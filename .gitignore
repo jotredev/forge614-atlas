@@ -2,4 +2,10 @@ node_modules/
 dist/
 build/
 coverage/
+*.tgz
+.DS_Store
+.env
+.env.*
+!.env.example
+.forge614/
 .superpowers/sdd/
