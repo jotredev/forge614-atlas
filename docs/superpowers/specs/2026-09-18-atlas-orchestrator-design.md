@@ -186,7 +186,27 @@ patrones clave, dependencias importantes — como lo explicaría un desarrollado
 otro), acompañada de metadatos mínimos indispensables para poder ubicarlo después: ruta del
 módulo, nivel asignado, modelo usado, identificador de sesión.
 
-## 16. Proceso de implementación y documentación
+## 16. Reporte final de la corrida
+
+Al terminar la contextualización completa de un proyecto (al cierre de `init`, o al cierre
+del último `resume` que completa lo pendiente), Atlas debe mostrarle al usuario un reporte
+resumen de cómo trabajó, no solo avisar que terminó. Datos objetivos, tomados de lo que la
+propia CLI del motor ya reporta en cada invocación (sin llamadas extra ni estimaciones
+aparte):
+
+- Motor de IA usado en la corrida (Claude Code o Codex) y qué modelo se empleó en cada
+  nivel (Ligero/Estándar/Profundo).
+- Total de mandaderos/subagentes despachados, desglosado por nivel.
+- Tokens consumidos, agregados de todos los mandaderos de la corrida.
+- Tiempo total transcurrido.
+- Cuántas pausas por cuota agotada hubo, si las hubo, y cuántas corridas de `resume` se
+  necesitaron para completar el proyecto.
+
+Este reporte se imprime en la terminal al finalizar y además queda guardado como metadatos
+de la sesión en Engram (datos de la corrida, no conocimiento del proyecto), para poder
+consultarlo después.
+
+## 17. Proceso de implementación y documentación
 
 La implementación de este diseño debe hacerse **por tareas discretas, no de una sola vez**.
 Al terminar cada tarea (con sus cambios y validaciones ya corridas), se debe producir un
@@ -195,7 +215,7 @@ agente de documentación distinto que actualiza tanto el repositorio como Notion
 no debe explicar cómo documentar (el agente de documentación ya lo sabe); solo debe dar la
 información fáctica de la tarea completada.
 
-## 17. Fuera de alcance de este diseño (explícitamente diferido)
+## 18. Fuera de alcance de este diseño (explícitamente diferido)
 
 - Soporte multi-motor simultáneo (repartir un mismo proyecto entre Claude y Codex a la vez).
 - Configurabilidad del límite de concurrencia.
