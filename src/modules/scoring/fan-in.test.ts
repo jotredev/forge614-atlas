@@ -53,4 +53,30 @@ describe("computeFanIn", () => {
     expect(result.get("auth")).toBe(0);
     rmSync(root, { recursive: true, force: true });
   });
+
+  test("handles sibling modules with overlapping names correctly (path-prefix collision)", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-fanin-collision-"));
+    const authPath = join(root, "auth");
+    const authLegacyPath = join(root, "auth-legacy");
+    mkdirSync(authPath, { recursive: true });
+    mkdirSync(authLegacyPath, { recursive: true });
+
+    const authFile = join(authPath, "index.ts");
+    const authLegacyFile = join(authLegacyPath, "index.ts");
+
+    writeFileSync(authFile, "export const newAuth = () => true;");
+    writeFileSync(authLegacyFile, `import { newAuth } from "../auth";\nexport const legacyAuth = () => newAuth();`);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "auth", path: authPath, files: [authFile] },
+      { name: "auth-legacy", path: authLegacyPath, files: [authLegacyFile] },
+    ];
+
+    const result = computeFanIn(modules);
+
+    expect(result.get("auth")).toBe(1);
+    expect(result.get("auth-legacy")).toBe(0);
+
+    rmSync(root, { recursive: true, force: true });
+  });
 });

@@ -1,6 +1,6 @@
 import ts from "typescript";
 import { readFileSync, existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import type { ModuleDescriptor } from "./discovery";
 
 export function extractRelativeImportSpecifiers(sourceText: string, fileName = "module.ts"): string[] {
@@ -55,7 +55,10 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
       for (const specifier of extractRelativeImportSpecifiers(sourceText, filePath)) {
         const resolvedPath = resolveImportPath(filePath, specifier);
         if (!resolvedPath) continue;
-        const toModule = modules.find(module => resolvedPath.startsWith(module.path));
+        const toModule = modules.find(module => {
+          const modulePath = module.path;
+          return resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep);
+        });
         if (toModule && toModule.name !== fromModule.name) {
           fanIn.set(toModule.name, (fanIn.get(toModule.name) ?? 0) + 1);
         }
