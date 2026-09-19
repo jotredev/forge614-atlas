@@ -7,6 +7,8 @@ import type { ModuleDescriptor } from "./discovery";
 
 describe("computeFanIn", () => {
   test("counts how many other modules import from this one", () => {
+    // Escenario: El módulo 'shared' es consumido por 'auth' y 'billing'.
+    // Su Fan-In debe ser exactamente 2.
     const root = mkdtempSync(join(tmpdir(), "atlas-fanin-"));
     const sharedPath = join(root, "shared");
     const authPath = join(root, "auth");
@@ -31,6 +33,7 @@ describe("computeFanIn", () => {
 
     const result = computeFanIn(modules);
 
+    // 'shared' tiene 2 módulos consumidores; 'auth' y 'billing' tienen 0
     expect(result.get("shared")).toBe(2);
     expect(result.get("auth")).toBe(0);
     expect(result.get("billing")).toBe(0);
@@ -39,6 +42,8 @@ describe("computeFanIn", () => {
   });
 
   test("does not count a module importing from itself", () => {
+    // Escenario: Dentro de 'auth', fileB importa fileA.
+    // Esto es cohesión interna, jamás debe contarse como Fan-In de dependencias externas.
     const root = mkdtempSync(join(tmpdir(), "atlas-fanin-self-"));
     const modulePath = join(root, "auth");
     mkdirSync(modulePath, { recursive: true });
@@ -50,11 +55,15 @@ describe("computeFanIn", () => {
     const modules: ModuleDescriptor[] = [{ name: "auth", path: modulePath, files: [fileA, fileB] }];
     const result = computeFanIn(modules);
 
+    // Debe ser 0 porque no hay módulos externos importándolo
     expect(result.get("auth")).toBe(0);
     rmSync(root, { recursive: true, force: true });
   });
 
   test("handles sibling modules with overlapping names correctly (path-prefix collision)", () => {
+    // Escenario de colisión de prefijo: 'auth' vs 'auth-legacy'.
+    // Si 'auth-legacy' importa de 'auth', solo 'auth' debe recibir +1 en Fan-In,
+    // y 'auth-legacy' no debe ser confundido por coincidencia parcial de texto.
     const root = mkdtempSync(join(tmpdir(), "atlas-fanin-collision-"));
     const authPath = join(root, "auth");
     const authLegacyPath = join(root, "auth-legacy");
@@ -81,6 +90,10 @@ describe("computeFanIn", () => {
   });
 
   test("counts distinct importing modules, not import statements or files", () => {
+    // Escenario de deduplicación de aristas:
+    // El módulo 'auth' tiene 3 archivos y 4 sentencias de import dirigidas a 'shared'.
+    // Sin embargo, como ambas pertenecen al mismo módulo consumidor ('auth'),
+    // el Fan-In de 'shared' debe ser estrictamente 1 (módulo a módulo), NO 4 ni 3.
     const root = mkdtempSync(join(tmpdir(), "atlas-fanin-distinct-"));
     const sharedPath = join(root, "shared");
     const authPath = join(root, "auth");
@@ -93,7 +106,6 @@ describe("computeFanIn", () => {
     const authFileC = join(authPath, "c.ts");
 
     writeFileSync(sharedFile, "export const log = (message: string) => console.log(message);");
-    // Four separate import statements across the same source module, all targeting "shared".
     writeFileSync(
       authFileA,
       `import { log } from "../shared/logger";\nimport { log as log2 } from "../shared/logger";\nexport const a = () => { log("a"); log2("a2"); };`,
@@ -108,14 +120,15 @@ describe("computeFanIn", () => {
 
     const result = computeFanIn(modules);
 
-    // auth imports from shared via 4 statements across 3 files, but it is a single distinct
-    // importing module, so shared's fan-in should be 1, not 4 or 3.
+    // Verificación de unicidad en grafo: 1 arista entre 'auth' y 'shared'
     expect(result.get("shared")).toBe(1);
 
     rmSync(root, { recursive: true, force: true });
   });
 
   test("does not count imports from a module's own test files", () => {
+    // Escenario: El archivo 'auth/login.test.ts' importa de 'shared', pero 'auth/login.ts' NO.
+    // Como los archivos de prueba se excluyen del cómputo productivo, el Fan-In de 'shared' debe ser 0.
     const root = mkdtempSync(join(tmpdir(), "atlas-fanin-testfile-"));
     const sharedPath = join(root, "shared");
     const authPath = join(root, "auth");
@@ -140,7 +153,6 @@ describe("computeFanIn", () => {
 
     const result = computeFanIn(modules);
 
-    // Only the test file imports from "shared"; that shouldn't count as auth importing it.
     expect(result.get("shared")).toBe(0);
 
     rmSync(root, { recursive: true, force: true });

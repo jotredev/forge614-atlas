@@ -7,6 +7,8 @@ import type { ModuleDescriptor } from "./discovery";
 
 describe("computeTestCoverageGap", () => {
   test("returns 0 when every source file has a sibling .test file", () => {
+    // Escenario: Cobertura perfecta (1 archivo productivo acompañado de 1 archivo de test hermano).
+    // Fórmula: 1 - (1 con test / 1 fuente) = 0.0 de brecha.
     const root = mkdtempSync(join(tmpdir(), "atlas-gap-covered-"));
     const modulePath = join(root, "auth");
     mkdirSync(modulePath, { recursive: true });
@@ -23,6 +25,8 @@ describe("computeTestCoverageGap", () => {
   });
 
   test("returns 1 when no source file has a sibling test", () => {
+    // Escenario: Brecha total (1 archivo productivo sin archivo de test hermano).
+    // Fórmula: 1 - (0 con test / 1 fuente) = 1.0 de brecha (máximo riesgo).
     const root = mkdtempSync(join(tmpdir(), "atlas-gap-uncovered-"));
     const modulePath = join(root, "billing");
     mkdirSync(modulePath, { recursive: true });
@@ -37,6 +41,8 @@ describe("computeTestCoverageGap", () => {
   });
 
   test("returns a fractional gap when only some files are covered", () => {
+    // Escenario: Cobertura mixta (2 archivos productivos, solo 1 tiene prueba hermana).
+    // Fórmula: 1 - (1 con test / 2 fuentes) = 0.5 (50% de brecha).
     const root = mkdtempSync(join(tmpdir(), "atlas-gap-partial-"));
     const modulePath = join(root, "mixed");
     mkdirSync(modulePath, { recursive: true });

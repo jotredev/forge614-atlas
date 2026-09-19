@@ -1,3 +1,35 @@
+# 07.07 Puntuación Compuesta Normalizada (Composite Score)
+
+> **Documento de Arquitectura y Código — Ecosistema Forge614 Atlas**  
+> **Alcance:** `src/modules/scoring/composite-score.ts` y `composite-score.test.ts`  
+> **Traducción hermana:** [07.07 (EN) Normalized Composite Score (composite-score.ts and test)](../../en/07-structure/07-composite-scoring.md)
+
+---
+
+## 1. Justificación Arquitectónica
+
+Las tres señales cuantitativas estructurales (Ciclomática, Fan-In y Churn) operan en dominios numéricos radicalmente diferentes:
+- La **complejidad ciclomática** suele rondar decenas o cientos de puntos.
+- La **centralidad Fan-In** está acotada por el número total de módulos (rara vez supera 10 o 20).
+- La **volatilidad Git Churn** puede superar fácilmente los 1,000 cambios en repositorios maduros.
+
+Si se combinaran sin normalizar, el Churn dominaría el 95% del peso de la decisión, ignorando módulos centrales de arquitectura que son estables pero altamente complejos. Para solucionar esto, Atlas aplica:
+1. **Normalización Min-Max:** Cada señal se proyecta independientemente al intervalo adimensional $[0.0, 1.0]$:
+   $$X_{\text{norm}} = \frac{X - \min(X)}{\max(X) - \min(X)}$$
+2. **Protección de Varianza Cero:** Si todos los módulos tienen exactamente el mismo valor ($\max = \min$), para evitar una indeterminación por división entre cero ($0/0$), se asigna $0.0$ a todos los elementos del vector.
+3. **Ponderación Balanceada:**
+   $$\text{Base} = 0.35 \cdot \text{Cyclo}_{\text{norm}} + 0.35 \cdot \text{FanIn}_{\text{norm}} + 0.30 \cdot \text{Churn}_{\text{norm}}$$
+4. **Modificador de Fragilidad:**
+   $$\text{Score} = \text{Base} \cdot (1 + 0.20 \cdot \text{TestGap})$$
+
+### Analogía del Mundo Real
+> Es como la calificación de un decatlón olímpico: no puedes sumar directamente los segundos de una carrera de 100 metros con los metros alcanzados en salto de longitud o los kilogramos de lanzamiento de peso. Cada disciplina se normaliza contra los mejores y peores competidores para obtener una puntuación justa y comparable.
+
+---
+
+## 2. Código Fuente Documentado: `src/modules/scoring/composite-score.ts`
+
+```typescript
 /**
  * Señales cuantitativas sin procesar recopiladas para un módulo determinado.
  */
@@ -102,3 +134,49 @@ function normalize(values: number[]): number[] {
   // Escalado lineal estándar a [0.0, 1.0]
   return values.map(value => (value - min) / (max - min));
 }
+```
+
+---
+
+## 3. Pruebas Automatizadas: `src/modules/scoring/composite-score.test.ts`
+
+```typescript
+import { describe, expect, test } from "bun:test";
+import { computeCompositeScores } from "./composite-score";
+
+describe("computeCompositeScores", () => {
+  test("weights cyclomatic and fan-in higher than churn, and never lets testGap fully decide", () => {
+    // Escenario: Dos módulos con perfiles contrastantes.
+    // 'trivial': señales en 0 -> Min-Max resulta en 0 -> puntuación 0.
+    // 'complex-untested': ciclomática=10, fanIn=8, churn=5, testGap=1.0.
+    // Min-Max normaliza los máximos a 1.0.
+    // Base = 0.35 * 1 + 0.35 * 1 + 0.30 * 1 = 1.0.
+    // Score final = base * (1 + 0.20 * testGap) = 1.0 * 1.20 = 1.20.
+    const signals = [
+      { name: "trivial", cyclomatic: 0, fanIn: 0, churn: 0, testGap: 0 },
+      { name: "complex-untested", cyclomatic: 10, fanIn: 8, churn: 5, testGap: 1 },
+    ];
+
+    const [trivial, complex] = computeCompositeScores(signals);
+
+    expect(trivial?.score).toBe(0);
+    expect(complex?.score).toBeGreaterThan(0);
+    expect(complex?.score).toBeCloseTo(1.2, 5);
+  });
+
+  test("a module that is complex but well-tested still outranks a trivial one, without the test gap inflating it", () => {
+    // Escenario: Módulo complejo pero con excelente cobertura de pruebas (testGap = 0).
+    // Su puntuación base = 1.0.
+    // Como testGap = 0, el multiplicador es (1 + 0) = 1.0, sin recargo por fragilidad.
+    const signals = [
+      { name: "complex-tested", cyclomatic: 10, fanIn: 8, churn: 5, testGap: 0 },
+      { name: "trivial", cyclomatic: 0, fanIn: 0, churn: 0, testGap: 0 },
+    ];
+
+    const [complexTested, trivial] = computeCompositeScores(signals);
+
+    expect(complexTested?.score).toBeCloseTo(1, 5);
+    expect(trivial?.score).toBe(0);
+  });
+});
+```

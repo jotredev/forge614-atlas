@@ -6,6 +6,9 @@ import { join } from "node:path";
 import { computeChurn } from "./churn";
 import type { ModuleDescriptor } from "./discovery";
 
+/**
+ * Función auxiliar para ejecutar comandos git de forma síncrona en el fixture temporal.
+ */
 function git(cwd: string, args: string[]): void {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
@@ -13,6 +16,9 @@ function git(cwd: string, args: string[]): void {
 
 describe("computeChurn", () => {
   test("counts changed-file entries per module across commit history", () => {
+    // Escenario: Se inicializa un repo Git real y se simula el flujo de commits.
+    // auth/login.ts se modifica en 2 commits.
+    // billing/charge.ts se modifica en 1 commit.
     const root = mkdtempSync(join(tmpdir(), "atlas-churn-"));
     git(root, ["init", "-q"]);
     git(root, ["config", "user.email", "test@example.com"]);
@@ -25,14 +31,17 @@ describe("computeChurn", () => {
     const authFile = join(authPath, "login.ts");
     const billingFile = join(billingPath, "charge.ts");
 
+    // Commit 1: Crear login.ts en 'auth'
     writeFileSync(authFile, "export const login = () => true;");
     git(root, ["add", "."]);
     git(root, ["commit", "-q", "-m", "add login"]);
 
+    // Commit 2: Modificar login.ts en 'auth' (segundo cambio para 'auth')
     writeFileSync(authFile, "export const login = () => false;");
     git(root, ["add", "."]);
     git(root, ["commit", "-q", "-m", "flip login"]);
 
+    // Commit 3: Crear charge.ts en 'billing' (primer cambio para 'billing')
     writeFileSync(billingFile, "export const charge = () => true;");
     git(root, ["add", "."]);
     git(root, ["commit", "-q", "-m", "add charge"]);
@@ -44,6 +53,7 @@ describe("computeChurn", () => {
 
     const result = computeChurn(root, modules);
 
+    // Churn esperado: auth = 2 cambios históricos, billing = 1 cambio histórico
     expect(result.get("auth")).toBe(2);
     expect(result.get("billing")).toBe(1);
 
@@ -51,6 +61,8 @@ describe("computeChurn", () => {
   });
 
   test("correctly attributes files to modules with prefix-overlapping names", () => {
+    // Escenario de colisión de prefijo en Git: 'auth' vs 'auth-legacy'.
+    // Cada módulo recibe 1 commit de forma aislada.
     const root = mkdtempSync(join(tmpdir(), "atlas-churn-prefix-"));
     git(root, ["init", "-q"]);
     git(root, ["config", "user.email", "test@example.com"]);
@@ -78,6 +90,7 @@ describe("computeChurn", () => {
 
     const result = computeChurn(root, modules);
 
+    // La regla `modulePath + sep` garantiza que 'auth-legacy' no aumente el churn de 'auth'
     expect(result.get("auth")).toBe(1);
     expect(result.get("auth-legacy")).toBe(1);
 
@@ -85,6 +98,9 @@ describe("computeChurn", () => {
   });
 
   test("correctly attributes churn for modules with non-ASCII names", () => {
+    // Escenario UTF-8 crítico: Módulo llamado 'señales' con letra 'ñ'.
+    // Gracias al argumento `git -c core.quotepath=false`, Git no escapa en octal ("\303\261")
+    // y Atlas puede atribuir el archivo sin pérdida de caracteres.
     const root = mkdtempSync(join(tmpdir(), "atlas-churn-nonascii-"));
     git(root, ["init", "-q"]);
     git(root, ["config", "user.email", "test@example.com"]);
