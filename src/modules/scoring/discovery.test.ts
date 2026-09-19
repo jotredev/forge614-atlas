@@ -39,4 +39,15 @@ describe("discoverModules", () => {
     const names = modules.map(module => module.name);
     expect(names).not.toContain("node_modules");
   });
+
+  test("excludes nested dot-directories from file scanning", () => {
+    const srcPath = join(root, "src");
+    mkdirSync(join(srcPath, "auth", ".cache"), { recursive: true });
+    writeFileSync(join(srcPath, "auth", ".cache", "generated.ts"), "export const x = 1;");
+    const modules = discoverModules(srcPath);
+    expect(modules).toHaveLength(1);
+    expect(modules[0]?.name).toBe("auth");
+    expect(modules[0]?.files).toHaveLength(1);
+    expect(modules[0]?.files).toEqual([join(srcPath, "auth", "login.ts")]);
+  });
 });

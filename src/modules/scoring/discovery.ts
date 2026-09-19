@@ -33,7 +33,7 @@ function listSourceFiles(dir: string): string[] {
   const matches: string[] = [];
   for (const relativePath of glob.scanSync({ cwd: dir, onlyFiles: true })) {
     const segments = relativePath.split("/");
-    if (segments.some(segment => EXCLUDED_DIRS.has(segment))) continue;
+    if (segments.some(segment => EXCLUDED_DIRS.has(segment) || segment.startsWith("."))) continue;
     matches.push(join(dir, relativePath));
   }
   return matches;
