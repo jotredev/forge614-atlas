@@ -2,8 +2,15 @@ import { spawnSync } from "node:child_process";
 import { join, sep } from "node:path";
 import type { ModuleDescriptor } from "./discovery";
 
+/**
+ * Computes per-module churn (changed-file entries across commit history).
+ *
+ * Throws if `repoRoot` is not a git repository, or if the underlying `git log`
+ * invocation otherwise fails for any reason — including on a git repo with
+ * zero commits, where `git log` exits non-zero. Callers must handle this.
+ */
 export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number> {
-  const result = spawnSync("git", ["log", "--format=", "--name-only"], {
+  const result = spawnSync("git", ["-c", "core.quotepath=false", "log", "--format=", "--name-only"], {
     cwd: repoRoot,
     encoding: "utf8",
   });

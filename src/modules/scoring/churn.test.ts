@@ -12,7 +12,7 @@ function git(cwd: string, args: string[]): void {
 }
 
 describe("computeChurn", () => {
-  test("counts commits that touched files inside each module", () => {
+  test("counts changed-file entries per module across commit history", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-churn-"));
     git(root, ["init", "-q"]);
     git(root, ["config", "user.email", "test@example.com"]);
@@ -80,6 +80,29 @@ describe("computeChurn", () => {
 
     expect(result.get("auth")).toBe(1);
     expect(result.get("auth-legacy")).toBe(1);
+
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  test("correctly attributes churn for modules with non-ASCII names", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-churn-nonascii-"));
+    git(root, ["init", "-q"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "Test"]);
+
+    const signalesPath = join(root, "señales");
+    mkdirSync(signalesPath, { recursive: true });
+    const signalesFile = join(signalesPath, "procesador.ts");
+
+    writeFileSync(signalesFile, "export const procesar = () => true;");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "add señales"]);
+
+    const modules: ModuleDescriptor[] = [{ name: "señales", path: signalesPath, files: [signalesFile] }];
+
+    const result = computeChurn(root, modules);
+
+    expect(result.get("señales")).toBe(1);
 
     rmSync(root, { recursive: true, force: true });
   });
