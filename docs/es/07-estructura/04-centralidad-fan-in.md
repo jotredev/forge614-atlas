@@ -13,7 +13,7 @@ La centralidad Fan-In mide el grado de entrada (in-degree) de cada módulo en el
 ### Reglas Críticas del Algoritmo
 1. **Unicidad de Arista (Set Deduplication):** Si el módulo consumidor `ordenes` contiene 10 archivos y todos importan utilidades de `auth`, el Fan-In de `auth` incrementa exactamente en **1**. Se contabiliza la dependencia estructural entre subsistemas, no la cantidad bruta de cláusulas de importación.
 2. **Exclusión de Cohesión Interna:** Si un archivo dentro de `auth` importa a su hermano en `auth`, esto es modularidad interna y jamás incrementa el Fan-In de dependencias externas.
-3. **Frontera Estricta de Directorio (`modulePath + sep`):** Al resolver rutas relativas en disco, se exige coincidencia exacta o prefijo seguido del separador del sistema operativo. Esto evita falsos positivos catastróficos entre carpetas con nombres similares como `auth` y `auth-service`.
+3. **Frontera Estricta de Directorio (`modulePath + sep`):** Al resolver rutas relativas en disco, se exige coincidencia exacta o prefijo seguido del separador del sistema operativo. Esto evita falsos positivos catastróficos entre carpetas con nombres similares como `auth` y `auth-legacy`.
 4. **Resolución de Extensiones TypeScript:** Resuelve candidatos sin extensión, con `.ts`, `.tsx`, `.js`, `.jsx`, o contenedores `index.ts/index.tsx`.
 5. **Exclusión de Archivos de Prueba:** Las aserciones de prueba que consumen librerías auxiliares se descartan para proteger la topología arquitectónica de producción.
 
@@ -143,7 +143,7 @@ function resolveImportPath(fromFile: string, specifier: string): string | null {
  * 3. Frontera Estricta de Directorio (`modulePath + sep`):
  *    Al asociar una ruta resuelta a un módulo, se valida que coincida exactamente o que empiece
  *    con la ruta del módulo seguida por el separador del sistema (`/` en POSIX o `\` en Windows).
- *    Esto previene falsos positivos catastróficos si existen carpetas como `auth` y `auth-service`.
+ *    Esto previene falsos positivos catastróficos si existen carpetas como `auth` y `auth-legacy`.
  * 4. Exclusión de Archivos de Prueba:
  *    Los archivos de test (`.test.ts`) se omiten del análisis para evitar que los imports
  *    de prueba distorsionen la topología arquitectónica de producción.

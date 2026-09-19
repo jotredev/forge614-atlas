@@ -116,7 +116,7 @@ function resolveImportPath(fromFile: string, specifier: string): string | null {
  * 3. Frontera Estricta de Directorio (`modulePath + sep`):
  *    Al asociar una ruta resuelta a un módulo, se valida que coincida exactamente o que empiece
  *    con la ruta del módulo seguida por el separador del sistema (`/` en POSIX o `\` en Windows).
- *    Esto previene falsos positivos catastróficos si existen carpetas como `auth` y `auth-service`.
+ *    Esto previene falsos positivos catastróficos si existen carpetas como `auth` y `auth-legacy`.
  * 4. Exclusión de Archivos de Prueba:
  *    Los archivos de test (`.test.ts`) se omiten del análisis para evitar que los imports
  *    de prueba distorsionen la topología arquitectónica de producción.
