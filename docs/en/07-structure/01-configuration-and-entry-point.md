@@ -29,8 +29,8 @@ Forge614 Atlas is engineered as a standalone, deterministic library within the F
   "private": true,
   // Enforces native ECMAScript Modules (ESM) for import/export
   "type": "module",
-  // Formal architectural description
-  "description": "Deep contextualization orchestrator for the Forge614 ecosystem",
+  // Formal architectural description (literal Spanish as in source package.json)
+  "description": "Orquestacion de contextualizacion profunda para el ecosistema Forge614",
   // Public package entry point exposed to external consumers
   "exports": "./src/index.ts",
   "scripts": {

@@ -26,7 +26,7 @@ import type { ModuleDescriptor } from "./discovery";
  *    (`HEAD` huérfano), Git retorna código de salida distinto de cero (`status !== 0`). En tal caso,
  *    la función lanza una excepción descriptiva para que el consumidor decida la estrategia de rescate.
  * 4. Atribución estricta con frontera de ruta (`modulePath + sep`):
- *    Garantiza que una ruta como `auth-service/index.ts` no incremente por error el churn de `auth`.
+ *    Garantiza que una ruta como `auth-legacy/index.ts` no incremente por error el churn de `auth`.
  * 
  * @param repoRoot - Ruta absoluta del directorio raíz del repositorio Git
  * @param modules - Lista de descriptores de módulos descubiertos

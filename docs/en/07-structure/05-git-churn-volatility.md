@@ -44,7 +44,7 @@ import type { ModuleDescriptor } from "./discovery";
  * 3. Error Handling:
  *    Throws descriptive error if git log exits non-zero (non-git directory or empty repo).
  * 4. Boundary Protection (`modulePath + sep`):
- *    Ensures `auth-service/index.ts` does not increment churn for `auth`.
+ *    Ensures `auth-legacy/index.ts` does not increment churn for `auth`.
  * 
  * @param repoRoot - Absolute path to the Git repository root
  * @param modules - Discovered module descriptors

@@ -30,7 +30,7 @@ Forge614 Atlas está diseñado como una librería autónoma y determinista dentr
   // Establece ECMAScript Modules (ESM) nativo para import/export
   "type": "module",
   // Descripción formal del propósito arquitectónico
-  "description": "Orquestador de contextualizacion profunda para el ecosistema Forge614",
+  "description": "Orquestacion de contextualizacion profunda para el ecosistema Forge614",
   // Superficie pública formal accesible por paquetes externos
   "exports": "./src/index.ts",
   "scripts": {

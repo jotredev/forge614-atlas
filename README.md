@@ -63,7 +63,7 @@ Toda la documentación técnica está disponible en pares bilingües e indexados
   - `04.` [Clasificación de Niveles y Percentiles](docs/es/04-clasificacion-niveles-y-percentiles.md)
   - `05.` [Proceso SDD y Catálogo de Defectos](docs/es/05-proceso-sdd-y-catalogo-defectos.md)
   - `06.` [Referencia de API en TypeScript](docs/es/06-referencia-api-typescript.md)
-  - `07.` [Estructura y Código Fuente Línea por Línea](docs/es/07-estructura-codigo-linea-por-linea.md)
+  - `07.` [Estructura y Código Fuente Línea por Línea (índice de 9 subpáginas)](docs/es/07-estructura-codigo-linea-por-linea.md)
 
 - 🇬🇧 **[English Documentation](docs/en/00-summary-and-quickstart.md)**:
   - `00.` [Summary & Quickstart](docs/en/00-summary-and-quickstart.md)
@@ -73,4 +73,4 @@ Toda la documentación técnica está disponible en pares bilingües e indexados
   - `04.` [Tier Classification & Percentiles](docs/en/04-tier-classification-and-percentiles.md)
   - `05.` [SDD Process & Defect Catalog](docs/en/05-sdd-process-and-defect-catalog.md)
   - `06.` [TypeScript API Reference](docs/en/06-typescript-api-reference.md)
-  - `07.` [Project Structure & Source Code Line-by-Line](docs/en/07-project-structure-documented-source-code.md)
+  - `07.` [Project Structure & Source Code Line-by-Line (index of 9 subpages)](docs/en/07-project-structure-documented-source-code.md)

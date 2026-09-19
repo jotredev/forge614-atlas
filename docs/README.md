@@ -17,7 +17,7 @@ Welcome to the official technical documentation of **Forge614 Atlas**. All docum
 | **04** | [04. Clasificación de Niveles y Percentiles](es/04-clasificacion-niveles-y-percentiles.md) | [04 (EN). Tier Classification and Percentiles](en/04-tier-classification-and-percentiles.md) | Vigente / Verified |
 | **05** | [05. Proceso SDD, Catálogo de Defectos y Decisiones Diferidas](es/05-proceso-sdd-y-catalogo-defectos.md) | [05 (EN). SDD Process, Defect Catalog, and Deferred Decisions](en/05-sdd-process-and-defect-catalog.md) | Vigente / Verified |
 | **06** | [06. Referencia de API Pública en TypeScript](es/06-referencia-api-typescript.md) | [06 (EN). TypeScript Public API Reference](en/06-typescript-api-reference.md) | Vigente / Verified |
-| **07** | [07. Estructura del Proyecto y Código Fuente Documentado](es/07-estructura-codigo-linea-por-linea.md) | [07 (EN). Project Structure and Documented Source Code](en/07-project-structure-documented-source-code.md) | Vigente / Verified |
+| **07** | [07. Estructura del Proyecto y Código Fuente Documentado (índice maestro, 9 subpáginas)](es/07-estructura-codigo-linea-por-linea.md) | [07 (EN). Project Structure and Documented Source Code (master index, 9 subpages)](en/07-project-structure-documented-source-code.md) | Vigente / Verified |
 
 ---
 

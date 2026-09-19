@@ -13,7 +13,7 @@ Fan-In centrality quantifies the in-degree of each module in the directed depend
 ### Critical Algorithmic Guarantees
 1. **Edge Uniqueness (Set Deduplication):** If consumer module `orders` has 10 files and every file imports utilities from `auth`, `auth`'s Fan-In increments by exactly **1**. We measure module-to-module architectural dependency, not raw import statements.
 2. **Exclusion of Internal Cohesion:** If a file inside `auth` imports a sibling file inside `auth`, this is internal modularity and never counts as external Fan-In.
-3. **Strict Directory Boundary (`modulePath + sep`):** When resolving relative import paths, exact match or path prefix followed by the OS path separator is enforced. This prevents prefix collisions between similarly named directories like `auth` and `auth-legacy`.
+3. **Strict Directory Boundary (`modulePath + sep`):** When resolving relative import paths, exact match or path prefix followed by the OS path separator is enforced. This prevents prefix collisions between similarly named directories like `auth` and `auth-service`.
 4. **TypeScript Extension Resolution:** Resolves candidate paths without extension, with `.ts`, `.tsx`, `.js`, `.jsx`, or index barrel files (`index.ts`, `index.tsx`).
 5. **Test File Exclusion:** Test assertions importing helper utilities are ignored to preserve production architecture.
 
@@ -132,11 +132,13 @@ function resolveImportPath(fromFile: string, specifier: string): string | null {
  * 
  * Key Architectural Invariants:
  * 1. Edge Uniqueness (Set Deduplication):
- *    Multiple imports across multiple files between the same module pair count as 1 edge.
+ *    If module `orders` has 5 distinct files and each imports 3 functions from
+ *    `users`, `users`'s Fan-In from `orders` must be exactly 1.
+ *    Individual import statements are not counted, only the module-level dependency.
  * 2. Self-Import Exclusion:
  *    Internal cross-file imports inside a module are excluded (`toModule.name !== fromModule.name`).
  * 3. Strict Directory Boundary (`modulePath + sep`):
- *    Prevents false matches when directory names share prefixes (`auth` vs `auth-legacy`).
+ *    Prevents false matches when directory names share prefixes (`auth` vs `auth-service`).
  * 4. Test File Exclusion:
  *    Test files are skipped to avoid inflating production dependency topology.
  * 

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Orquestador de contextualizacion profunda para el ecosistema Forge614",
+  "description": "Orquestacion de contextualizacion profunda para el ecosistema Forge614",
   "exports": "./src/index.ts",
   "scripts": {
     "test": "bun test",

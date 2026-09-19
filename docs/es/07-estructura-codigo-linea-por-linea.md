@@ -10,7 +10,10 @@
 
 ## 1. Directorio Maestro de Subpáginas Modulares
 
-Para garantizar máxima legibilidad, profundidad pedagógica y accesibilidad arquitectónica, la documentación detallada del código fuente se encuentra desglosada en **9 subpáginas dedicadas**, cada una con el código completo, comentarios línea por línea, explicaciones matemáticas del algoritmo y sus pruebas automatizadas asociadas:
+> [!IMPORTANT]
+> **Aclaración Arquitectónica de Estructura:** Este documento **ya no es un archivo monolítico único** con el volcado plano de todo el código del proyecto. Funciona formalmente como el **índice maestro y punto de navegación hacia 9 subpáginas modulares (07.01 a 07.09)**, donde cada subpágina aloja su propio código fuente integral documentado línea por línea, justificación teórica, explicaciones del algoritmo y suite de pruebas automatizadas aisladas.
+
+Para garantizar máxima legibilidad, profundidad pedagógica y accesibilidad arquitectónica, la documentación detallada del código fuente se encuentra desglosada en las siguientes subpáginas:
 
 | Subpágina | Archivos Cubiertos | Propósito Arquitectónico | Algoritmo / Estándar Clave |
 | :--- | :--- | :--- | :--- |

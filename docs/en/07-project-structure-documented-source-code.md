@@ -10,7 +10,10 @@
 
 ## 1. Master Directory of Modular Subpages
 
-To maximize readability, educational clarity, and architectural accessibility, the source code documentation is structured into **9 dedicated subpages**, each featuring complete code, line-by-line inline comments, algorithmic walkthroughs, and automated test suites:
+> [!IMPORTANT]
+> **Architectural Structure Clarification:** This document is **no longer a single monolithic file** dumping all codebase files sequentially. It formally operates as the **master navigation index pointing to 9 dedicated modular subpages (07.01 to 07.09)**, where each subpage hosts its own complete source code documented line-by-line, theoretical rationale, algorithmic breakdowns, and isolated automated test suites.
+
+To maximize readability, educational clarity, and architectural accessibility, the source code documentation is structured into the following dedicated subpages:
 
 | Subpage | Files Covered | Architectural Purpose | Key Algorithm / Standard |
 | :--- | :--- | :--- | :--- |
