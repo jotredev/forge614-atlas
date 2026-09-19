@@ -54,4 +54,38 @@ describe("computeCyclomaticComplexity", () => {
     expect(result.get("auth")).toBe(3); // 1 (identity) + 2 (flag: baseline 1 + 1 if)
     rmSync(root, { recursive: true, force: true });
   });
+
+  test("excludes *.test.ts files from the module's complexity total", () => {
+    root = mkdtempSync(join(tmpdir(), "atlas-cyclomatic-testfile-"));
+    const modulePath = join(root, "auth");
+    mkdirSync(modulePath, { recursive: true });
+    const sourceFile = join(modulePath, "a.ts");
+    const testFile = join(modulePath, "a.test.ts");
+    writeFileSync(sourceFile, "export function identity(value: number) { return value; }");
+    writeFileSync(
+      testFile,
+      `
+        import { describe, test, expect } from "bun:test";
+        describe("identity", () => {
+          test("branches a lot", () => {
+            const value = 1;
+            if (value > 0) {
+              expect(true).toBe(true);
+            } else if (value < 0) {
+              expect(false).toBe(true);
+            } else {
+              expect(value).toBe(0);
+            }
+          });
+        });
+      `,
+    );
+
+    const modules: ModuleDescriptor[] = [{ name: "auth", path: modulePath, files: [sourceFile, testFile] }];
+    const result = computeCyclomaticComplexity(modules);
+
+    // Only the source file (complexity 1) should count; the branchy test file must be skipped.
+    expect(result.get("auth")).toBe(1);
+    rmSync(root, { recursive: true, force: true });
+  });
 });

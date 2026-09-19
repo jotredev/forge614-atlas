@@ -1,7 +1,7 @@
 import ts from "typescript";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
-import type { ModuleDescriptor } from "./discovery";
+import { isTestFile, type ModuleDescriptor } from "./discovery";
 
 export function extractRelativeImportSpecifiers(sourceText: string, fileName = "module.ts"): string[] {
   const sourceFile = ts.createSourceFile(fileName, sourceText, ts.ScriptTarget.Latest, true);
@@ -50,7 +50,9 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
   const fanIn = new Map(modules.map(module => [module.name, 0]));
 
   for (const fromModule of modules) {
+    const targetModuleNames = new Set<string>();
     for (const filePath of fromModule.files) {
+      if (isTestFile(filePath)) continue;
       const sourceText = readFileSync(filePath, "utf8");
       for (const specifier of extractRelativeImportSpecifiers(sourceText, filePath)) {
         const resolvedPath = resolveImportPath(filePath, specifier);
@@ -60,9 +62,12 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
           return resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep);
         });
         if (toModule && toModule.name !== fromModule.name) {
-          fanIn.set(toModule.name, (fanIn.get(toModule.name) ?? 0) + 1);
+          targetModuleNames.add(toModule.name);
         }
       }
+    }
+    for (const name of targetModuleNames) {
+      fanIn.set(name, (fanIn.get(name) ?? 0) + 1);
     }
   }
   return fanIn;

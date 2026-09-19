@@ -12,6 +12,10 @@ export interface ModuleDescriptor {
   files: string[];
 }
 
+export function isTestFile(filePath: string): boolean {
+  return /\.(test|spec)\.[tj]sx?$/.test(filePath);
+}
+
 export function discoverModules(root: string): ModuleDescriptor[] {
   const topLevelDirs = readdirSync(root, { withFileTypes: true })
     .filter(entry => entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name) && !entry.name.startsWith("."))

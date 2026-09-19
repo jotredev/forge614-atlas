@@ -1,6 +1,6 @@
 import ts from "typescript";
 import { readFileSync } from "node:fs";
-import type { ModuleDescriptor } from "./discovery";
+import { isTestFile, type ModuleDescriptor } from "./discovery";
 
 export function fileCyclomaticComplexity(sourceText: string, fileName = "module.ts"): number {
   const sourceFile = ts.createSourceFile(fileName, sourceText, ts.ScriptTarget.Latest, true);
@@ -44,6 +44,7 @@ export function computeCyclomaticComplexity(modules: ModuleDescriptor[]): Map<st
   for (const module of modules) {
     let total = 0;
     for (const filePath of module.files) {
+      if (isTestFile(filePath)) continue;
       const sourceText = readFileSync(filePath, "utf8");
       total += fileCyclomaticComplexity(sourceText, filePath);
     }

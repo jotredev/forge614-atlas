@@ -1,9 +1,5 @@
 import { existsSync } from "node:fs";
-import type { ModuleDescriptor } from "./discovery";
-
-function isTestFile(filePath: string): boolean {
-  return /\.(test|spec)\.[tj]sx?$/.test(filePath);
-}
+import { isTestFile, type ModuleDescriptor } from "./discovery";
 
 function hasSiblingTest(filePath: string): boolean {
   const dotIndex = filePath.lastIndexOf(".");

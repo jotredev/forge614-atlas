@@ -79,4 +79,70 @@ describe("computeFanIn", () => {
 
     rmSync(root, { recursive: true, force: true });
   });
+
+  test("counts distinct importing modules, not import statements or files", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-fanin-distinct-"));
+    const sharedPath = join(root, "shared");
+    const authPath = join(root, "auth");
+    mkdirSync(sharedPath, { recursive: true });
+    mkdirSync(authPath, { recursive: true });
+
+    const sharedFile = join(sharedPath, "logger.ts");
+    const authFileA = join(authPath, "a.ts");
+    const authFileB = join(authPath, "b.ts");
+    const authFileC = join(authPath, "c.ts");
+
+    writeFileSync(sharedFile, "export const log = (message: string) => console.log(message);");
+    // Four separate import statements across the same source module, all targeting "shared".
+    writeFileSync(
+      authFileA,
+      `import { log } from "../shared/logger";\nimport { log as log2 } from "../shared/logger";\nexport const a = () => { log("a"); log2("a2"); };`,
+    );
+    writeFileSync(authFileB, `import { log } from "../shared/logger";\nexport const b = () => log("b");`);
+    writeFileSync(authFileC, `import { log } from "../shared/logger";\nexport const c = () => log("c");`);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "shared", path: sharedPath, files: [sharedFile] },
+      { name: "auth", path: authPath, files: [authFileA, authFileB, authFileC] },
+    ];
+
+    const result = computeFanIn(modules);
+
+    // auth imports from shared via 4 statements across 3 files, but it is a single distinct
+    // importing module, so shared's fan-in should be 1, not 4 or 3.
+    expect(result.get("shared")).toBe(1);
+
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  test("does not count imports from a module's own test files", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-fanin-testfile-"));
+    const sharedPath = join(root, "shared");
+    const authPath = join(root, "auth");
+    mkdirSync(sharedPath, { recursive: true });
+    mkdirSync(authPath, { recursive: true });
+
+    const sharedFile = join(sharedPath, "logger.ts");
+    const authSourceFile = join(authPath, "login.ts");
+    const authTestFile = join(authPath, "login.test.ts");
+
+    writeFileSync(sharedFile, "export const log = (message: string) => console.log(message);");
+    writeFileSync(authSourceFile, "export const login = () => true;");
+    writeFileSync(
+      authTestFile,
+      `import { log } from "../shared/logger";\nlog("testing login");`,
+    );
+
+    const modules: ModuleDescriptor[] = [
+      { name: "shared", path: sharedPath, files: [sharedFile] },
+      { name: "auth", path: authPath, files: [authSourceFile, authTestFile] },
+    ];
+
+    const result = computeFanIn(modules);
+
+    // Only the test file imports from "shared"; that shouldn't count as auth importing it.
+    expect(result.get("shared")).toBe(0);
+
+    rmSync(root, { recursive: true, force: true });
+  });
 });
