@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import type { ModuleDescriptor } from "./discovery";
 
 export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number> {
@@ -16,7 +16,10 @@ export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map
 
   for (const relativeFile of touchedFiles) {
     const absolutePath = join(repoRoot, relativeFile);
-    const matchedModule = modules.find(module => absolutePath.startsWith(module.path));
+    const matchedModule = modules.find(module => {
+      const modulePath = module.path;
+      return absolutePath === modulePath || absolutePath.startsWith(modulePath + sep);
+    });
     if (matchedModule) {
       churn.set(matchedModule.name, (churn.get(matchedModule.name) ?? 0) + 1);
     }

@@ -49,4 +49,38 @@ describe("computeChurn", () => {
 
     rmSync(root, { recursive: true, force: true });
   });
+
+  test("correctly attributes files to modules with prefix-overlapping names", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-churn-prefix-"));
+    git(root, ["init", "-q"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "Test"]);
+
+    const authPath = join(root, "auth");
+    const authLegacyPath = join(root, "auth-legacy");
+    mkdirSync(authPath, { recursive: true });
+    mkdirSync(authLegacyPath, { recursive: true });
+    const authFile = join(authPath, "login.ts");
+    const authLegacyFile = join(authLegacyPath, "old-login.ts");
+
+    writeFileSync(authFile, "export const login = () => true;");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "add login"]);
+
+    writeFileSync(authLegacyFile, "export const oldLogin = () => true;");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "add old login"]);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "auth", path: authPath, files: [authFile] },
+      { name: "auth-legacy", path: authLegacyPath, files: [authLegacyFile] },
+    ];
+
+    const result = computeChurn(root, modules);
+
+    expect(result.get("auth")).toBe(1);
+    expect(result.get("auth-legacy")).toBe(1);
+
+    rmSync(root, { recursive: true, force: true });
+  });
 });
