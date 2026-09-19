@@ -7,7 +7,7 @@ export interface TieredModule extends ModuleScore {
 }
 
 export function assignTiers(scores: ModuleScore[]): TieredModule[] {
-  const sorted = [...scores].sort((a, b) => b.score - a.score);
+  const sorted = [...scores].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
   const total = sorted.length;
   const deepCount = Math.max(1, Math.round(total * 0.15));
   const standardCount = Math.round(total * 0.35);

@@ -29,4 +29,34 @@ describe("assignTiers", () => {
     expect(tiered).toHaveLength(1);
     expect(tiered[0]?.tier).toBe("profundo");
   });
+
+  test("ties on score break deterministically by name, regardless of input order", () => {
+    const scoresInOneOrder: ModuleScore[] = [
+      { name: "zebra", score: 5 },
+      { name: "mango", score: 5 },
+      { name: "apple", score: 5 },
+      { name: "kiwi", score: 5 },
+    ];
+    const scoresInAnotherOrder: ModuleScore[] = [
+      { name: "kiwi", score: 5 },
+      { name: "apple", score: 5 },
+      { name: "zebra", score: 5 },
+      { name: "mango", score: 5 },
+    ];
+
+    const tieredA = assignTiers(scoresInOneOrder);
+    const tieredB = assignTiers(scoresInAnotherOrder);
+
+    const namesA = tieredA.map(m => m.name);
+    const namesB = tieredB.map(m => m.name);
+
+    // All-tied scores should sort alphabetically among ties, independent of input order.
+    expect(namesA).toEqual(["apple", "kiwi", "mango", "zebra"]);
+    expect(namesB).toEqual(["apple", "kiwi", "mango", "zebra"]);
+
+    // Tier assignment per module name should also match between the two orderings.
+    const tierByNameA = Object.fromEntries(tieredA.map(m => [m.name, m.tier]));
+    const tierByNameB = Object.fromEntries(tieredB.map(m => [m.name, m.tier]));
+    expect(tierByNameA).toEqual(tierByNameB);
+  });
 });

@@ -19,7 +19,8 @@ export function isTestFile(filePath: string): boolean {
 export function discoverModules(root: string): ModuleDescriptor[] {
   const topLevelDirs = readdirSync(root, { withFileTypes: true })
     .filter(entry => entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name) && !entry.name.startsWith("."))
-    .map(entry => entry.name);
+    .map(entry => entry.name)
+    .sort((a, b) => a.localeCompare(b));
 
   const modules: ModuleDescriptor[] = [];
   for (const dirName of topLevelDirs) {
@@ -40,5 +41,5 @@ function listSourceFiles(dir: string): string[] {
     if (segments.some(segment => EXCLUDED_DIRS.has(segment) || segment.startsWith("."))) continue;
     matches.push(join(dir, relativePath));
   }
-  return matches;
+  return matches.sort((a, b) => a.localeCompare(b));
 }
