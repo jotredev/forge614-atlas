@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Estado: ✅ Completo.** Fusionado a `main` en [PR #1](https://github.com/jotredev/forge614-atlas/pull/1) (ver `STATE.md`). Los snippets de código de las Tasks 2, 3, 4, 5 y 8 fueron actualizados post-implementación para reflejar 5 commits de corrección hechos durante la revisión (ver "Fixes aplicados tras la implementación inicial" al final de este documento) y Task 9 documenta el barrel export público que no estaba en el diseño original de este plan.
+
 **Goal:** Build the deterministic, AI-free module that scores every folder/module of a
 target repository on complexity/importance and assigns it a tier (Ligero / Estándar /
 Profundo), the signal Atlas will later use to pick which model and reasoning level a
@@ -47,7 +49,7 @@ división del trabajo por módulo, señales de puntuación, niveles por percenti
 **Interfaces:**
 - Produces: a working `bun test` and `bun run` toolchain for every later task in this plan.
 
-- [ ] **Step 1: Write `package.json`**
+- [x] **Step 1: Write `package.json`**
 
 ```json
 {
@@ -73,7 +75,7 @@ división del trabajo por módulo, señales de puntuación, niveles por percenti
 }
 ```
 
-- [ ] **Step 2: Write `tsconfig.json`**
+- [x] **Step 2: Write `tsconfig.json`**
 
 ```json
 {
@@ -89,12 +91,12 @@ división del trabajo por módulo, señales de puntuación, niveles por percenti
 }
 ```
 
-- [ ] **Step 3: Install dependencies**
+- [x] **Step 3: Install dependencies**
 
 Run: `bun install`
 Expected: lockfile created, no errors.
 
-- [ ] **Step 4: Write the scaffold sanity test**
+- [x] **Step 4: Write the scaffold sanity test**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -106,12 +108,12 @@ describe("project scaffold", () => {
 });
 ```
 
-- [ ] **Step 5: Run the test suite**
+- [x] **Step 5: Run the test suite**
 
 Run: `bun test`
 Expected: PASS (1 test).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add package.json tsconfig.json src/modules/scoring/scaffold.test.ts bun.lock
@@ -131,7 +133,7 @@ git commit -m "chore: scaffold Bun/TypeScript project"
   `discoverModules(root: string): ModuleDescriptor[]` — every later task in this plan
   consumes `ModuleDescriptor[]`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -175,15 +177,53 @@ describe("discoverModules", () => {
     const names = modules.map(module => module.name);
     expect(names).not.toContain("node_modules");
   });
+
+  test("excludes nested dot-directories from file scanning", () => {
+    const srcPath = join(root, "src");
+    mkdirSync(join(srcPath, "auth", ".cache"), { recursive: true });
+    writeFileSync(join(srcPath, "auth", ".cache", "generated.ts"), "export const x = 1;");
+
+    const modules = discoverModules(srcPath);
+    expect(modules).toHaveLength(1);
+    expect(modules[0]?.name).toBe("auth");
+    expect(modules[0]?.files).toHaveLength(1);
+    expect(modules[0]?.files).toEqual([join(srcPath, "auth", "login.ts")]);
+  });
+
+  test("returns modules and files in stable, alphabetically sorted order regardless of creation order", () => {
+    const stableRoot = mkdtempSync(join(tmpdir(), "atlas-discovery-stable-"));
+    mkdirSync(join(stableRoot, "zebra"), { recursive: true });
+    writeFileSync(join(stableRoot, "zebra", "z.ts"), "export const z = 1;");
+    mkdirSync(join(stableRoot, "mango"), { recursive: true });
+    writeFileSync(join(stableRoot, "mango", "m.ts"), "export const m = 1;");
+    mkdirSync(join(stableRoot, "apple"), { recursive: true });
+    writeFileSync(join(stableRoot, "apple", "z-file.ts"), "export const z = 1;");
+    writeFileSync(join(stableRoot, "apple", "a-file.ts"), "export const a = 1;");
+    writeFileSync(join(stableRoot, "apple", "m-file.ts"), "export const m = 1;");
+
+    const modules = discoverModules(stableRoot);
+
+    expect(modules.map(module => module.name)).toEqual(["apple", "mango", "zebra"]);
+    const apple = modules.find(module => module.name === "apple");
+    expect(apple?.files).toEqual([
+      join(stableRoot, "apple", "a-file.ts"),
+      join(stableRoot, "apple", "m-file.ts"),
+      join(stableRoot, "apple", "z-file.ts"),
+    ]);
+
+    rmSync(stableRoot, { recursive: true, force: true });
+  });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/modules/scoring/discovery.test.ts`
 Expected: FAIL with "Cannot find module './discovery'" (or similar).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
+
+**Fix aplicado tras revisión:** la primera versión no ordenaba las carpetas ni los archivos, produciendo orden no determinista entre sistemas operativos/CI. Se agregó `.sort((a, b) => a.localeCompare(b))` en ambos niveles, y se exportó `isTestFile` (usado luego por `cyclomatic.ts`, `fan-in.ts` y `test-coverage-gap.ts` para excluir archivos de prueba del análisis de producción).
 
 ```typescript
 import { Glob } from "bun";
@@ -200,10 +240,15 @@ export interface ModuleDescriptor {
   files: string[];
 }
 
+export function isTestFile(filePath: string): boolean {
+  return /\.(test|spec)\.[tj]sx?$/.test(filePath);
+}
+
 export function discoverModules(root: string): ModuleDescriptor[] {
   const topLevelDirs = readdirSync(root, { withFileTypes: true })
     .filter(entry => entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name) && !entry.name.startsWith("."))
-    .map(entry => entry.name);
+    .map(entry => entry.name)
+    .sort((a, b) => a.localeCompare(b));
 
   const modules: ModuleDescriptor[] = [];
   for (const dirName of topLevelDirs) {
@@ -221,19 +266,19 @@ function listSourceFiles(dir: string): string[] {
   const matches: string[] = [];
   for (const relativePath of glob.scanSync({ cwd: dir, onlyFiles: true })) {
     const segments = relativePath.split("/");
-    if (segments.some(segment => EXCLUDED_DIRS.has(segment))) continue;
+    if (segments.some(segment => EXCLUDED_DIRS.has(segment) || segment.startsWith("."))) continue;
     matches.push(join(dir, relativePath));
   }
-  return matches;
+  return matches.sort((a, b) => a.localeCompare(b));
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/modules/scoring/discovery.test.ts`
-Expected: PASS (3 tests).
+Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/scoring/discovery.ts src/modules/scoring/discovery.test.ts
@@ -254,7 +299,7 @@ git commit -m "feat: discover project modules for complexity scoring"
   `computeCyclomaticComplexity(modules: ModuleDescriptor[]): Map<string, number>` — consumed
   by Task 7 (composite score).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -313,20 +358,55 @@ describe("computeCyclomaticComplexity", () => {
     expect(result.get("auth")).toBe(3); // 1 (identity) + 2 (flag: baseline 1 + 1 if)
     rmSync(root, { recursive: true, force: true });
   });
+
+  test("excludes *.test.ts files from the module's complexity total", () => {
+    root = mkdtempSync(join(tmpdir(), "atlas-cyclomatic-testfile-"));
+    const modulePath = join(root, "auth");
+    mkdirSync(modulePath, { recursive: true });
+    const sourceFile = join(modulePath, "a.ts");
+    const testFile = join(modulePath, "a.test.ts");
+    writeFileSync(sourceFile, "export function identity(value: number) { return value; }");
+    writeFileSync(
+      testFile,
+      `
+        import { describe, test, expect } from "bun:test";
+        describe("identity", () => {
+          test("branches a lot", () => {
+            const value = 1;
+            if (value > 0) {
+              expect(true).toBe(true);
+            } else if (value < 0) {
+              expect(false).toBe(true);
+            } else {
+              expect(value).toBe(0);
+            }
+          });
+        });
+      `,
+    );
+
+    const modules: ModuleDescriptor[] = [{ name: "auth", path: modulePath, files: [sourceFile, testFile] }];
+    const result = computeCyclomaticComplexity(modules);
+
+    expect(result.get("auth")).toBe(1); // solo cuenta a.ts; a.test.ts se ignora
+    rmSync(root, { recursive: true, force: true });
+  });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/modules/scoring/cyclomatic.test.ts`
 Expected: FAIL with "Cannot find module './cyclomatic'".
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
+
+**Fix aplicado tras revisión:** se agregó exclusión de archivos de prueba (`isTestFile`, importado de `./discovery`) para que la complejidad ciclomática no se infle con las aserciones de los propios tests.
 
 ```typescript
 import ts from "typescript";
 import { readFileSync } from "node:fs";
-import type { ModuleDescriptor } from "./discovery";
+import { isTestFile, type ModuleDescriptor } from "./discovery";
 
 export function fileCyclomaticComplexity(sourceText: string, fileName = "module.ts"): number {
   const sourceFile = ts.createSourceFile(fileName, sourceText, ts.ScriptTarget.Latest, true);
@@ -370,6 +450,7 @@ export function computeCyclomaticComplexity(modules: ModuleDescriptor[]): Map<st
   for (const module of modules) {
     let total = 0;
     for (const filePath of module.files) {
+      if (isTestFile(filePath)) continue;
       const sourceText = readFileSync(filePath, "utf8");
       total += fileCyclomaticComplexity(sourceText, filePath);
     }
@@ -379,12 +460,12 @@ export function computeCyclomaticComplexity(modules: ModuleDescriptor[]): Map<st
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/modules/scoring/cyclomatic.test.ts`
-Expected: PASS (3 tests).
+Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/scoring/cyclomatic.ts src/modules/scoring/cyclomatic.test.ts
@@ -404,7 +485,7 @@ git commit -m "feat: compute cyclomatic complexity per module"
 - Produces: `computeFanIn(modules: ModuleDescriptor[]): Map<string, number>` — consumed by
   Task 7 (composite score).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -462,21 +543,96 @@ describe("computeFanIn", () => {
     expect(result.get("auth")).toBe(0);
     rmSync(root, { recursive: true, force: true });
   });
+
+  test("handles sibling modules with overlapping names correctly (path-prefix collision)", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-fanin-collision-"));
+    const authPath = join(root, "auth");
+    const authLegacyPath = join(root, "auth-legacy");
+    mkdirSync(authPath, { recursive: true });
+    mkdirSync(authLegacyPath, { recursive: true });
+    const authFile = join(authPath, "index.ts");
+    const authLegacyFile = join(authLegacyPath, "index.ts");
+    writeFileSync(authFile, "export const newAuth = () => true;");
+    writeFileSync(authLegacyFile, `import { newAuth } from "../auth";\nexport const legacyAuth = () => newAuth();`);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "auth", path: authPath, files: [authFile] },
+      { name: "auth-legacy", path: authLegacyPath, files: [authLegacyFile] },
+    ];
+    const result = computeFanIn(modules);
+
+    expect(result.get("auth")).toBe(1);
+    expect(result.get("auth-legacy")).toBe(0);
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  test("counts distinct importing modules, not import statements or files", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-fanin-distinct-"));
+    const sharedPath = join(root, "shared");
+    const authPath = join(root, "auth");
+    mkdirSync(sharedPath, { recursive: true });
+    mkdirSync(authPath, { recursive: true });
+    const sharedFile = join(sharedPath, "logger.ts");
+    const authFileA = join(authPath, "a.ts");
+    const authFileB = join(authPath, "b.ts");
+    const authFileC = join(authPath, "c.ts");
+    writeFileSync(sharedFile, "export const log = (message: string) => console.log(message);");
+    writeFileSync(
+      authFileA,
+      `import { log } from "../shared/logger";\nimport { log as log2 } from "../shared/logger";\nexport const a = () => { log("a"); log2("a2"); };`,
+    );
+    writeFileSync(authFileB, `import { log } from "../shared/logger";\nexport const b = () => log("b");`);
+    writeFileSync(authFileC, `import { log } from "../shared/logger";\nexport const c = () => log("c");`);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "shared", path: sharedPath, files: [sharedFile] },
+      { name: "auth", path: authPath, files: [authFileA, authFileB, authFileC] },
+    ];
+    const result = computeFanIn(modules);
+
+    expect(result.get("shared")).toBe(1); // 1 arista módulo-a-módulo, no 4 imports
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  test("does not count imports from a module's own test files", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-fanin-testfile-"));
+    const sharedPath = join(root, "shared");
+    const authPath = join(root, "auth");
+    mkdirSync(sharedPath, { recursive: true });
+    mkdirSync(authPath, { recursive: true });
+    const sharedFile = join(sharedPath, "logger.ts");
+    const authSourceFile = join(authPath, "login.ts");
+    const authTestFile = join(authPath, "login.test.ts");
+    writeFileSync(sharedFile, "export const log = (message: string) => console.log(message);");
+    writeFileSync(authSourceFile, "export const login = () => true;");
+    writeFileSync(authTestFile, `import { log } from "../shared/logger";\nlog("testing login");`);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "shared", path: sharedPath, files: [sharedFile] },
+      { name: "auth", path: authPath, files: [authSourceFile, authTestFile] },
+    ];
+    const result = computeFanIn(modules);
+
+    expect(result.get("shared")).toBe(0);
+    rmSync(root, { recursive: true, force: true });
+  });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/modules/scoring/fan-in.test.ts`
 Expected: FAIL with "Cannot find module './fan-in'".
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
+
+**Fix aplicado tras revisión:** la primera versión asociaba un import a un módulo con `resolvedPath.startsWith(module.path)`, lo que causaba falsos positivos entre carpetas con prefijos compartidos (`auth` vs `auth-legacy`). Se corrigió a `resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep)`. También se agregó exclusión de archivos de prueba (`isTestFile`) y deduplicación explícita por `Set` para contar aristas módulo-a-módulo, no imports individuales.
 
 ```typescript
 import ts from "typescript";
 import { readFileSync, existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import type { ModuleDescriptor } from "./discovery";
+import { dirname, join, resolve, sep } from "node:path";
+import { isTestFile, type ModuleDescriptor } from "./discovery";
 
 export function extractRelativeImportSpecifiers(sourceText: string, fileName = "module.ts"): string[] {
   const sourceFile = ts.createSourceFile(fileName, sourceText, ts.ScriptTarget.Latest, true);
@@ -525,28 +681,38 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
   const fanIn = new Map(modules.map(module => [module.name, 0]));
 
   for (const fromModule of modules) {
+    const targetModuleNames = new Set<string>();
+
     for (const filePath of fromModule.files) {
+      if (isTestFile(filePath)) continue;
       const sourceText = readFileSync(filePath, "utf8");
       for (const specifier of extractRelativeImportSpecifiers(sourceText, filePath)) {
         const resolvedPath = resolveImportPath(filePath, specifier);
         if (!resolvedPath) continue;
-        const toModule = modules.find(module => resolvedPath.startsWith(module.path));
+        const toModule = modules.find(module => {
+          const modulePath = module.path;
+          return resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep);
+        });
         if (toModule && toModule.name !== fromModule.name) {
-          fanIn.set(toModule.name, (fanIn.get(toModule.name) ?? 0) + 1);
+          targetModuleNames.add(toModule.name);
         }
       }
+    }
+
+    for (const name of targetModuleNames) {
+      fanIn.set(name, (fanIn.get(name) ?? 0) + 1);
     }
   }
   return fanIn;
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/modules/scoring/fan-in.test.ts`
-Expected: PASS (2 tests).
+Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/scoring/fan-in.ts src/modules/scoring/fan-in.test.ts
@@ -566,7 +732,7 @@ git commit -m "feat: compute fan-in centrality per module"
 - Produces: `computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number>`
   — consumed by Task 7 (composite score).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -620,23 +786,77 @@ describe("computeChurn", () => {
 
     rmSync(root, { recursive: true, force: true });
   });
+
+  test("correctly attributes files to modules with prefix-overlapping names", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-churn-prefix-"));
+    git(root, ["init", "-q"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "Test"]);
+
+    const authPath = join(root, "auth");
+    const authLegacyPath = join(root, "auth-legacy");
+    mkdirSync(authPath, { recursive: true });
+    mkdirSync(authLegacyPath, { recursive: true });
+    const authFile = join(authPath, "login.ts");
+    const authLegacyFile = join(authLegacyPath, "old-login.ts");
+
+    writeFileSync(authFile, "export const login = () => true;");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "add login"]);
+
+    writeFileSync(authLegacyFile, "export const oldLogin = () => true;");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "add old login"]);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "auth", path: authPath, files: [authFile] },
+      { name: "auth-legacy", path: authLegacyPath, files: [authLegacyFile] },
+    ];
+    const result = computeChurn(root, modules);
+
+    expect(result.get("auth")).toBe(1);
+    expect(result.get("auth-legacy")).toBe(1);
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  test("correctly attributes churn for modules with non-ASCII names", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-churn-nonascii-"));
+    git(root, ["init", "-q"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "Test"]);
+
+    const signalesPath = join(root, "señales");
+    mkdirSync(signalesPath, { recursive: true });
+    const signalesFile = join(signalesPath, "procesador.ts");
+    writeFileSync(signalesFile, "export const procesar = () => true;");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "add señales"]);
+
+    const modules: ModuleDescriptor[] = [{ name: "señales", path: signalesPath, files: [signalesFile] }];
+    const result = computeChurn(root, modules);
+
+    expect(result.get("señales")).toBe(1);
+    rmSync(root, { recursive: true, force: true });
+  });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/modules/scoring/churn.test.ts`
 Expected: FAIL with "Cannot find module './churn'".
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
+
+**Fix aplicado tras revisión:** se agregó `-c core.quotepath=false` a la invocación de `git log` (por defecto Git escapa en octal cualquier ruta no-ASCII, rompiendo la atribución de módulos con tildes/eñes), y se corrigió la atribución de archivo a módulo con la misma frontera `modulePath + sep` que en `fan-in.ts`.
 
 ```typescript
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import type { ModuleDescriptor } from "./discovery";
 
 export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number> {
-  const result = spawnSync("git", ["log", "--format=", "--name-only"], {
+  const result = spawnSync("git", ["-c", "core.quotepath=false", "log", "--format=", "--name-only"], {
     cwd: repoRoot,
     encoding: "utf8",
   });
@@ -649,7 +869,10 @@ export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map
 
   for (const relativeFile of touchedFiles) {
     const absolutePath = join(repoRoot, relativeFile);
-    const matchedModule = modules.find(module => absolutePath.startsWith(module.path));
+    const matchedModule = modules.find(module => {
+      const modulePath = module.path;
+      return absolutePath === modulePath || absolutePath.startsWith(modulePath + sep);
+    });
     if (matchedModule) {
       churn.set(matchedModule.name, (churn.get(matchedModule.name) ?? 0) + 1);
     }
@@ -658,12 +881,12 @@ export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/modules/scoring/churn.test.ts`
-Expected: PASS (1 test).
+Expected: PASS (3 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/scoring/churn.ts src/modules/scoring/churn.test.ts
@@ -683,7 +906,7 @@ git commit -m "feat: compute git churn per module"
 - Produces: `computeTestCoverageGap(modules: ModuleDescriptor[]): Map<string, number>`
   (0 = every source file has a sibling test, 1 = none do) — consumed by Task 7.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -746,12 +969,12 @@ describe("computeTestCoverageGap", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/modules/scoring/test-coverage-gap.test.ts`
 Expected: FAIL with "Cannot find module './test-coverage-gap'".
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 import { existsSync } from "node:fs";
@@ -783,12 +1006,12 @@ export function computeTestCoverageGap(modules: ModuleDescriptor[]): Map<string,
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/modules/scoring/test-coverage-gap.test.ts`
 Expected: PASS (3 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/scoring/test-coverage-gap.ts src/modules/scoring/test-coverage-gap.test.ts
@@ -812,7 +1035,7 @@ git commit -m "feat: compute test coverage gap per module"
 - Produces: `ModuleScore { name: string; score: number }` and
   `computeCompositeScores(signals: ModuleSignals[]): ModuleScore[]` — consumed by Task 8.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -847,12 +1070,12 @@ describe("computeCompositeScores", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/modules/scoring/composite-score.test.ts`
 Expected: FAIL with "Cannot find module './composite-score'".
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 export interface ModuleSignals {
@@ -888,12 +1111,12 @@ function normalize(values: number[]): number[] {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/modules/scoring/composite-score.test.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/scoring/composite-score.ts src/modules/scoring/composite-score.test.ts
@@ -915,7 +1138,7 @@ git commit -m "feat: compute weighted composite complexity score per module"
   `assignTiers(scores: ModuleScore[]): TieredModule[]` — this is what Plan 3 (Núcleo del
   CLI) will call to decide which model/reasoning level each module's subagent gets.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -949,15 +1172,42 @@ describe("assignTiers", () => {
     expect(tiered).toHaveLength(1);
     expect(tiered[0]?.tier).toBe("profundo");
   });
+
+  test("ties on score break deterministically by name, regardless of input order", () => {
+    const scoresInOneOrder: ModuleScore[] = [
+      { name: "zebra", score: 5 },
+      { name: "mango", score: 5 },
+      { name: "apple", score: 5 },
+      { name: "kiwi", score: 5 },
+    ];
+    const scoresInAnotherOrder: ModuleScore[] = [
+      { name: "kiwi", score: 5 },
+      { name: "apple", score: 5 },
+      { name: "zebra", score: 5 },
+      { name: "mango", score: 5 },
+    ];
+
+    const tieredA = assignTiers(scoresInOneOrder);
+    const tieredB = assignTiers(scoresInAnotherOrder);
+
+    expect(tieredA.map(m => m.name)).toEqual(["apple", "kiwi", "mango", "zebra"]);
+    expect(tieredB.map(m => m.name)).toEqual(["apple", "kiwi", "mango", "zebra"]);
+
+    const tierByNameA = Object.fromEntries(tieredA.map(m => [m.name, m.tier]));
+    const tierByNameB = Object.fromEntries(tieredB.map(m => [m.name, m.tier]));
+    expect(tierByNameA).toEqual(tierByNameB);
+  });
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun test src/modules/scoring/tiers.test.ts`
 Expected: FAIL with "Cannot find module './tiers'".
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
+
+**Fix aplicado tras revisión:** `Array.sort` no garantiza desempate estable entre implementaciones; se agregó desempate explícito por `a.name.localeCompare(b.name)` cuando dos módulos tienen el mismo score, para que el orden de entrada nunca cambie el resultado. También se protegió `deepCount` contra `total === 0`.
 
 ```typescript
 import type { ModuleScore } from "./composite-score";
@@ -969,9 +1219,14 @@ export interface TieredModule extends ModuleScore {
 }
 
 export function assignTiers(scores: ModuleScore[]): TieredModule[] {
-  const sorted = [...scores].sort((a, b) => b.score - a.score);
+  const sorted = [...scores].sort((a, b) => {
+    const diff = b.score - a.score;
+    if (diff !== 0) return diff;
+    return a.name.localeCompare(b.name);
+  });
+
   const total = sorted.length;
-  const deepCount = Math.max(1, Math.round(total * 0.15));
+  const deepCount = total > 0 ? Math.max(1, Math.round(total * 0.15)) : 0;
   const standardCount = Math.round(total * 0.35);
 
   return sorted.map((module, index) => {
@@ -984,19 +1239,86 @@ export function assignTiers(scores: ModuleScore[]): TieredModule[] {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bun test src/modules/scoring/tiers.test.ts`
-Expected: PASS (2 tests).
+Expected: PASS (3 tests).
 
-- [ ] **Step 5: Run the full suite for this plan**
+- [x] **Step 5: Run the full suite for this plan**
 
 Run: `bun test src/modules/scoring/`
-Expected: PASS (all tests from Tasks 1–8, 17 tests total).
+Expected: PASS (all tests from Tasks 1–9, 26 tests total, 46 expect() calls).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/scoring/tiers.ts src/modules/scoring/tiers.test.ts
 git commit -m "feat: assign percentile-based complexity tiers"
 ```
+
+---
+
+### Task 9: Public library barrel export
+
+**Files:**
+- Create: `src/index.ts`
+
+**Interfaces:**
+- Produces: the public surface of the library — every primitive from Tasks 2–8, re-exported
+  from a single entry point so consuming plans (Plan 3's CLI core) import from
+  `forge614-atlas` instead of reaching into `src/modules/scoring/*` directly.
+
+Este task no estaba en el diseño original de este plan; se agregó al cerrar la implementación
+porque `package.json` ya declaraba `"exports": "./src/index.ts"` (Task 1) pero el archivo no
+existía todavía.
+
+- [x] **Step 1: Write `src/index.ts`**
+
+```typescript
+export { discoverModules, isTestFile } from "./modules/scoring/discovery";
+export type { ModuleDescriptor } from "./modules/scoring/discovery";
+
+export { fileCyclomaticComplexity, computeCyclomaticComplexity } from "./modules/scoring/cyclomatic";
+
+export { computeFanIn } from "./modules/scoring/fan-in";
+
+export { computeChurn } from "./modules/scoring/churn";
+
+export { computeTestCoverageGap } from "./modules/scoring/test-coverage-gap";
+
+export { computeCompositeScores } from "./modules/scoring/composite-score";
+export type { ModuleSignals, ModuleScore } from "./modules/scoring/composite-score";
+
+export { assignTiers } from "./modules/scoring/tiers";
+export type { Tier, TieredModule } from "./modules/scoring/tiers";
+```
+
+- [x] **Step 2: Run the full suite**
+
+Run: `bun test`
+Expected: PASS (26 tests, 0 failures).
+
+- [x] **Step 3: Commit**
+
+```bash
+git add src/index.ts
+git commit -m "feat: add src/index.ts barrel export for public scoring library surface"
+```
+
+---
+
+## Fixes aplicados tras la implementación inicial
+
+Durante la revisión (subagente revisor por task, `superpowers:subagent-driven-development`) se
+encontraron y corrigieron 5 defectos que no estaban previstos en el diseño original de las
+Tasks 2, 4 y 5. Los snippets de código de este documento ya reflejan el estado corregido; esta
+tabla queda como registro histórico de qué cambió y por qué:
+
+| Commit | Task afectada | Defecto | Corrección |
+|---|---|---|---|
+| `1f3d862` | Task 2 (discovery) | Orden no determinista de carpetas/archivos entre sistemas operativos | `.sort((a, b) => a.localeCompare(b))` en `discoverModules` y `listSourceFiles` |
+| `1f3d862` | Task 8 (tiers) | `Array.sort` sin desempate estable entre módulos con score idéntico | Desempate explícito por `a.name.localeCompare(b.name)` |
+| `951dd07` | Task 4 (fan-in) | Contaba imports individuales en vez de aristas módulo-a-módulo, e incluía imports de archivos `.test.ts` | Deduplicación por `Set` + exclusión con `isTestFile` |
+| `4a5fc77` | Task 4 (fan-in) | `resolvedPath.startsWith(module.path)` daba falsos positivos entre carpetas con prefijos compartidos (`auth` vs `auth-legacy`) | Frontera estricta `resolvedPath === modulePath \|\| resolvedPath.startsWith(modulePath + sep)` |
+| `d5ab888` | Task 5 (churn) | Mismo problema de frontera de ruta que en fan-in, aplicado a la atribución de churn | Misma frontera `modulePath + sep` en `computeChurn` |
+| `b679879` | Task 5 (churn) | Git escapa en octal (`"\303\261"`) las rutas con caracteres no-ASCII (tildes, eñes), rompiendo la atribución de módulos en español | Se agregó `-c core.quotepath=false` a la invocación de `git log` |

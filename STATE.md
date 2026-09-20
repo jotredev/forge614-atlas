@@ -2,7 +2,8 @@
 
 > Lee este archivo primero, siempre, antes de tocar nada en este repo.
 > Este archivo se actualiza cada vez que se cierra un plan. Si algo aquí
-> contradice el spec o un plan, el spec manda (ver abajo).
+> contradice el contrato del ecosistema, el spec o un plan, manda el de
+> mayor autoridad según el orden de "Fuentes de verdad" (ver abajo).
 
 ## Qué es Atlas
 
@@ -14,24 +15,36 @@ forge614-engram (memoria personal local con SQLite FTS5 y sesiones
 progresivas), para que cualquier asistente de IA, en cualquier ventana de
 contexto nueva, pueda consultarlo después vía MCP sin releer todo el repo.
 
-Es independiente de forge614-shell: no importa su código, aunque reutiliza
-el mismo patrón de detección de motores y de menú interactivo (usando la
-librería npm externa `@earendil-works/pi-tui`, no el paquete de shell).
+Atlas **no tiene TUI propia y no detecta motores de IA por su cuenta**
+(ver `FORGE614_ECOSYSTEM_CONTRACT.md`): Shell es la única experiencia
+visual del ecosistema, y Engines es el único detector de motores/asistentes
+instalados. Atlas solo consume esos dos contratos.
 
 ## Fuentes de verdad (en este orden)
 
-1. **`docs/superpowers/specs/2026-09-18-atlas-orchestrator-design.md`** —
-   el diseño completo aprobado, 18 secciones. Autoridad máxima.
-2. **`docs/superpowers/plans/*.md`** — planes de implementación ya
+1. **`FORGE614_ECOSYSTEM_CONTRACT.md`** (raíz de este repo) — contrato de
+   todo el ecosistema Forge614 (jerarquía de productos, quién tiene TUI,
+   quién detecta motores, límites de instalación/desinstalación). Autoridad
+   máxima; el mismo archivo, sin cambios, vive en la raíz de
+   forge614-shell, forge614-engram y forge614-engines. Cualquier decisión
+   de este documento que choque con él pierde.
+2. **`docs/superpowers/specs/2026-09-18-atlas-orchestrator-design.md`** —
+   el diseño completo aprobado de Atlas, 18 secciones. Autoridad máxima
+   dentro del scope propio de Atlas (no puede contradecir el contrato del
+   ecosistema).
+3. **`docs/superpowers/plans/*.md`** — planes de implementación ya
    ejecutados o en curso, uno por cada plan de la tabla de abajo.
-3. **Este archivo (`STATE.md`)** — resumen de continuidad y estado actual,
+4. **Este archivo (`STATE.md`)** — resumen de continuidad y estado actual,
    para no depender de memoria de conversación ni de que alguien encuentre
    los archivos anteriores por su cuenta.
 
 ## Reglas de diseño ya decididas — no reabrir sin razón fuerte
 
 - Los subagentes se lanzan como procesos de CLI (`claude -p`, futuro
-  `codex`), **nunca** por API/SDK de pago.
+  `codex`), **nunca** por API/SDK de pago. Atlas no decide esto por sí
+  mismo: le pregunta a `forge614-engines` qué motores están disponibles y
+  son seguros para correr sin pantalla (headless); Atlas no implementa un
+  segundo detector de motores (regla del contrato del ecosistema).
 - Razonamiento tope: siempre bajo o medio, **jamás** alto/xhigh/max en
   ningún motor — quemar cuota de más rompería el propósito de la
   herramienta.
@@ -46,9 +59,15 @@ librería npm externa `@earendil-works/pi-tui`, no el paquete de shell).
   Estándar ~35%, Profundo ~15%.
 - Concurrencia de subagentes: máximo 3 a la vez, fijo, no configurable por
   el usuario.
-- Selector de motor de IA: **siempre** pregunta con menú de flechas al
-  iniciar (estilo Orca/Shell), nunca se guarda ni se recuerda la elección
-  entre corridas.
+- Selector de motor de IA: Atlas nunca dibuja este menú. Shell no es la
+  puerta obligatoria para todo (el día a día — programar, usar Engram vía
+  MCP desde cualquier asistente en cualquier terminal — no pasa por Shell
+  para nada); Shell solo se levanta cuando hay una decisión **ambigua**
+  que Atlas no puede resolver por sí solo (ej. hay 2+ motores instalados y
+  ninguno fue indicado por flag). Si solo hay un motor disponible, o el
+  usuario ya lo indicó explícito (`--engine claude`), Atlas corre de
+  punta a punta sin tocar Shell. Nunca se guarda ni se recuerda la
+  elección entre corridas.
 - Si se agota la cuota de la suscripción a medio análisis: pausar, guardar
   de inmediato (no al final) lo ya avanzado, avisar, permitir
   `forge614-atlas resume` después.
@@ -57,15 +76,37 @@ librería npm externa `@earendil-works/pi-tui`, no el paquete de shell).
   de módulo en cuanto termina, no al final de la corrida.
 - Solo el orquestador (Atlas) guarda en Engram, nunca los mandaderos
   directamente — mismo costo en tokens, más consistencia.
-- Integración con Engram: importando su SDK de TypeScript directo (ambos
-  son Bun/TS), no llamando a su CLI como proceso aparte.
+- Integración con Engram, según el tipo de operación (no es una regla
+  única — cada modo resuelve un problema distinto):
+  - **Instalar o configurar Engram** (verificar que exista, correr su
+    `curl | bash`, correr `forge614-engram setup`): como subproceso de
+    CLI, igual que lo haría una persona. Es una conversación de una
+    sola vez con el humano; reimplementarla importando `runSetup` con
+    un `SetupIO` propio solo duplica esa lógica y la deja frágil ante
+    cualquier cambio futuro en el wizard de Engram, sin ninguna
+    ganancia real a cambio.
+  - **Operación normal en tiempo de ejecución** (guardar reporte de
+    módulo, iniciar/cerrar sesión progresiva): importando su SDK de
+    TypeScript directo (ambos son Bun/TS), nunca como subproceso. Esto
+    pasa decenas o cientos de veces por corrida sin humano de por medio
+    — por terminal sería mucho más lento (arrancar Bun y abrir/cerrar
+    SQLite en cada llamada), perdería el chequeo de tipos de TypeScript,
+    y no permitiría mantener una sola conexión de base de datos viva
+    durante toda la corrida. La detección de qué asistentes/motores de
+    IA hay instalados **no es parte de este SDK** — es responsabilidad
+    exclusiva de `forge614-engines` (contrato del ecosistema, sección 6
+    y 11.4: Engram debe dejar de poseer esa lógica).
 - Al terminar una corrida completa, Atlas debe mostrar un reporte final:
   motor/modelo usado por nivel, total de mandaderos por nivel, tokens
   consumidos, tiempo total, pausas/reanudaciones.
 - Instalador: mismo patrón que forge614-engram (binario único compilado,
   autocontenido, sin Node/Bun en ejecución), **no** el patrón de
   forge614-shell (que necesita Node.js). `curl -fsSL .../install.sh | bash`
-  instala Atlas, de paso instala/verifica Engram y registra su MCP.
+  instala Atlas y de paso instala/verifica Engram — pero Atlas **no
+  registra el MCP por su cuenta**. Eso pasa por `forge614-engines`
+  (detecta y arma el plan) con confirmación de Shell antes de aplicarlo
+  (contrato del ecosistema, secciones 5 y 8: "installing a binary never
+  silently configures AI integrations").
 
 ## Cómo se trabaja este proyecto (metodología, seguir igual siempre)
 
@@ -99,10 +140,20 @@ librería npm externa `@earendil-works/pi-tui`, no el paquete de shell).
 | # | Plan | Estado | Archivo del plan |
 |---|---|---|---|
 | 1 | Motor de puntuación de complejidad (`src/modules/scoring/`: descubrimiento de módulos, complejidad ciclomática, fan-in, churn de git, cobertura de pruebas, puntaje compuesto, niveles por percentil) | ✅ Completo, fusionado a main en [PR #1](https://github.com/jotredev/forge614-atlas/pull/1) | `docs/superpowers/plans/2026-09-18-atlas-complexity-scoring.md` |
-| 2 | Integración con Engram (SDK, sesiones progresivas, reutilizar detección de asistentes de Engram — requiere agregar una exportación al SDK de forge614-engram, que hoy no la expone) | ⏳ Siguiente — falta el brainstorming de diseño | *(sin escribir todavía)* |
-| 3 | Núcleo del CLI (`init`/`resume`, selector de motor, clasificación de módulos) | ⏳ Pendiente | *(sin escribir)* |
+| 2 | Integración con Engram (SDK, sesiones progresivas — la detección de motores/asistentes YA NO es parte de este plan, se movió a `forge614-engines`) | 🚫 Bloqueado — no puede avanzar del todo hasta que `forge614-engines` exista y publique su contrato (regla de orden obligatorio, contrato del ecosistema sección 11); lo que no depende de Engines (SDK de memoria/sesiones) sí se puede brainstormear ya | *(sin escribir todavía)* |
+| 3 | Núcleo del CLI (`init`/`resume`, clasificación de módulos) — el selector de motor ya no lo dibuja Atlas, lo presenta Shell | ⏳ Pendiente | *(sin escribir)* |
 | 4 | Despacho de subagentes (headless, concurrencia, cuota agotada, reporte final) | ⏳ Pendiente | *(sin escribir)* |
 | 5 | Instalador (`curl \| bash`, encadena Engram, registra MCP) | ⏳ Pendiente | *(sin escribir)* |
+
+### Dependencia nueva: forge614-engines
+
+No existe todavía. Es un proyecto separado, propio del ecosistema Forge614
+(ver `FORGE614_ECOSYSTEM_CONTRACT.md`), no parte de los 5 planes de Atlas:
+detecta motores/asistentes de IA instalados (ejecutable, configuración,
+capacidades), sin TUI propia y sin escribir configuración por su cuenta.
+Shell y Atlas lo consumen; Engram debe dejar de tener su propia detección
+de asistentes una vez que exista. Bloquea el cierre completo del Plan 2 y
+el diseño final del selector de motor del Plan 3.
 
 ### Pendientes que el Plan 3 debe resolver
 
@@ -119,7 +170,9 @@ implementar en el Plan 1:
 
 ## Siguiente paso
 
-Arrancar el brainstorming del Plan 2 (integración con Engram) con
-`superpowers:brainstorming`, empezando por revisar el SDK real de
-forge614-engram (`src/index.ts` en ese repo) para confirmar qué falta
-exportar.
+Crear `forge614-engines` (bloqueante para cerrar el Plan 2 y para el
+selector de motor del Plan 3). Mientras tanto, se puede seguir el
+brainstorming de la parte del Plan 2 que no depende de Engines: el SDK de
+Engram para sesiones progresivas y guardado de reportes de módulo
+(`saveProjectMemoryWithSession`, `startProjectSession`, ya expuestos en
+`src/index.ts` de forge614-engram, sin cambios pendientes ahí).
