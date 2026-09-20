@@ -18,6 +18,7 @@ Welcome to the official technical documentation of **Forge614 Atlas**. All docum
 | **05** | [05. Proceso SDD, Catálogo de Defectos y Decisiones Diferidas](es/05-proceso-sdd-y-catalogo-defectos.md) | [05 (EN). SDD Process, Defect Catalog, and Deferred Decisions](en/05-sdd-process-and-defect-catalog.md) | Vigente / Verified |
 | **06** | [06. Referencia de API Pública en TypeScript](es/06-referencia-api-typescript.md) | [06 (EN). TypeScript Public API Reference](en/06-typescript-api-reference.md) | Vigente / Verified |
 | **07** | [07. Estructura del Proyecto y Código Fuente Documentado (índice maestro, 9 subpáginas)](es/07-estructura-codigo-linea-por-linea.md) | [07 (EN). Project Structure and Documented Source Code (master index, 9 subpages)](en/07-project-structure-documented-source-code.md) | Vigente / Verified |
+| **08** | [08. Núcleo del CLI y plan de corrida JSON](es/08-nucleo-cli-y-plan-de-corrida.md) | [08 (EN). CLI Core and JSON Run Plan](en/08-cli-core-and-run-plan.md) | Vigente / Verified |
 
 ---
 
@@ -25,3 +26,4 @@ Welcome to the official technical documentation of **Forge614 Atlas**. All docum
 
 - **Especificación del Orquestador:** [`docs/superpowers/specs/2026-09-18-atlas-orchestrator-design.md`](superpowers/specs/2026-09-18-atlas-orchestrator-design.md)
 - **Plan de Implementación del Motor de Puntuación (Plan 1/5):** [`docs/superpowers/plans/2026-09-18-atlas-complexity-scoring.md`](superpowers/plans/2026-09-18-atlas-complexity-scoring.md)
+- **Diseño y plan del núcleo del CLI (Plan 3/5):** [`docs/superpowers/specs/2026-09-20-atlas-cli-core-design.md`](superpowers/specs/2026-09-20-atlas-cli-core-design.md) y [`docs/superpowers/plans/2026-09-20-atlas-cli-core.md`](superpowers/plans/2026-09-20-atlas-cli-core.md)

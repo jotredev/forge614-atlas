@@ -2,13 +2,15 @@
 
 > **Official Technical Reference Document — Forge614 Ecosystem**  
 > **Project:** Forge614 Atlas (Deep Contextualization Orchestrator)  
-> **Component:** Plan 1/5 — Deterministic Complexity Scoring Engine (`src/modules/scoring/`)  
-> **Branch:** `atlas/plan1-complexity-scoring` (17 commits ahead of `main`)  
-> **Runtime:** Bun >= 1.3.8 | TypeScript 5.9.3 | Zero network calls and zero AI model invocations in this phase  
-> **Verification:** 26 passing tests (0 failures, 46 assertions in 285 ms) | Clean static typecheck (`tsc --noEmit`)  
+> **Component:** Plans 1–3 — scoring, Engram sessions, and the `init` CLI core
+> **Branch:** `main` (Plan 3 merged in `2b5272c`)
+> **Runtime:** Bun >= 1.3.8 | TypeScript 5.9.3 | `init` plans only; it does not dispatch AI yet
+> **Verification:** 67 passing tests (0 failures) | Clean typecheck and build
 > **Sister translation:** [00. Resumen Ejecutivo y Guía Rápida](../es/00-resumen-y-guia-rapida.md)
 
 ---
+
+> **Scope update (2026-09-20):** This document retains the historical Plan 1 detail. Current behavior also includes Plan 2 (progressive Engram sessions) and Plan 3 (`forge614-atlas init`). See [08 (EN). CLI Core and JSON Run Plan](08-cli-core-and-run-plan.md) for the current contract. Plan 4, the only plan that will dispatch subagents, remains pending.
 
 ## 1. What is Forge614 Atlas?
 
@@ -151,3 +153,4 @@ All documentation adheres to strict two-digit sequential numbering across both l
 | **05** | [Proceso SDD y Catálogo de Defectos](../es/05-proceso-sdd-y-catalogo-defectos.md) | [SDD Process & Defect Catalog](05-sdd-process-and-defect-catalog.md) | 8-task subagent workflow, 17 commits, 5 corrected defects, and deferred items. |
 | **06** | [Referencia de API Pública en TypeScript](../es/06-referencia-api-typescript.md) | [TypeScript API Reference](06-typescript-api-reference.md) | Type signatures, module interfaces, and production-ready usage examples. |
 | **07** | [Estructura del Proyecto y Código Fuente](../es/07-estructura-codigo-linea-por-linea.md) | [Project Structure & Source Code](07-project-structure-documented-source-code.md) | Master index to 9 modular subpages with complete code and line-by-line analysis of all 19 files. |
+| **08** | [Núcleo del CLI y plan de corrida JSON](../es/08-nucleo-cli-y-plan-de-corrida.md) | [CLI Core and JSON Run Plan](08-cli-core-and-run-plan.md) | `init` contract, Engines, Engram, JSON outcomes, and limits. |

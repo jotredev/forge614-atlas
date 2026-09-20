@@ -112,7 +112,7 @@ Analiza las sentencias de importación/exportación relativas de todo el proyect
 Ejecuta `git -c core.quotepath=false log` y cuantifica el número de veces que los archivos de cada módulo han sido modificados en el historial de commits.
 
 > [!CAUTION]
-> Lanza un error si `repoRoot` no es un repositorio de Git o si `git log` falla (por ejemplo, en repositorios sin commits). En el Plan 3 se integrará degradación suave.
+> Lanza un error si `repoRoot` no es un repositorio de Git o si `git log` falla (por ejemplo, en repositorios sin commits). `runInitCommand` lo convierte en el resultado JSON estructurado `ANALYSIS_FAILED`; `computeChurn` no degrada a cero por sí mismo.
 
 ---
 

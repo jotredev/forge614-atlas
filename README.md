@@ -3,7 +3,7 @@
 > **Orquestador de Contextualización Profunda para el Ecosistema Forge614**  
 > *Deep Contextualization Orchestrator for the Forge614 Ecosystem*
 
-[![CI / Tests](https://img.shields.io/badge/tests-26%20passing-brightgreen)](#)
+[![CI / Tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)](#)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue)](#)
 [![Bun](https://img.shields.io/badge/Bun-%3E%3D1.3.8-black)](#)
 [![License](https://img.shields.io/badge/license-Private-red)](#)
@@ -14,12 +14,12 @@
 
 **Forge614 Atlas** es el orquestador del ecosistema Forge614 encargado de contextualizar un repositorio de código al 100% —línea por línea, módulo por módulo— empleando las herramientas de inteligencia artificial ya instaladas en la máquina del usuario (Claude Code, OpenAI Codex) en modo no interactivo, y depositando todo ese conocimiento estructurado en **`forge614-engram`** (memoria personal local en SQLite FTS5).
 
-### Estado Actual: Plan 1/5 Completado
-Se ha completado e integrado el **motor determinista de puntuación de complejidad** (`src/modules/scoring/`):
+### Estado Actual: Planes 1–3 completados
+Además del **motor determinista de puntuación de complejidad** (`src/modules/scoring/`), Atlas ya integra sesiones progresivas de Engram y el núcleo del CLI `forge614-atlas init`. `init` produce exclusivamente un plan de corrida JSON; todavía no despacha subagentes (eso corresponde al Plan 4).
 - **Cero costo de IA:** Evaluación matemática puramente estática sin llamadas a modelos ni consumo de tokens.
 - **Señales estructurales:** Combina complejidad ciclomática de McCabe (AST de TypeScript), centralidad *fan-in* de dependencias relativas, volatilidad histórica (*churn* de Git) y brecha de pruebas unitarias hermanas.
 - **Clasificación por percentiles:** Agrupa los módulos en tres niveles de atención operativa: **Profundo (~15%)**, **Estándar (~35%)** y **Ligero (~50%)**.
-- **Superficie verificada:** 26 pruebas pasando, 0 fallos y chequeo de tipos limpio (`tsc --noEmit`).
+- **Superficie verificada:** 67 pruebas pasando, 0 fallos, typecheck y compilación limpios.
 
 ---
 
@@ -27,12 +27,12 @@ Se ha completado e integrado el **motor determinista de puntuación de complejid
 
 **Forge614 Atlas** is the deep contextualization orchestrator for the Forge614 ecosystem. It is designed to comprehend 100% of a target codebase —traversing every module and file— using third-party AI coding CLIs already authenticated on the user's computer (Claude Code, OpenAI Codex) in headless mode, and saving that structured understanding into **`forge614-engram`** (local personal memory powered by SQLite FTS5).
 
-### Current Status: Plan 1/5 Completed
-The **deterministic, AI-free complexity scoring engine** (`src/modules/scoring/`) is fully implemented and tested:
+### Current Status: Plans 1–3 Completed
+In addition to the **deterministic, AI-free complexity scoring engine** (`src/modules/scoring/`), Atlas now integrates progressive Engram sessions and the `forge614-atlas init` CLI core. `init` emits only a JSON run plan; it does not dispatch subagents yet (that is Plan 4).
 - **Zero AI cost:** Purely static, analytical calculation without network or token overhead.
 - **Structural signals:** Evaluates McCabe cyclomatic complexity (TypeScript compiler AST), relative dependency fan-in centrality, historical commit churn (Git log), and sibling unit test coverage gaps.
 - **Percentile tiers:** Classifies modules into **Deep (~15%)**, **Standard (~35%)**, and **Light (~50%)**.
-- **Verified quality:** 26 passing tests, 0 failures, and clean typecheck (`tsc --noEmit`).
+- **Verified quality:** 67 passing tests, 0 failures, clean typecheck, and clean build.
 
 ---
 
@@ -64,6 +64,7 @@ Toda la documentación técnica está disponible en pares bilingües e indexados
   - `05.` [Proceso SDD y Catálogo de Defectos](docs/es/05-proceso-sdd-y-catalogo-defectos.md)
   - `06.` [Referencia de API en TypeScript](docs/es/06-referencia-api-typescript.md)
   - `07.` [Estructura y Código Fuente Línea por Línea (índice de 9 subpáginas)](docs/es/07-estructura-codigo-linea-por-linea.md)
+  - `08.` [Núcleo del CLI y plan de corrida JSON](docs/es/08-nucleo-cli-y-plan-de-corrida.md)
 
 - 🇬🇧 **[English Documentation](docs/en/00-summary-and-quickstart.md)**:
   - `00.` [Summary & Quickstart](docs/en/00-summary-and-quickstart.md)
@@ -74,3 +75,4 @@ Toda la documentación técnica está disponible en pares bilingües e indexados
   - `05.` [SDD Process & Defect Catalog](docs/en/05-sdd-process-and-defect-catalog.md)
   - `06.` [TypeScript API Reference](docs/en/06-typescript-api-reference.md)
   - `07.` [Project Structure & Source Code Line-by-Line (index of 9 subpages)](docs/en/07-project-structure-documented-source-code.md)
+  - `08.` [CLI Core and JSON Run Plan](docs/en/08-cli-core-and-run-plan.md)

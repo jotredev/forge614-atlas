@@ -1,0 +1,18 @@
+{
+  "reviewedProductVersion": "0.1.0",
+  "reviewedCommit": "2b5272c",
+  "pages": [
+    {
+      "localPath": "docs/es/08-nucleo-cli-y-plan-de-corrida.md",
+      "language": "es",
+      "notionUrl": "https://app.notion.com/p/3e121943d129812d9814cb2e9e9a95c9?pvs=204",
+      "contentFingerprint": "plan3-cli-core-2b5272c"
+    },
+    {
+      "localPath": "docs/en/08-cli-core-and-run-plan.md",
+      "language": "en",
+      "notionUrl": "https://app.notion.com/p/3e121943d1298178ae70c84bf95e9e4f?pvs=204",
+      "contentFingerprint": "plan3-cli-core-2b5272c"
+    }
+  ]
+}

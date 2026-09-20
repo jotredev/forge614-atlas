@@ -112,7 +112,7 @@ Parses relative imports/exports across the codebase and counts how many distinct
 Executes `git -c core.quotepath=false log` and quantifies file change frequency per module across repository commit history.
 
 > [!CAUTION]
-> Throws if `repoRoot` is not a Git repository or if `git log` fails (e.g. repositories with zero commits). Graceful fallback is scheduled for Plan 3.
+> Throws if `repoRoot` is not a Git repository or if `git log` fails (e.g. repositories with zero commits). `runInitCommand` turns this into the structured JSON result `ANALYSIS_FAILED`; `computeChurn` itself does not fall back to zero.
 
 ---
 
