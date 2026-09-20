@@ -18,7 +18,7 @@ function main(): void {
 
   console.log(
     JSON.stringify(
-      { schemaVersion: 1, error: { code: "UNKNOWN_COMMAND", message: `Unknown command: ${process.argv.slice(2).join(" ")}` } },
+      { schemaVersion: 1, status: "error", error: { code: "UNKNOWN_COMMAND", argv: process.argv.slice(2) } },
       null,
       2,
     ),
