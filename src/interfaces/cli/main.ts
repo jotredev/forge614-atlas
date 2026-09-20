@@ -1,0 +1,29 @@
+#!/usr/bin/env bun
+import { runInit } from "./commands";
+
+function flag(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  return index === -1 ? undefined : args[index + 1];
+}
+
+function main(): void {
+  const [command, ...rest] = process.argv.slice(2);
+
+  if (command === "init") {
+    const engine = flag(rest, "--engine");
+    const force = rest.includes("--force");
+    runInit(process.cwd(), engine, force);
+    return;
+  }
+
+  console.log(
+    JSON.stringify(
+      { schemaVersion: 1, error: { code: "UNKNOWN_COMMAND", message: `Unknown command: ${process.argv.slice(2).join(" ")}` } },
+      null,
+      2,
+    ),
+  );
+  process.exitCode = 1;
+}
+
+main();
