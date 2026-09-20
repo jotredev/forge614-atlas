@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { MemoryWorkspace, WorkspaceConfig } from "forge614-engram";
+import { MemoryWorkspace } from "forge614-engram";
 import { resolveEnginesBinaryPath } from "../../modules/engines-client/binary-path";
 import { runInitCommand } from "../../modules/cli/init";
 
@@ -11,6 +11,7 @@ export function runInit(directory: string, requestedEngineId: string | undefined
   const workspace = new MemoryWorkspace();
   workspace.init();
   const store = workspace.open();
+  store.enableSessions();
   try {
     const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, homedir());
     const outcome = runInitCommand(store, { directory, enginesBinaryPath, requestedEngineId, force });
