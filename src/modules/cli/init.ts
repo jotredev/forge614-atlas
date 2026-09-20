@@ -25,13 +25,13 @@ export type InitOutcome =
   | { schemaVersion: 1; status: "engine-ambiguous"; candidates: { id: string; executable: string }[] }
   | { schemaVersion: 1; status: "engine-unavailable" }
   | { schemaVersion: 1; status: "engine-invalid"; requestedId: string; candidates: { id: string; executable: string }[] }
-  | { schemaVersion: 1; status: "error"; error: { code: "ENGINES_UNREACHABLE"; message: string } };
+  | { schemaVersion: 1; status: "error"; error: { code: "ENGINES_UNREACHABLE" | "ANALYSIS_FAILED"; message: string } };
 
-function unreachable(error: unknown): InitOutcome {
+function failure(code: "ENGINES_UNREACHABLE" | "ANALYSIS_FAILED", error: unknown): InitOutcome {
   return {
     schemaVersion: 1,
     status: "error",
-    error: { code: "ENGINES_UNREACHABLE", message: error instanceof Error ? error.message : String(error) },
+    error: { code, message: error instanceof Error ? error.message : String(error) },
   };
 }
 
@@ -40,7 +40,7 @@ export function runInitCommand(store: MemoryStore, options: RunInitOptions): Ini
   try {
     agents = detectAgents(options.enginesBinaryPath);
   } catch (error) {
-    return unreachable(error);
+    return failure("ENGINES_UNREACHABLE", error);
   }
 
   const capabilitiesById = new Map<string, Capabilities>();
@@ -50,7 +50,7 @@ export function runInitCommand(store: MemoryStore, options: RunInitOptions): Ini
       capabilitiesById.set(agent.id, getCapabilities(options.enginesBinaryPath, agent.id));
     }
   } catch (error) {
-    return unreachable(error);
+    return failure("ENGINES_UNREACHABLE", error);
   }
 
   const resolution = resolveEngine(agents, capabilitiesById, options.requestedEngineId);
@@ -62,7 +62,12 @@ export function runInitCommand(store: MemoryStore, options: RunInitOptions): Ini
   if (options.force) {
     const sessionId = deriveForcedSessionId(options.directory);
     const session = startProjectSession(store, options.directory, sessionId);
-    const plan = buildRunPlan(store, session.projectId, options.directory, { skipCompleted: false });
+    let plan;
+    try {
+      plan = buildRunPlan(store, session.projectId, options.directory, { skipCompleted: false });
+    } catch (error) {
+      return failure("ANALYSIS_FAILED", error);
+    }
     return {
       schemaVersion: 1,
       status: "ready",
@@ -77,7 +82,12 @@ export function runInitCommand(store: MemoryStore, options: RunInitOptions): Ini
     return { schemaVersion: 1, status: "already-complete" };
   }
 
-  const plan = buildRunPlan(store, runState.session.projectId, options.directory, { skipCompleted: true });
+  let plan;
+  try {
+    plan = buildRunPlan(store, runState.session.projectId, options.directory, { skipCompleted: true });
+  } catch (error) {
+    return failure("ANALYSIS_FAILED", error);
+  }
   return {
     schemaVersion: 1,
     status: "ready",

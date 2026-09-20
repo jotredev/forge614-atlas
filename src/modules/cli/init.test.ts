@@ -142,4 +142,49 @@ describe("runInitCommand", () => {
     rmSync(engramRoot, { recursive: true, force: true });
     rmSync(repo, { recursive: true, force: true });
   });
+
+  test("returns an ANALYSIS_FAILED error, not a crash, on a plain directory that was never git-init'd", () => {
+    const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-nogit-"));
+    const directory = mkdtempSync(join(tmpdir(), "atlas-init-nogit-repo-"));
+    mkdirSync(join(directory, "auth"), { recursive: true });
+    writeFileSync(join(directory, "auth", "login.ts"), "export const login = () => true;");
+    const store = engramStore(engramRoot);
+
+    const outcome = runInitCommand(store, {
+      directory, enginesBinaryPath, requestedEngineId: "claude-code", force: false,
+    });
+
+    expect(outcome.status).toBe("error");
+    if (outcome.status === "error") {
+      expect(outcome.error.code).toBe("ANALYSIS_FAILED");
+    }
+
+    store.close();
+    rmSync(engramRoot, { recursive: true, force: true });
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  test("returns an ANALYSIS_FAILED error, not a crash, on a git repo with zero commits", () => {
+    const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-zerocommits-"));
+    const directory = mkdtempSync(join(tmpdir(), "atlas-init-zerocommits-repo-"));
+    git(directory, ["init", "-q"]);
+    git(directory, ["config", "user.email", "test@example.com"]);
+    git(directory, ["config", "user.name", "Test"]);
+    mkdirSync(join(directory, "auth"), { recursive: true });
+    writeFileSync(join(directory, "auth", "login.ts"), "export const login = () => true;");
+    const store = engramStore(engramRoot);
+
+    const outcome = runInitCommand(store, {
+      directory, enginesBinaryPath, requestedEngineId: "claude-code", force: false,
+    });
+
+    expect(outcome.status).toBe("error");
+    if (outcome.status === "error") {
+      expect(outcome.error.code).toBe("ANALYSIS_FAILED");
+    }
+
+    store.close();
+    rmSync(engramRoot, { recursive: true, force: true });
+    rmSync(directory, { recursive: true, force: true });
+  });
 });
