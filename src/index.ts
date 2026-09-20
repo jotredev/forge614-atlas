@@ -39,3 +39,18 @@ export type { RunState } from "./modules/memory/run-state";
 export { recordModuleReport } from "./modules/memory/module-report";
 export { finalizeRun } from "./modules/memory/finalize-run";
 export type { FinalReport } from "./modules/memory/finalize-run";
+
+// 9. Módulo Cliente de Engines (Detección y Capacidades)
+export { detectAgents } from "./modules/engines-client/detect";
+export type { AgentDetection } from "./modules/engines-client/detect";
+export { getCapabilities } from "./modules/engines-client/capabilities";
+export type { Capabilities } from "./modules/engines-client/capabilities";
+export { resolveEnginesBinaryPath } from "./modules/engines-client/binary-path";
+
+// 10. Módulo de Núcleo del CLI (Resolución de Motor y Plan de Corrida)
+export { resolveEngine } from "./modules/cli/resolve-engine";
+export type { EngineResolution } from "./modules/cli/resolve-engine";
+export { buildRunPlan } from "./modules/cli/build-run-plan";
+export type { RunPlanModule, RunPlanResult } from "./modules/cli/build-run-plan";
+export { runInitCommand } from "./modules/cli/init";
+export type { RunInitOptions, InitOutcome } from "./modules/cli/init";
