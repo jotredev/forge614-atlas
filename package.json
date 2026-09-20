@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "typescript": "5.9.3",
-    "forge614-engram": "file:../../../../forge614-engram"
+    "forge614-engram": "file:../forge614-engram"
   }
 }
