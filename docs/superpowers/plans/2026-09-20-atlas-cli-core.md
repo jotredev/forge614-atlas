@@ -55,7 +55,7 @@ automáticamente (mismo patrón que `forge614-engines`/`forge614-engram`).
 **Interfaces:**
 - Produces: `resolveEnginesBinaryPath(platform: NodeJS.Platform, home: string): string` — consumida por Task 2, Task 3, y la capa CLI (Task 7).
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -79,12 +79,12 @@ describe("resolveEnginesBinaryPath", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/engines-client/binary-path.test.ts`
 Expected: FAIL con "Cannot find module './binary-path'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 **Ojo:** se usa `path.win32.join`/`path.posix.join` explícitos según el
 parámetro `platform` — NO el `join` genérico de `node:path` (que siempre
@@ -104,12 +104,12 @@ export function resolveEnginesBinaryPath(platform: NodeJS.Platform, home: string
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/engines-client/binary-path.test.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/engines-client/binary-path.ts src/modules/engines-client/binary-path.test.ts
@@ -131,7 +131,7 @@ git commit -m "feat: resolve the fixed forge614-engines binary path per platform
   boolean }` y `detectAgents(binaryPath: string): AgentDetection[]` —
   consumida por Task 4 (resolve-engine) y Task 6 (init).
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -163,12 +163,12 @@ describe("detectAgents", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/engines-client/detect.test.ts`
 Expected: FAIL con "Cannot find module './detect'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import { spawnSync } from "node:child_process";
@@ -195,12 +195,12 @@ export function detectAgents(binaryPath: string): AgentDetection[] {
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/engines-client/detect.test.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/engines-client/detect.ts src/modules/engines-client/detect.test.ts
@@ -222,7 +222,7 @@ git commit -m "feat: detect installed AI agents via the real forge614-engines bi
   boolean }` y `getCapabilities(binaryPath: string, agentId: string):
   Capabilities` — consumida por Task 4 y Task 6.
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -248,12 +248,12 @@ describe("getCapabilities", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/engines-client/capabilities.test.ts`
 Expected: FAIL con "Cannot find module './capabilities'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import { spawnSync } from "node:child_process";
@@ -278,12 +278,12 @@ export function getCapabilities(binaryPath: string, agentId: string): Capabiliti
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/engines-client/capabilities.test.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/engines-client/capabilities.ts src/modules/engines-client/capabilities.test.ts
@@ -309,7 +309,7 @@ git commit -m "feat: query agent capabilities via the real forge614-engines bina
   AgentDetection[], capabilitiesById: Map<string, Capabilities>,
   requestedId?: string): EngineResolution` — consumida por Task 6 (init).
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -397,12 +397,12 @@ describe("resolveEngine", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/cli/resolve-engine.test.ts`
 Expected: FAIL con "Cannot find module './resolve-engine'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import type { AgentDetection } from "../engines-client/detect";
@@ -445,12 +445,12 @@ export function resolveEngine(
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/cli/resolve-engine.test.ts`
 Expected: PASS (6 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/cli/resolve-engine.ts src/modules/cli/resolve-engine.test.ts
@@ -487,7 +487,7 @@ Por eso `skipCompleted` es un parámetro explícito: `true` para `init`
 normal, `false` para `init --force` (que debe re-analizar todo sin
 importar lo ya guardado).
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -595,12 +595,12 @@ describe("buildRunPlan", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/cli/build-run-plan.test.ts`
 Expected: FAIL con "Cannot find module './build-run-plan'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import type { MemoryStore } from "forge614-engram";
@@ -660,12 +660,12 @@ export function buildRunPlan(
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/cli/build-run-plan.test.ts`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/cli/build-run-plan.ts src/modules/cli/build-run-plan.test.ts
@@ -700,7 +700,7 @@ dependencias, incluyendo el caso de "binario inalcanzable", sin tener que
 tocar la instalación real del sistema. La capa CLI (Task 7) es quien
 resuelve la ruta real y se la pasa.
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -850,12 +850,12 @@ describe("runInitCommand", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/cli/init.test.ts`
 Expected: FAIL con "Cannot find module './init'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import { startProjectSession, type MemoryStore } from "forge614-engram";
@@ -947,12 +947,12 @@ export function runInitCommand(store: MemoryStore, options: RunInitOptions): Ini
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/cli/init.test.ts`
 Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/cli/init.ts src/modules/cli/init.test.ts
@@ -984,7 +984,7 @@ dependencias que dejaría de ser "la capa delgada de verdad" — mismo
 criterio que ya siguen `forge614-engines`/`forge614-engram` para sus
 propios `main.ts`/`commands.ts`. Se verifica manualmente en el Step 4.
 
-- [ ] **Step 1: Escribir `src/interfaces/cli/commands.ts`**
+- [x] **Step 1: Escribir `src/interfaces/cli/commands.ts`**
 
 ```typescript
 import { homedir } from "node:os";
@@ -1011,7 +1011,7 @@ export function runInit(directory: string, requestedEngineId: string | undefined
 }
 ```
 
-- [ ] **Step 2: Escribir `src/interfaces/cli/main.ts`**
+- [x] **Step 2: Escribir `src/interfaces/cli/main.ts`**
 
 ```typescript
 #!/usr/bin/env bun
@@ -1045,7 +1045,7 @@ function main(): void {
 main();
 ```
 
-- [ ] **Step 3: Agregar el script de build a `package.json`**
+- [x] **Step 3: Agregar el script de build a `package.json`**
 
 Agrega esta línea dentro de `"scripts"`:
 
@@ -1053,7 +1053,7 @@ Agrega esta línea dentro de `"scripts"`:
     "build": "bun build ./src/interfaces/cli/main.ts --compile --outfile dist/forge614-atlas"
 ```
 
-- [ ] **Step 4: Verificación manual (no hay test automatizado)**
+- [x] **Step 4: Verificación manual (no hay test automatizado)**
 
 Corre esto en una carpeta de prueba (NO en `forge614-atlas` mismo, para no
 tocar su propia sesión de Engram):
@@ -1081,7 +1081,7 @@ el spec, sección 4).
 
 Limpia después: `rm -rf /tmp/atlas-manual-check`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/interfaces/cli/commands.ts src/interfaces/cli/main.ts package.json
@@ -1098,7 +1098,7 @@ git commit -m "feat: add the forge614-atlas init CLI entrypoint"
 **Interfaces:**
 - Produces: superficie pública final de este plan.
 
-- [ ] **Step 1: Agregar los exports al barrel**
+- [x] **Step 1: Agregar los exports al barrel**
 
 Agrega esto a `src/index.ts`, después de los exports existentes del Plan 2:
 
@@ -1119,23 +1119,23 @@ export { runInitCommand } from "./modules/cli/init";
 export type { RunInitOptions, InitOutcome } from "./modules/cli/init";
 ```
 
-- [ ] **Step 2: Correr la suite completa**
+- [x] **Step 2: Correr la suite completa**
 
 Run: `bun test`
 Expected: PASS (todos los tests de Tasks 1–6 de este plan, más los del
 Plan 1 y Plan 2, sin fallos).
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `bun run typecheck`
 Expected: sin errores.
 
-- [ ] **Step 4: Build**
+- [x] **Step 4: Build**
 
 Run: `bun run build`
 Expected: genera `dist/forge614-atlas` sin errores.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/index.ts

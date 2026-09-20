@@ -141,7 +141,7 @@ instalados. Atlas solo consume esos dos contratos.
 |---|---|---|---|
 | 1 | Motor de puntuación de complejidad (`src/modules/scoring/`: descubrimiento de módulos, complejidad ciclomática, fan-in, churn de git, cobertura de pruebas, puntaje compuesto, niveles por percentil) | ✅ Completo, fusionado a main en [PR #1](https://github.com/jotredev/forge614-atlas/pull/1) | `docs/superpowers/plans/2026-09-18-atlas-complexity-scoring.md` |
 | 2 | Integración con Engram (SDK, sesiones progresivas — la detección de motores/asistentes YA NO es parte de este plan, se movió a `forge614-engines`) | ✅ Completo (parte de SDK/sesiones) — fusionado desde la rama `atlas/plan2-engram-sesiones` (dependencia del SDK, ciclo de vida de sesión, guardado de reporte por módulo, cierre de corrida); 🚫 Bloqueado (parte de detección de motores/asistentes) — no puede avanzar hasta que `forge614-engines` exista y publique su contrato (regla de orden obligatorio, contrato del ecosistema sección 11) | `docs/superpowers/plans/2026-09-19-atlas-engram-integration.md` |
-| 3 | Núcleo del CLI (`init`/`resume`, clasificación de módulos) — el selector de motor ya no lo dibuja Atlas, lo presenta Shell | ⏳ Pendiente | *(sin escribir)* |
+| 3 | Núcleo del CLI (`init`/`resume`, clasificación de módulos) — el selector de motor ya no lo dibuja Atlas, lo presenta Shell | ✅ Completo, fusionado a main | `docs/superpowers/plans/2026-09-20-atlas-cli-core.md` |
 | 4 | Despacho de subagentes (headless, concurrencia, cuota agotada, reporte final) | ⏳ Pendiente | *(sin escribir)* |
 | 5 | Instalador (`curl \| bash`, encadena Engram, registra MCP) | ⏳ Pendiente | *(sin escribir)* |
 
@@ -155,18 +155,34 @@ Shell y Atlas lo consumen; Engram debe dejar de tener su propia detección
 de asistentes una vez que exista. Bloquea el cierre completo del Plan 2 y
 el diseño final del selector de motor del Plan 3.
 
-### Pendientes que el Plan 3 debe resolver
+### Pendientes antes del Plan 4
 
 Documentados con comentario en el código, dejados a propósito sin
 implementar en el Plan 1:
 
 - `computeChurn` (`src/modules/scoring/churn.ts`) truena si la carpeta no
-  es un repo git o no tiene commits — decidir si debe degradarse en vez de
-  interrumpir.
+  es un repo git o no tiene commits. **Resuelto del lado de Atlas por el
+  Plan 3** (ronda final de revisión, Fix 2): `runInitCommand` ahora
+  envuelve la fase de análisis (`buildRunPlan`, tanto en la rama normal
+  como en `--force`) en un try/catch que produce un `InitOutcome` de
+  error estructurado (`status: "error"`, `error.code: "ANALYSIS_FAILED"`)
+  en vez de dejar escapar la excepción como un stack trace crudo. Sigue
+  abierta, como pregunta de diseño separada y deliberadamente NO atendida
+  por este fix, la decisión de si `computeChurn` mismo debería degradarse
+  a cero en vez de lanzar — eso implicaría tocar `src/modules/scoring/`
+  (Plan 1), fuera de alcance de este fix.
 - `discoverModules` (`src/modules/scoring/discovery.ts`) solo mira un
   nivel de profundidad; en un repo típico `src/{auth,billing}` hoy
   colapsa todo en un solo módulo — resolver cómo elegir bien la raíz de
-  análisis.
+  análisis. **Sigue sin resolver, bloqueante explícito antes de que
+  arranque el Plan 4:** el Plan 4 va a consumir `RunPlanModule[]` (el
+  resultado de `buildRunPlan`, este mismo Plan 3) directamente para
+  despachar subagentes, y el comportamiento actual de un solo nivel de
+  profundidad hace que layouts típicos como `src/{auth,billing}` colapsen
+  en un único módulo siempre clasificado "profundo" — esto anula por
+  completo el diseño de niveles por percentil del Plan 1 para el caso
+  común. Confirmado con una prueba en vivo durante la revisión final del
+  Plan 3.
 
 ## Siguiente paso
 
