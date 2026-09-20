@@ -25,11 +25,12 @@ export type InitOutcome =
   | { schemaVersion: 1; status: "engine-ambiguous"; candidates: { id: string; executable: string }[] }
   | { schemaVersion: 1; status: "engine-unavailable" }
   | { schemaVersion: 1; status: "engine-invalid"; requestedId: string; candidates: { id: string; executable: string }[] }
-  | { schemaVersion: 1; error: { code: "ENGINES_UNREACHABLE"; message: string } };
+  | { schemaVersion: 1; status: "error"; error: { code: "ENGINES_UNREACHABLE"; message: string } };
 
 function unreachable(error: unknown): InitOutcome {
   return {
     schemaVersion: 1,
+    status: "error",
     error: { code: "ENGINES_UNREACHABLE", message: error instanceof Error ? error.message : String(error) },
   };
 }
