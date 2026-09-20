@@ -80,4 +80,18 @@ describe("resolveEngine", () => {
 
     expect(resolveEngine(agents, capsById)).toEqual({ status: "engine-unavailable" });
   });
+
+  test("excludes an installed agent with no executable, even when capabilities report headless support", () => {
+    const agents = [agent("claude-code", true)];
+    const capsById = new Map([["claude-code", capabilities("claude-code", true)]]);
+
+    expect(resolveEngine(agents, capsById)).toEqual({ status: "engine-unavailable" });
+  });
+
+  test("excludes an installed agent with an executable whose id is missing from capabilitiesById", () => {
+    const agents = [agent("claude-code", true, "/bin/claude")];
+    const capsById = new Map<string, ReturnType<typeof capabilities>>();
+
+    expect(resolveEngine(agents, capsById)).toEqual({ status: "engine-unavailable" });
+  });
 });
