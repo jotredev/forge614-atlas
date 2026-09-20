@@ -30,3 +30,12 @@ export type { ModuleSignals, ModuleScore } from "./modules/scoring/composite-sco
 // 7. Módulo de Asignación de Niveles de Presupuesto por Percentiles (Tiers)
 export { assignTiers } from "./modules/scoring/tiers";
 export type { Tier, TieredModule } from "./modules/scoring/tiers";
+
+// 8. Módulo de Integración con Engram (Sesiones y Reportes de Módulo)
+export { moduleTopicKey } from "./modules/memory/module-topic";
+export { deriveSessionId, deriveForcedSessionId } from "./modules/memory/session-id";
+export { startOrResumeSession, isModuleReportSaved } from "./modules/memory/run-state";
+export type { RunState } from "./modules/memory/run-state";
+export { recordModuleReport } from "./modules/memory/module-report";
+export { finalizeRun } from "./modules/memory/finalize-run";
+export type { FinalReport } from "./modules/memory/finalize-run";
