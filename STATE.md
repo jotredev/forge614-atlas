@@ -140,7 +140,7 @@ instalados. Atlas solo consume esos dos contratos.
 | # | Plan | Estado | Archivo del plan |
 |---|---|---|---|
 | 1 | Motor de puntuación de complejidad (`src/modules/scoring/`: descubrimiento de módulos, complejidad ciclomática, fan-in, churn de git, cobertura de pruebas, puntaje compuesto, niveles por percentil) | ✅ Completo, fusionado a main en [PR #1](https://github.com/jotredev/forge614-atlas/pull/1) | `docs/superpowers/plans/2026-09-18-atlas-complexity-scoring.md` |
-| 2 | Integración con Engram (SDK, sesiones progresivas — la detección de motores/asistentes YA NO es parte de este plan, se movió a `forge614-engines`) | 🚫 Bloqueado — no puede avanzar del todo hasta que `forge614-engines` exista y publique su contrato (regla de orden obligatorio, contrato del ecosistema sección 11); lo que no depende de Engines (SDK de memoria/sesiones) sí se puede brainstormear ya | *(sin escribir todavía)* |
+| 2 | Integración con Engram (SDK, sesiones progresivas — la detección de motores/asistentes YA NO es parte de este plan, se movió a `forge614-engines`) | ✅ Completo (parte de SDK/sesiones) — fusionado desde la rama `atlas/plan2-engram-sesiones` (dependencia del SDK, ciclo de vida de sesión, guardado de reporte por módulo, cierre de corrida); 🚫 Bloqueado (parte de detección de motores/asistentes) — no puede avanzar hasta que `forge614-engines` exista y publique su contrato (regla de orden obligatorio, contrato del ecosistema sección 11) | `docs/superpowers/plans/2026-09-19-atlas-engram-integration.md` |
 | 3 | Núcleo del CLI (`init`/`resume`, clasificación de módulos) — el selector de motor ya no lo dibuja Atlas, lo presenta Shell | ⏳ Pendiente | *(sin escribir)* |
 | 4 | Despacho de subagentes (headless, concurrencia, cuota agotada, reporte final) | ⏳ Pendiente | *(sin escribir)* |
 | 5 | Instalador (`curl \| bash`, encadena Engram, registra MCP) | ⏳ Pendiente | *(sin escribir)* |
@@ -170,9 +170,12 @@ implementar en el Plan 1:
 
 ## Siguiente paso
 
-Crear `forge614-engines` (bloqueante para cerrar el Plan 2 y para el
-selector de motor del Plan 3). Mientras tanto, se puede seguir el
-brainstorming de la parte del Plan 2 que no depende de Engines: el SDK de
-Engram para sesiones progresivas y guardado de reportes de módulo
-(`saveProjectMemoryWithSession`, `startProjectSession`, ya expuestos en
-`src/index.ts` de forge614-engram, sin cambios pendientes ahí).
+La parte de integración con Engram del Plan 2 (SDK, ciclo de vida de
+sesión, guardado de reporte por módulo, cierre de corrida) ya quedó
+completa y fusionada (`atlas/plan2-engram-sesiones`). Lo único que sigue
+bloqueado es la parte de detección de motores/asistentes, necesaria para el
+selector de motor del CLI del Plan 3: hay que crear `forge614-engines`
+primero (bloqueante, regla de orden obligatorio del contrato del
+ecosistema, sección 11). Hasta que exista, el Plan 3 no puede completar su
+lógica de selección de motor, aunque sí puede avanzar en todo lo demás que
+no dependa de Engines.

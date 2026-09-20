@@ -53,7 +53,7 @@ levanta subprocesos — todo es SDK importado directo.
   sesiones, cerrar) funciona — todas las tareas siguientes dependen de
   esto.
 
-- [ ] **Step 1: Agregar la dependencia**
+- [x] **Step 1: Agregar la dependencia**
 
 Edita `package.json`, agrega esta línea dentro de `"dependencies"`:
 
@@ -64,13 +64,13 @@ Edita `package.json`, agrega esta línea dentro de `"dependencies"`:
   }
 ```
 
-- [ ] **Step 2: Instalar**
+- [x] **Step 2: Instalar**
 
 Run: `bun install`
 Expected: sin errores, `bun.lock` actualizado con la entrada de
 `forge614-engram`.
 
-- [ ] **Step 3: Escribir la prueba de plomería**
+- [x] **Step 3: Escribir la prueba de plomería**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -96,12 +96,12 @@ describe("forge614-engram wiring", () => {
 });
 ```
 
-- [ ] **Step 4: Correr la prueba**
+- [x] **Step 4: Correr la prueba**
 
 Run: `bun test src/modules/memory/engram-link.test.ts`
 Expected: PASS (1 test).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add package.json bun.lock src/modules/memory/engram-link.test.ts
@@ -122,7 +122,7 @@ git commit -m "chore: add forge614-engram as a local SDK dependency"
   formato `"atlas:module:<nombre>"`, para que no se desincronice entre
   ambos usos.
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -139,12 +139,12 @@ describe("moduleTopicKey", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/memory/module-topic.test.ts`
 Expected: FAIL con "Cannot find module './module-topic'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 export function moduleTopicKey(moduleName: string): string {
@@ -152,12 +152,12 @@ export function moduleTopicKey(moduleName: string): string {
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/memory/module-topic.test.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/memory/module-topic.ts src/modules/memory/module-topic.test.ts
@@ -177,7 +177,7 @@ git commit -m "feat: define the module report topic key format"
   `deriveForcedSessionId(directory: string): string` — consumidas por
   Task 4 (run-state).
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -223,12 +223,12 @@ describe("deriveForcedSessionId", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/memory/session-id.test.ts`
 Expected: FAIL con "Cannot find module './session-id'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import { createHash } from "node:crypto";
@@ -255,12 +255,12 @@ export function deriveForcedSessionId(directory: string): string {
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/memory/session-id.test.ts`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/memory/session-id.ts src/modules/memory/session-id.test.ts
@@ -287,7 +287,7 @@ git commit -m "feat: derive a per-repository, collision-safe Engram sessionId"
   Plan 3 (CLI `init`/`resume`) y Plan 4 (despacho de subagentes, para
   saber qué módulos saltarse).
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -390,12 +390,12 @@ describe("startOrResumeSession", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/memory/run-state.test.ts`
 Expected: FAIL con "Cannot find module './run-state'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import { MemoryError, startProjectSession, type MemoryStore, type Session } from "forge614-engram";
@@ -430,12 +430,12 @@ export function isModuleReportSaved(store: MemoryStore, projectId: string, modul
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/memory/run-state.test.ts`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/memory/run-state.ts src/modules/memory/run-state.test.ts
@@ -459,7 +459,7 @@ git commit -m "feat: resolve run state (fresh, resumed, or already complete) per
   SessionSaveResult` — consumida por Plan 4 (despacho de subagentes),
   apenas termina cada mandadero.
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -516,12 +516,12 @@ describe("recordModuleReport", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/memory/module-report.test.ts`
 Expected: FAIL con "Cannot find module './module-report'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import { saveProjectMemoryWithSession, type MemoryStore, type Session, type SessionSaveResult } from "forge614-engram";
@@ -554,12 +554,12 @@ export function recordModuleReport(
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/memory/module-report.test.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/memory/module-report.ts src/modules/memory/module-report.test.ts
@@ -586,7 +586,7 @@ git commit -m "feat: record a module's analysis report as soon as it finishes"
   session: Session, report: FinalReport): void` — consumida por Plan 4 al
   terminar el 100% de los módulos.
 
-- [ ] **Step 1: Escribir la prueba que falla**
+- [x] **Step 1: Escribir la prueba que falla**
 
 ```typescript
 import { describe, expect, test } from "bun:test";
@@ -662,12 +662,12 @@ describe("finalizeRun", () => {
 });
 ```
 
-- [ ] **Step 2: Correr la prueba para confirmar que falla**
+- [x] **Step 2: Correr la prueba para confirmar que falla**
 
 Run: `bun test src/modules/memory/finalize-run.test.ts`
 Expected: FAIL con "Cannot find module './finalize-run'".
 
-- [ ] **Step 3: Escribir la implementación**
+- [x] **Step 3: Escribir la implementación**
 
 ```typescript
 import { type MemoryStore, type Session, type SummaryFields } from "forge614-engram";
@@ -709,12 +709,12 @@ export function finalizeRun(store: MemoryStore, session: Session, report: FinalR
 }
 ```
 
-- [ ] **Step 4: Correr la prueba para confirmar que pasa**
+- [x] **Step 4: Correr la prueba para confirmar que pasa**
 
 Run: `bun test src/modules/memory/finalize-run.test.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/modules/memory/finalize-run.ts src/modules/memory/finalize-run.test.ts
@@ -733,7 +733,7 @@ git commit -m "feat: close a completed run with a final Engram session summary"
   Plan 3 y Plan 4 importen desde `forge614-atlas` en vez de rutas
   internas.
 
-- [ ] **Step 1: Agregar los exports al barrel**
+- [x] **Step 1: Agregar los exports al barrel**
 
 Agrega esto a `src/index.ts`, después de los exports existentes de Tiers:
 
@@ -748,18 +748,18 @@ export { finalizeRun } from "./modules/memory/finalize-run";
 export type { FinalReport } from "./modules/memory/finalize-run";
 ```
 
-- [ ] **Step 2: Correr la suite completa**
+- [x] **Step 2: Correr la suite completa**
 
 Run: `bun test`
 Expected: PASS (todos los tests de Tasks 1–6 de este plan, más los 26 del
 Plan 1, sin fallos).
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `bun run typecheck`
 Expected: sin errores.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/index.ts
