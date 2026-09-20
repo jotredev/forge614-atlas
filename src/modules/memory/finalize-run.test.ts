@@ -29,20 +29,25 @@ describe("finalizeRun", () => {
       totalTimeMs: 60000,
       pauseCount: 1,
       analyzedModuleNames: ["auth", "billing"],
-      pendingModuleNames: [],
+      skippedModuleNames: [],
     };
 
     finalizeRun(store, session, report);
 
     const closed = store.getSession(session.projectId, session.sessionId);
-    expect(closed?.endedAt).not.toBeNull();
+    if (!closed) throw new Error("expected the session to still exist after finalizeRun");
+    expect(closed.endedAt).not.toBeNull();
+
+    const summary = store.getByTopic(session.projectId, `session/${session.sessionId}/summary`);
+    expect(summary).not.toBeNull();
+    expect(summary?.content).toContain("mi-repo");
 
     store.close();
     rmSync(root, { recursive: true, force: true });
     rmSync(repoDir, { recursive: true, force: true });
   });
 
-  test("nextSteps lists pending modules when the run was not fully completed", () => {
+  test("nextSteps lists skipped modules when the run had failures or permanent skips", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-finalize-pending-"));
     const repoDir = mkdtempSync(join(tmpdir(), "atlas-finalize-pending-repo-"));
     const { store, session } = freshSession(root, repoDir, "atlas:test-finalize-pending");
@@ -56,13 +61,15 @@ describe("finalizeRun", () => {
       totalTimeMs: 5000,
       pauseCount: 0,
       analyzedModuleNames: ["auth"],
-      pendingModuleNames: ["billing"],
+      skippedModuleNames: ["billing"],
     };
 
     finalizeRun(store, session, report);
 
     const summary = store.getByTopic(session.projectId, `session/${session.sessionId}/summary`);
     expect(summary?.content).toContain("billing");
+
+    expect(store.getSession(session.projectId, session.sessionId)?.endedAt).not.toBeNull();
 
     store.close();
     rmSync(root, { recursive: true, force: true });

@@ -1,8 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { deriveSessionId, deriveForcedSessionId } from "./session-id";
+
+/**
+ * Función auxiliar para ejecutar comandos git de forma síncrona en el fixture temporal
+ * (mismo patrón que usa `src/modules/scoring/churn.test.ts`).
+ */
+function git(cwd: string, args: string[]): void {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+}
 
 describe("deriveSessionId", () => {
   test("is deterministic for the same directory", () => {
@@ -25,6 +35,27 @@ describe("deriveSessionId", () => {
     expect(id.startsWith("atlas:")).toBe(true);
     expect(id.length).toBeLessThanOrEqual(200);
     expect(id.trim()).toBe(id);
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  test("resolves to the same id from the repo root and from a subdirectory of a real git repo", () => {
+    // Escenario crítico del hallazgo del review: Engram deriva su projectId con
+    // `git rev-parse --path-format=absolute --git-common-dir`, que devuelve la
+    // MISMA ruta sin importar la subcarpeta desde la que se invoque. Si Atlas
+    // hashea la ruta literal en vez de la identidad del repo, la raíz y una
+    // subcarpeta del mismo repo producen sessionIds distintos — rompiendo
+    // silenciosamente la detección de "este repo ya se analizó".
+    const root = mkdtempSync(join(tmpdir(), "atlas-sessionid-gitrepo-"));
+    git(root, ["init", "-q"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "Test"]);
+
+    const subdir = join(root, "src", "auth");
+    mkdirSync(subdir, { recursive: true });
+    git(root, ["commit", "-q", "--allow-empty", "-m", "initial commit"]);
+
+    expect(deriveSessionId(root)).toBe(deriveSessionId(subdir));
+
     rmSync(root, { recursive: true, force: true });
   });
 });

@@ -9,9 +9,23 @@ export interface FinalReport {
   totalTimeMs: number;
   pauseCount: number;
   analyzedModuleNames: string[];
-  pendingModuleNames: string[];
+  skippedModuleNames: string[];
 }
 
+/**
+ * Cierra una corrida de análisis con un resumen final en Engram.
+ *
+ * PRECONDICIÓN: solo debe llamarse cuando la corrida está TOTALMENTE
+ * terminada — todos los módulos ya quedaron procesados, sea con éxito o
+ * porque fallaron/se saltaron permanentemente. Una corrida pausada o
+ * interrumpida a medias (ej. cuota de la suscripción agotada) NUNCA debe
+ * llamar a esta función: `finalizeRun` cierra la sesión de forma
+ * incondicional (`endSession`), y una sesión cerrada no puede reabrirse con
+ * el mismo `sessionId` (ver spec sección 4). Representar una pausa es
+ * simplemente detenerse sin llamar nada más — dejar la sesión abierta ES la
+ * señal de "quedó a medias" (spec sección 6); el siguiente `init`/`resume`
+ * la encuentra abierta automáticamente.
+ */
 export function finalizeRun(store: MemoryStore, session: Session, report: FinalReport): void {
   const fields: SummaryFields = {
     goal: `Contextualización profunda de ${report.repoName}`,
@@ -24,9 +38,9 @@ export function finalizeRun(store: MemoryStore, session: Session, report: FinalR
       `Tiempo total: ${report.totalTimeMs} ms.`,
       `Pausas/reanudaciones: ${report.pauseCount}.`,
     ].join("\n"),
-    nextSteps: report.pendingModuleNames.length === 0
+    nextSteps: report.skippedModuleNames.length === 0
       ? "Ninguno; análisis completo."
-      : `Módulos pendientes: ${report.pendingModuleNames.join(", ")}.`,
+      : `Módulos saltados o fallidos: ${report.skippedModuleNames.join(", ")}.`,
     files: report.analyzedModuleNames,
   };
 
