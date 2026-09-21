@@ -53,12 +53,26 @@ instalados. Atlas solo consume esos dos contratos.
   - Ligero: Haiku 4.5 / `gpt-5.6-luna` — razonamiento bajo
   - Estándar: Sonnet 5 / `gpt-5.6-terra` — razonamiento medio
   - Profundo: Opus 5 / `gpt-5.6-sol` — razonamiento medio (nunca alto)
+  - **Límite real confirmado en `forge614-engines` v1.5.0:** el flag
+    `--reasoning-level` del comando `headless` solo lo soporta Codex
+    (`-c model_reasoning_effort=<level>`). Con Claude Code, pedirlo
+    lanza `REASONING_LEVEL_UNSUPPORTED` — ese motor solo permite elegir
+    `--model`, el nivel de razonamiento queda en el default del modelo.
+    **Resuelto en el diseño de `forge614-workers`** (repo separado, spec en
+    `docs/superpowers/specs/2026-09-20-forge614-workers-design.md` de ese
+    repo): es responsabilidad de Atlas consultar `forge614-engines
+    capabilities`/`agents list` antes de armar una tarea, para nunca pedir
+    `--reasoning-level` a un motor que no lo soporta. Workers solo falla la
+    tarea si de todos modos se lo piden, nunca reintenta ni adivina.
 - División del trabajo: por carpeta/módulo del propio proyecto, no por
   tamaño fijo.
 - Niveles por percentil dentro del proyecto (no fijos): Ligero ~50%,
   Estándar ~35%, Profundo ~15%.
-- Concurrencia de subagentes: máximo 3 a la vez, fijo, no configurable por
-  el usuario.
+- Despacho de subagentes: secuencial, 1 a la vez (no en paralelo).
+  Decisión tomada explícitamente para minimizar el consumo de tokens de
+  las suscripciones de IA sobre la velocidad total del análisis. (Regla
+  anterior de "máximo 3 en
+  paralelo" descartada el 2026-09-20.)
 - Selector de motor de IA: Atlas nunca dibuja este menú. Shell no es la
   puerta obligatoria para todo (el día a día — programar, usar Engram vía
   MCP desde cualquier asistente en cualquier terminal — no pasa por Shell
@@ -145,15 +159,19 @@ instalados. Atlas solo consume esos dos contratos.
 | 4 | Despacho de subagentes (headless, concurrencia, cuota agotada, reporte final) | ⏳ Pendiente | *(sin escribir)* |
 | 5 | Instalador (`curl \| bash`, encadena Engram, registra MCP) | ⏳ Pendiente | *(sin escribir)* |
 
-### Dependencia nueva: forge614-engines
+### Dependencia: forge614-engines
 
-No existe todavía. Es un proyecto separado, propio del ecosistema Forge614
-(ver `FORGE614_ECOSYSTEM_CONTRACT.md`), no parte de los 5 planes de Atlas:
-detecta motores/asistentes de IA instalados (ejecutable, configuración,
-capacidades), sin TUI propia y sin escribir configuración por su cuenta.
-Shell y Atlas lo consumen; Engram debe dejar de tener su propia detección
-de asistentes una vez que exista. Bloquea el cierre completo del Plan 2 y
-el diseño final del selector de motor del Plan 3.
+Ya existe y está en **v1.5.0**. Es un proyecto separado, propio del
+ecosistema Forge614 (ver `FORGE614_ECOSYSTEM_CONTRACT.md`), no parte de
+los 5 planes de Atlas: detecta motores/asistentes de IA instalados
+(ejecutable, configuración, capacidades), sin TUI propia y sin escribir
+configuración por su cuenta. Shell y Atlas lo consumen. Comandos CLI
+relevantes para Plan 4 / `forge614-workers`: `detect`, `capabilities
+--agent <id>`, y `headless --agent <id> --executable <ruta> --prompt
+<texto> [--timeout-ms] [--model <model-id>] [--reasoning-level
+<low|medium|high>]` (los dos últimos flags agregados en v1.5.0,
+aditivos — ver límite de Claude Code arriba, en la tabla de
+modelo/razonamiento).
 
 ### Pendientes antes del Plan 4
 
