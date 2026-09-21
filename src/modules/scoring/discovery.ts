@@ -1,6 +1,6 @@
 import { Glob } from "bun";
 import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 
 /**
  * Conjunto inmutable en memoria (O(1) lookup) con las carpetas estándar
@@ -46,81 +46,99 @@ export function isTestFile(filePath: string): boolean {
 }
 
 /**
- * Algoritmo de descubrimiento de módulos de primer nivel.
- * 
- * Paso a paso:
- * 1. Lee todas las entradas del directorio raíz (`root`) de forma síncrona.
- * 2. Filtra exclusivamente las entradas que sean directorios, ignorando carpetas
- *    del sistema (`EXCLUDED_DIRS`) y carpetas ocultas que comiencen con punto (`.`).
- * 3. Ordena los nombres alfabéticamente usando `localeCompare` para garantizar determinismo estricto.
- * 4. Por cada directorio calificado, explora recursivamente todos los archivos de código fuente.
- * 5. Si el directorio contiene al menos 1 archivo fuente válido, lo registra como un `ModuleDescriptor`.
- * 
+ * Algoritmo de descubrimiento de módulos con profundidad adaptable.
+ *
+ * A diferencia de una exploración de un solo nivel, cada carpeta candidata se evalúa
+ * de forma independiente y recursiva:
+ * - Si solo contiene subcarpetas (sin archivos de código directamente adentro), NO se
+ *   convierte en módulo — se sigue bajando y se evalúan sus subcarpetas por separado.
+ *   Esto evita que layouts típicos como `src/{auth,billing}` colapsen en un solo módulo.
+ * - Si contiene archivos de código directamente Y subcarpetas (carpeta mixta), los
+ *   archivos sueltos forman su propio módulo, y cada subcarpeta se evalúa aparte.
+ * - Si no tiene subcarpetas (o ya no quedan), es un módulo completo si contiene al
+ *   menos un archivo de código, igual que el comportamiento original.
+ *
+ * El nombre de cada módulo es su ruta relativa a `root` (ej. `src/auth`), no solo el
+ * nombre de la carpeta final — así dos carpetas con el mismo nombre en ramas distintas
+ * (ej. `src/auth` y `tests/auth`) nunca chocan como si fueran el mismo módulo.
+ *
  * @param root - Ruta absoluta del repositorio del proyecto
  * @returns Lista de módulos descubiertos ordenada alfabéticamente por nombre
  */
 export function discoverModules(root: string): ModuleDescriptor[] {
-  // 1. Obtener entradas de primer nivel con tipos de archivo (evita statSync adicional)
   const topLevelDirs = readdirSync(root, { withFileTypes: true })
-    // 2. Filtrar solo directorios que no estén en la lista negra ni sean carpetas ocultas
     .filter(entry => entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name) && !entry.name.startsWith("."))
-    // 3. Extraer solo el nombre de la carpeta
     .map(entry => entry.name)
-    // 4. Ordenamiento lexicográfico estable para eliminar variabilidad dependiente del sistema operativo
     .sort((a, b) => a.localeCompare(b));
 
   const modules: ModuleDescriptor[] = [];
-
-  // 5. Inspeccionar cada carpeta candidata para verificar si contiene código real
   for (const dirName of topLevelDirs) {
-    const modulePath = join(root, dirName);
-    const files = listSourceFiles(modulePath);
-
-    // Solo se califica como módulo funcional si posee al menos un archivo .ts, .tsx, .js o .jsx
-    if (files.length > 0) {
-      modules.push({
-        name: dirName,
-        path: modulePath,
-        files,
-      });
-    }
+    collectModules(root, join(root, dirName), modules);
   }
 
-  return modules;
+  return modules.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
- * Escanea recursivamente un directorio en búsqueda de archivos de código TypeScript y JavaScript.
- * 
- * Paso a paso:
- * 1. Inicializa un escáner `Bun.Glob` con el patrón global `**\/*.{ts,tsx,js,jsx}`.
- * 2. Ejecuta el escaneo síncrono filtrando solo archivos (excluye subcarpetas).
- * 3. Divide cada ruta relativa en segmentos para verificar si atraviesa alguna carpeta
- *    oculta o excluida en niveles anidados (ej. `mi-modulo/.cache/archivo.ts`).
- * 4. Resuelve la ruta absoluta final y la agrega a la lista de coincidencias.
- * 5. Retorna la lista ordenada alfabéticamente para preservar el determinismo.
- * 
- * @param dir - Ruta absoluta del directorio del módulo
- * @returns Lista de rutas absolutas de archivos de código fuente ordenadas
+ * Evalúa recursivamente una carpeta candidata y registra en `modules` (por referencia)
+ * cero, uno, o varios `ModuleDescriptor` según el caso (contenedor puro, mixta, u hoja).
+ *
+ * @param root - Raíz original pasada a `discoverModules`, usada para calcular nombres relativos
+ * @param dirPath - Ruta absoluta de la carpeta candidata que se está evaluando
+ * @param modules - Acumulador mutable de módulos descubiertos hasta el momento
  */
-function listSourceFiles(dir: string): string[] {
-  // 1. Instanciar patrón glob optimizado para Bun
-  const glob = new Glob("**/*.{ts,tsx,js,jsx}");
+function collectModules(root: string, dirPath: string, modules: ModuleDescriptor[]): void {
+  const entries = readdirSync(dirPath, { withFileTypes: true });
+
+  const subdirNames = entries
+    .filter(entry => entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name) && !entry.name.startsWith("."))
+    .map(entry => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  const directFiles = listDirectSourceFiles(dirPath);
+
+  // Carpeta hoja (sin subcarpetas calificadas): módulo completo si tiene código.
+  if (subdirNames.length === 0) {
+    if (directFiles.length > 0) {
+      modules.push({ name: relativeModuleName(root, dirPath), path: dirPath, files: directFiles });
+    }
+    return;
+  }
+
+  // Carpeta mixta: los archivos sueltos forman su propio módulo pequeño.
+  if (directFiles.length > 0) {
+    modules.push({ name: relativeModuleName(root, dirPath), path: dirPath, files: directFiles });
+  }
+
+  // Carpeta contenedora (pura o mixta): cada subcarpeta se evalúa por separado.
+  for (const subdirName of subdirNames) {
+    collectModules(root, join(dirPath, subdirName), modules);
+  }
+}
+
+/**
+ * Calcula el nombre de módulo como la ruta relativa a `root`, normalizada a separadores
+ * `/` sin importar el sistema operativo, para que los nombres sean estables entre
+ * macOS, Linux y Windows (se usan como claves de mapa y como parte de topic keys de Engram).
+ */
+function relativeModuleName(root: string, dirPath: string): string {
+  return relative(root, dirPath).split(sep).join("/");
+}
+
+/**
+ * Lista los archivos de código TypeScript/JavaScript ubicados directamente dentro de
+ * `dir` (sin recursividad — las subcarpetas se manejan por separado en `collectModules`).
+ *
+ * @param dir - Ruta absoluta de la carpeta a inspeccionar
+ * @returns Lista de rutas absolutas ordenadas alfabéticamente
+ */
+function listDirectSourceFiles(dir: string): string[] {
+  const glob = new Glob("*.{ts,tsx,js,jsx}");
   const matches: string[] = [];
 
-  // 2. Iterar sobre los resultados síncronos dentro del directorio del módulo
   for (const relativePath of glob.scanSync({ cwd: dir, onlyFiles: true })) {
-    const segments = relativePath.split("/");
-
-    // 3. Protección contra subdirectorios anidados no deseados (ej. submódulos git o node_modules anidados)
-    if (segments.some(segment => EXCLUDED_DIRS.has(segment) || segment.startsWith("."))) {
-      continue;
-    }
-
-    // 4. Reconstruir ruta absoluta normalizada
     matches.push(join(dir, relativePath));
   }
 
-  // 5. Ordenamiento lexicográfico para asegurar orden idéntico en macOS, Linux y CI/CD
   return matches.sort((a, b) => a.localeCompare(b));
 }

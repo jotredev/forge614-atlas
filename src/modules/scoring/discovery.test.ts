@@ -71,6 +71,52 @@ describe("discoverModules", () => {
     expect(modules[0]?.files).toEqual([join(srcPath, "auth", "login.ts")]);
   });
 
+  test("descends into a purely-nested container folder instead of collapsing it into one module", () => {
+    // 'src' solo contiene subcarpetas (auth, styles) — no debe convertirse en un módulo único.
+    // 'src/auth' debe ser su propio módulo, nombrado con la ruta relativa completa.
+    const modules = discoverModules(root);
+    const names = modules.map(module => module.name).sort();
+    expect(names).toEqual(["src/auth"]);
+    const authModule = modules.find(module => module.name === "src/auth");
+    expect(authModule?.files).toEqual([join(root, "src", "auth", "login.ts")]);
+  });
+
+  test("splits a mixed folder (loose files + subfolders) into a loose-files module plus one module per subfolder", () => {
+    const mixedRoot = mkdtempSync(join(tmpdir(), "atlas-discovery-mixed-"));
+
+    // 'src' tiene un archivo suelto (index.ts) Y subcarpetas (auth, billing) con código propio.
+    mkdirSync(join(mixedRoot, "src", "auth"), { recursive: true });
+    writeFileSync(join(mixedRoot, "src", "index.ts"), "export * from './auth';");
+    writeFileSync(join(mixedRoot, "src", "auth", "login.ts"), "export const login = () => true;");
+
+    mkdirSync(join(mixedRoot, "src", "billing"), { recursive: true });
+    writeFileSync(join(mixedRoot, "src", "billing", "invoice.ts"), "export const invoice = () => 1;");
+
+    const modules = discoverModules(mixedRoot);
+    const names = modules.map(module => module.name).sort();
+    expect(names).toEqual(["src", "src/auth", "src/billing"]);
+
+    const srcModule = modules.find(module => module.name === "src");
+    expect(srcModule?.files).toEqual([join(mixedRoot, "src", "index.ts")]);
+
+    const authModule = modules.find(module => module.name === "src/auth");
+    expect(authModule?.files).toEqual([join(mixedRoot, "src", "auth", "login.ts")]);
+
+    rmSync(mixedRoot, { recursive: true, force: true });
+  });
+
+  test("keeps flat top-level modules working exactly as before (no regression)", () => {
+    const flatRoot = mkdtempSync(join(tmpdir(), "atlas-discovery-flat-"));
+
+    mkdirSync(join(flatRoot, "auth"), { recursive: true });
+    writeFileSync(join(flatRoot, "auth", "login.ts"), "export const login = () => true;");
+
+    const modules = discoverModules(flatRoot);
+    expect(modules.map(module => module.name)).toEqual(["auth"]);
+
+    rmSync(flatRoot, { recursive: true, force: true });
+  });
+
   test("returns modules and files in stable, alphabetically sorted order regardless of creation order", () => {
     const stableRoot = mkdtempSync(join(tmpdir(), "atlas-discovery-stable-"));
 

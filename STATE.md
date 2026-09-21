@@ -171,18 +171,17 @@ implementar en el Plan 1:
   por este fix, la decisión de si `computeChurn` mismo debería degradarse
   a cero en vez de lanzar — eso implicaría tocar `src/modules/scoring/`
   (Plan 1), fuera de alcance de este fix.
-- `discoverModules` (`src/modules/scoring/discovery.ts`) solo mira un
-  nivel de profundidad; en un repo típico `src/{auth,billing}` hoy
-  colapsa todo en un solo módulo — resolver cómo elegir bien la raíz de
-  análisis. **Sigue sin resolver, bloqueante explícito antes de que
-  arranque el Plan 4:** el Plan 4 va a consumir `RunPlanModule[]` (el
-  resultado de `buildRunPlan`, este mismo Plan 3) directamente para
-  despachar subagentes, y el comportamiento actual de un solo nivel de
-  profundidad hace que layouts típicos como `src/{auth,billing}` colapsen
-  en un único módulo siempre clasificado "profundo" — esto anula por
-  completo el diseño de niveles por percentil del Plan 1 para el caso
-  común. Confirmado con una prueba en vivo durante la revisión final del
-  Plan 3.
+- `discoverModules` (`src/modules/scoring/discovery.ts`) solo miraba un
+  nivel de profundidad; en un repo típico `src/{auth,billing}` colapsaba
+  todo en un solo módulo. **Resuelto** (rama `atlas/fix-discover-modules-depth`):
+  ahora cada carpeta se evalúa recursivamente — si solo contiene
+  subcarpetas (sin código directo), se sigue bajando en vez de tratarla
+  como un módulo único; si tiene código directo Y subcarpetas (carpeta
+  mixta), los archivos sueltos forman su propio módulo y cada subcarpeta
+  se evalúa aparte. El nombre de cada módulo pasa a ser su ruta relativa
+  a la raíz analizada (ej. `src/auth`), no solo el nombre de la carpeta,
+  para evitar choques entre carpetas del mismo nombre en ramas distintas.
+  Ya no bloquea el Plan 4.
 
 ## Siguiente paso
 
