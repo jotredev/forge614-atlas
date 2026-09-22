@@ -120,6 +120,28 @@ is_loopback_test_url() {
   (( 10#$port >= 1 && 10#$port <= 65535 ))
 }
 
+install_engram_dependency() {
+  local engram_command engram_installer installer_url
+  engram_command="$HOME/.forge614/engram/bin/forge614-engram"
+  if [ -x "$engram_command" ]; then
+    printf '%s\n' "Forge614 Engram is already available: $engram_command"
+    return 0
+  fi
+
+  installer_url='https://github.com/jotredev/forge614-engram/releases/latest/download/install.sh'
+  if [ -n "${FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL:-}" ]; then
+    [ "${FORGE614_ATLAS_INSTALLER_TEST:-}" = '1' ] || fail 'The Engram installer override is reserved for test fixtures.'
+    installer_url="$FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL"
+    case "$installer_url" in file:///*) ;; *) fail 'The Engram test installer must be a local file URL.' ;; esac
+  fi
+
+  engram_installer="$download_dir/forge614-engram-install.sh"
+  curl --fail --location --proto '=https,file' --tlsv1.2 --silent --show-error "$installer_url" --output "$engram_installer" \
+    || fail 'Could not download the Forge614 Engram installer.'
+  bash "$engram_installer" || fail 'Forge614 Engram could not be installed; Atlas was not changed.'
+  [ -x "$engram_command" ] || fail 'Forge614 Engram installation did not provide its required command.'
+}
+
 repo='jotredev/forge614-atlas'
 bin_dir="${HOME:?HOME must be set}/.forge614/atlas/bin"
 version=''
@@ -243,6 +265,7 @@ else
 fi
 [ "$expected_digest" = "$actual_digest" ] || fail "Checksum verification failed for ${artifact}."
 
+install_engram_dependency
 prepare_bin_directory || fail 'Could not safely create the selected Atlas installation directory.'
 [ ! -d "$destination" ] || fail 'The destination is a directory; choose a different --bin-dir.'
 if { [ -e "$destination" ] || [ -L "$destination" ]; } && [ "$force" -ne 1 ]; then

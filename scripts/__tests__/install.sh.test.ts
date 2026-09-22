@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -8,6 +8,24 @@ const temporaryDirectories: string[] = [];
 const fixtureBytes = "#!/usr/bin/env sh\nprintf 'fixture release binary\\n'\n";
 const testReleaseBaseUrl = "FORGE614_ATLAS_TEST_RELEASE_BASE_URL";
 const testMode = "FORGE614_ATLAS_INSTALLER_TEST";
+const engramInstallerTestUrl = "FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL";
+
+// Task 2's tests predate the Engram dependency Task 3 chains in front of every install. None of
+// them opt into `FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL` themselves, so without a default they
+// would otherwise fall through to installer.sh's real, network-hitting fallback URL and become
+// flaky/non-hermetic. Provide one shared local stub installer and point every fixture run at it,
+// unless a test (the Engram-specific ones below) has already set its own override.
+const defaultEngramInstaller = join(mkdtempSync(join(tmpdir(), "forge614-atlas-default-engram-")), "install.sh");
+writeFileSync(
+  defaultEngramInstaller,
+  [
+    "#!/usr/bin/env bash",
+    "set -euo pipefail",
+    "mkdir -p \"$HOME/.forge614/engram/bin\"",
+    "printf '#!/usr/bin/env sh\\nexit 0\\n' > \"$HOME/.forge614/engram/bin/forge614-engram\"",
+    "chmod 700 \"$HOME/.forge614/engram/bin/forge614-engram\"",
+  ].join("\n"),
+);
 
 function temporaryDirectory() {
   const directory = mkdtempSync(join(tmpdir(), "forge614-atlas-installer-"));
@@ -63,13 +81,16 @@ async function withFixtureEnvironment<T>(
     shell: process.env.SHELL,
     releaseBaseUrl: process.env[testReleaseBaseUrl],
     testMode: process.env[testMode],
+    engramInstallerTestUrl: process.env[engramInstallerTestUrl],
   };
+  const setDefaultEngramInstaller = process.env[engramInstallerTestUrl] === undefined;
   process.env.HOME = home;
   if (shell === undefined) delete process.env.SHELL;
   else process.env.SHELL = shell;
   process.env[testReleaseBaseUrl] = releaseBaseUrl;
   if (includeTestSentinel) process.env[testMode] = "1";
   else delete process.env[testMode];
+  if (setDefaultEngramInstaller) process.env[engramInstallerTestUrl] = `file://${defaultEngramInstaller}`;
   try {
     return await operation();
   } finally {
@@ -78,6 +99,7 @@ async function withFixtureEnvironment<T>(
       SHELL: saved.shell,
       [testReleaseBaseUrl]: saved.releaseBaseUrl,
       [testMode]: saved.testMode,
+      [engramInstallerTestUrl]: saved.engramInstallerTestUrl,
     })) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
@@ -303,6 +325,87 @@ test("rejects non-loopback release asset URLs from a test fixture", async () => 
     expect(existsSync(destination)).toBe(false);
     expect(existsSync(join(fakeHome, ".forge614"))).toBe(false);
   } finally {
+    server.stop(true);
+  }
+});
+
+test("installs Forge614 Engram as a dependency without configuring an AI client", async () => {
+  const root = temporaryDirectory();
+  const fixture = join(root, "fixture-binary");
+  const destination = join(root, "bin");
+  const fakeHome = join(root, "home");
+  const engramInstaller = join(root, "engram-install.sh");
+  mkdirSync(fakeHome, { recursive: true });
+  writeFileSync(fixture, fixtureBytes);
+  writeFileSync(engramInstaller, [
+    "#!/usr/bin/env bash",
+    "set -euo pipefail",
+    "mkdir -p \"$HOME/.forge614/engram/bin\"",
+    "printf '#!/usr/bin/env sh\\nexit 0\\n' > \"$HOME/.forge614/engram/bin/forge614-engram\"",
+    "chmod 700 \"$HOME/.forge614/engram/bin/forge614-engram\"",
+  ].join("\n"));
+  const server = fixtureReleaseServer(targetArtifact(), fixture);
+  const previous = process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
+  process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = `file://${engramInstaller}`;
+  try {
+    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]));
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(existsSync(join(fakeHome, ".forge614", "engram", "bin", "forge614-engram"))).toBe(true);
+    expect(existsSync(join(fakeHome, ".claude.json"))).toBe(false);
+    expect(existsSync(join(fakeHome, ".codex", "config.toml"))).toBe(false);
+  } finally {
+    if (previous === undefined) delete process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
+    else process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = previous;
+    server.stop(true);
+  }
+});
+
+test("skips Engram installation when it is already present", async () => {
+  const root = temporaryDirectory();
+  const fixture = join(root, "fixture-binary");
+  const destination = join(root, "bin");
+  const fakeHome = join(root, "home");
+  const engramBin = join(fakeHome, ".forge614", "engram", "bin", "forge614-engram");
+  mkdirSync(resolve(engramBin, ".."), { recursive: true });
+  writeFileSync(engramBin, "#!/usr/bin/env sh\nexit 0\n");
+  chmodSync(engramBin, 0o755);
+  writeFileSync(fixture, fixtureBytes);
+  const server = fixtureReleaseServer(targetArtifact(), fixture);
+  const engramInstaller = join(root, "engram-install-should-not-run.sh");
+  writeFileSync(engramInstaller, "#!/usr/bin/env bash\nexit 1\n");
+  const previous = process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
+  process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = `file://${engramInstaller}`;
+  try {
+    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]));
+    expect(result.exitCode, result.stderr).toBe(0);
+    expect(result.stdout).toContain("Forge614 Engram is already available");
+  } finally {
+    if (previous === undefined) delete process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
+    else process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = previous;
+    server.stop(true);
+  }
+});
+
+test("stops without installing Atlas when the Engram installer fails", async () => {
+  const root = temporaryDirectory();
+  const fixture = join(root, "fixture-binary");
+  const destination = join(root, "bin");
+  const fakeHome = join(root, "home");
+  const engramInstaller = join(root, "engram-install-fails.sh");
+  mkdirSync(fakeHome, { recursive: true });
+  writeFileSync(fixture, fixtureBytes);
+  writeFileSync(engramInstaller, "#!/usr/bin/env bash\nexit 1\n");
+  const server = fixtureReleaseServer(targetArtifact(), fixture);
+  const previous = process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
+  process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = `file://${engramInstaller}`;
+  try {
+    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]));
+    expect(result.exitCode).not.toBe(0);
+    expect(existsSync(join(destination, "forge614-atlas"))).toBe(false);
+    expect(existsSync(join(fakeHome, ".forge614", "atlas"))).toBe(false);
+  } finally {
+    if (previous === undefined) delete process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
+    else process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = previous;
     server.stop(true);
   }
 });
