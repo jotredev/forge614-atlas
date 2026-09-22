@@ -1,0 +1,159 @@
+name: Release standalone artifacts
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Release verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bun run typecheck
+      - run: git diff --check
+      - run: bash -n scripts/install.sh
+
+  build:
+    name: Build ${{ matrix.artifact }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            target: bun-darwin-arm64
+            artifact: forge614-atlas-darwin-arm64
+            bun_version: 1.3.8
+          - runner: macos-15-intel
+            target: bun-darwin-x64
+            artifact: forge614-atlas-darwin-x64
+            bun_version: 1.3.8
+          - runner: ubuntu-latest
+            target: bun-linux-x64
+            artifact: forge614-atlas-linux-x64
+            bun_version: 1.3.8
+          - runner: ubuntu-24.04-arm
+            target: bun-linux-arm64
+            artifact: forge614-atlas-linux-arm64
+            bun_version: 1.3.8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.bun_version }}
+      - run: bun install --frozen-lockfile
+      - name: Create the disposable build directory
+        run: mkdir dist
+      - name: Compile standalone artifact
+        run: bun build ./src/interfaces/cli/main.ts --compile --target=${{ matrix.target }} --outfile dist/${{ matrix.artifact }}
+      - name: Smoke-test the native standalone artifact
+        shell: bash
+        run: ./dist/${{ matrix.artifact }} --version
+      - name: Preserve the artifact mode for collection
+        run: tar -C dist -czf dist/${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}.tar.gz
+          if-no-files-found: error
+
+  assemble:
+    name: Assemble and validate release assets
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - name: Extract the four standalone artifacts with their original modes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for archive in dist/*.tar.gz; do
+            tar -xzf "$archive" -C dist
+          done
+      - name: Generate SHA256SUMS for the four release artifacts
+        shell: bash
+        run: |
+          cd dist
+          sha256sum \
+            forge614-atlas-darwin-arm64 \
+            forge614-atlas-darwin-x64 \
+            forge614-atlas-linux-x64 \
+            forge614-atlas-linux-arm64 > SHA256SUMS
+      - name: Validate release artifacts and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          for artifact in forge614-atlas-darwin-arm64 forge614-atlas-darwin-x64 \
+            forge614-atlas-linux-x64 forge614-atlas-linux-arm64; do
+            test -s "dist/$artifact" || { echo "missing or empty artifact: $artifact" >&2; exit 1; }
+          done
+          for artifact in forge614-atlas-darwin-arm64 forge614-atlas-darwin-x64 \
+            forge614-atlas-linux-x64 forge614-atlas-linux-arm64; do
+            test -x "dist/$artifact" || { echo "artifact is not executable: $artifact" >&2; exit 1; }
+          done
+          test -s dist/SHA256SUMS || { echo "missing or empty SHA256SUMS" >&2; exit 1; }
+          test "$(wc -l < dist/SHA256SUMS | tr -d ' ')" = 4
+          for artifact in forge614-atlas-darwin-arm64 forge614-atlas-darwin-x64 \
+            forge614-atlas-linux-x64 forge614-atlas-linux-arm64; do
+            grep -Eq "^[0-9a-f]{64}  ${artifact}$" dist/SHA256SUMS || { echo "invalid checksum entry: $artifact" >&2; exit 1; }
+          done
+          (cd dist && sha256sum --check SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: |
+            dist/forge614-atlas-darwin-arm64
+            dist/forge614-atlas-darwin-x64
+            dist/forge614-atlas-linux-x64
+            dist/forge614-atlas-linux-arm64
+            dist/SHA256SUMS
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [verify, assemble]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: dist
+      - name: Create the GitHub Release with the validated files only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          release_flags=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            release_flags+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            dist/forge614-atlas-darwin-arm64 \
+            dist/forge614-atlas-darwin-x64 \
+            dist/forge614-atlas-linux-x64 \
+            dist/forge614-atlas-linux-arm64 \
+            dist/SHA256SUMS \
+            scripts/install.sh#install.sh \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            "${release_flags[@]}"
