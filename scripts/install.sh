@@ -40,7 +40,7 @@ prepare_bin_directory() {
 replace_path_marker_block() {
   local configuration_file="$1"
   local path_command="$2"
-  local configuration_dir temporary_file
+  local configuration_dir temporary_file existing_mode
   [ ! -L "$configuration_file" ] || return 1
   [ ! -e "$configuration_file" ] || [ -f "$configuration_file" ] || return 1
   configuration_dir="$(dirname -- "$configuration_file")"
@@ -48,6 +48,7 @@ replace_path_marker_block() {
   temporary_file="$(mktemp "${configuration_file}.XXXXXX")" || return 1
 
   if [ -f "$configuration_file" ]; then
+    existing_mode="$(stat -f '%Lp' -- "$configuration_file" 2>/dev/null || stat -c '%a' -- "$configuration_file" 2>/dev/null || printf '644')"
     awk -v start="$path_marker_start" -v end="$path_marker_end" '
       $0 == start {
         if (inside_block) { invalid = 1; exit 1 }
@@ -68,6 +69,7 @@ replace_path_marker_block() {
       return 1
     }
   else
+    existing_mode='644'
     : > "$temporary_file" || return 1
   fi
 
@@ -75,7 +77,11 @@ replace_path_marker_block() {
     rm -f -- "$temporary_file"
     return 1
   }
-  mv -f -- "$temporary_file" "$configuration_file"
+  chmod "$existing_mode" "$temporary_file" || {
+    rm -f -- "$temporary_file"
+    return 1
+  }
+  mv -f -- "$temporary_file" "$configuration_file" || { rm -f -- "$temporary_file"; return 1; }
 }
 
 publish_path_for_future_shell() {
@@ -121,7 +127,7 @@ is_loopback_test_url() {
 }
 
 install_engram_dependency() {
-  local engram_command engram_installer installer_url
+  local engram_command engram_installer installer_url engram_proto
   engram_command="$HOME/.forge614/engram/bin/forge614-engram"
   if [ -x "$engram_command" ]; then
     printf '%s\n' "Forge614 Engram is already available: $engram_command"
@@ -129,14 +135,16 @@ install_engram_dependency() {
   fi
 
   installer_url='https://github.com/jotredev/forge614-engram/releases/latest/download/install.sh'
+  engram_proto='=https'
   if [ -n "${FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL:-}" ]; then
     [ "${FORGE614_ATLAS_INSTALLER_TEST:-}" = '1' ] || fail 'The Engram installer override is reserved for test fixtures.'
     installer_url="$FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL"
     case "$installer_url" in file:///*) ;; *) fail 'The Engram test installer must be a local file URL.' ;; esac
+    engram_proto='=https,file'
   fi
 
   engram_installer="$download_dir/forge614-engram-install.sh"
-  curl --fail --location --proto '=https,file' --tlsv1.2 --silent --show-error "$installer_url" --output "$engram_installer" \
+  curl --fail --location --proto "$engram_proto" --tlsv1.2 --silent --show-error "$installer_url" --output "$engram_installer" \
     || fail 'Could not download the Forge614 Engram installer.'
   bash "$engram_installer" || fail 'Forge614 Engram could not be installed; Atlas was not changed.'
   [ -x "$engram_command" ] || fail 'Forge614 Engram installation did not provide its required command.'

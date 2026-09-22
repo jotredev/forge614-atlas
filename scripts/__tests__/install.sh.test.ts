@@ -413,3 +413,25 @@ test("stops without installing Atlas when the Engram installer fails", async () 
     server.stop(true);
   }
 });
+
+test("rejects a non-file Engram installer override", async () => {
+  const root = temporaryDirectory();
+  const fixture = join(root, "fixture-binary");
+  const destination = join(root, "untrusted-bin");
+  const fakeHome = join(root, "empty-home");
+  mkdirSync(fakeHome);
+  writeFileSync(fixture, fixtureBytes);
+  const server = fixtureReleaseServer(targetArtifact(), fixture);
+  const previous = process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
+  process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = "https://example.invalid/install.sh";
+  try {
+    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]));
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("must be a local file URL");
+    expect(existsSync(destination)).toBe(false);
+  } finally {
+    if (previous === undefined) delete process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
+    else process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = previous;
+    server.stop(true);
+  }
+});

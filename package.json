@@ -1,6 +1,6 @@
 {
   "name": "forge614-atlas",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Orquestacion de contextualizacion profunda para el ecosistema Forge614",

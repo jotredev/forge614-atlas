@@ -13,8 +13,18 @@ jobs:
   verify:
     name: Release verification
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: forge614-atlas
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: forge614-atlas
+      - uses: actions/checkout@v4
+        with:
+          repository: jotredev/forge614-engram
+          ref: v1.5.0
+          path: forge614-engram
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.8
@@ -23,10 +33,21 @@ jobs:
       - run: bun run typecheck
       - run: git diff --check
       - run: bash -n scripts/install.sh
+      - name: Verify the release tag matches package.json
+        if: github.ref_type == 'tag'
+        run: |
+          package_version="v$(bun -e 'console.log(require("./package.json").version)')"
+          if [ "$package_version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version ($package_version)" >&2
+            exit 1
+          fi
 
   build:
     name: Build ${{ matrix.artifact }}
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        working-directory: forge614-atlas
     strategy:
       fail-fast: false
       matrix:
@@ -49,6 +70,13 @@ jobs:
             bun_version: 1.3.8
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: forge614-atlas
+      - uses: actions/checkout@v4
+        with:
+          repository: jotredev/forge614-engram
+          ref: v1.5.0
+          path: forge614-engram
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ matrix.bun_version }}
@@ -65,7 +93,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.artifact }}
-          path: dist/${{ matrix.artifact }}.tar.gz
+          path: forge614-atlas/dist/${{ matrix.artifact }}.tar.gz
           if-no-files-found: error
 
   assemble:
