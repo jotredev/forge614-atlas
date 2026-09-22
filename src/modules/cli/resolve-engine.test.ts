@@ -8,7 +8,8 @@ function agent(id: string, installed: boolean, executable?: string): AgentDetect
 }
 
 function capabilities(id: string, supportsHeadlessExec: boolean): Capabilities {
-  return { id, label: id, supportsMcp: true, supportsHooks: true, supportsHeadlessExec };
+  const supportsReasoningLevel = id === "codex";
+  return { id, label: id, supportsMcp: true, supportsHooks: true, supportsHeadlessExec, supportsReasoningLevel };
 }
 
 describe("resolveEngine", () => {
