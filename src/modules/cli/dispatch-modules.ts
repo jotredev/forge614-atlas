@@ -6,7 +6,8 @@ import { resolveTaskConfig } from "./task-config";
 import { buildAnalysisPrompt } from "./analysis-prompt";
 import { runWorkersBatch, type WorkersTask, type WorkersEvent } from "../workers-client/run-batch";
 import { recordModuleReport } from "../memory/module-report";
-import { recordPause } from "../memory/pause-count";
+import { readPauseCount, recordPause } from "../memory/pause-count";
+import { finalizeRun } from "../memory/finalize-run";
 
 type Tier = "ligero" | "estandar" | "profundo";
 type ReportTier = "deep" | "standard" | "light";
@@ -57,6 +58,7 @@ export async function dispatchModules(
   const skippedModuleNames: string[] = [];
   let quotaExhausted = false;
   let fatalErrorMessage: string | undefined;
+  let runCompletedEvent: Extract<WorkersEvent, { event: "run_completed" }> | undefined;
 
   const onEvent = (event: WorkersEvent) => {
     if (event.event === "task_completed") {
@@ -68,6 +70,8 @@ export async function dispatchModules(
       quotaExhausted = true;
     } else if (event.event === "fatal_error") {
       fatalErrorMessage = `${event.reason}: ${event.message}`;
+    } else if (event.event === "run_completed") {
+      runCompletedEvent = event;
     }
   };
 
@@ -97,18 +101,17 @@ export async function dispatchModules(
     totalWorkersByTier[reportTier] += 1;
   }
 
-  return {
-    status: "completed",
-    report: {
-      repoName: directory,
-      tierBreakdown,
-      engineByTier,
-      totalWorkersByTier,
-      tokensConsumed: 0,
-      totalTimeMs: 0,
-      pauseCount: 0,
-      analyzedModuleNames,
-      skippedModuleNames,
-    },
+  const report: FinalReport = {
+    repoName: directory,
+    tierBreakdown,
+    engineByTier,
+    totalWorkersByTier,
+    tokensConsumed: 0,
+    totalTimeMs: runCompletedEvent?.totalDurationMs ?? 0,
+    pauseCount: readPauseCount(store, session.projectId),
+    analyzedModuleNames,
+    skippedModuleNames,
   };
+  finalizeRun(store, session, report);
+  return { status: "completed", report };
 }

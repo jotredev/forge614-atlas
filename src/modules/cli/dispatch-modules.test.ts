@@ -8,6 +8,7 @@ import { resolveWorkersBinaryPath } from "../workers-client/binary-path";
 import { resolveEnginesBinaryPath } from "../engines-client/binary-path";
 import { isModuleReportSaved } from "../memory/run-state";
 import { readPauseCount } from "../memory/pause-count";
+import { deriveSessionId } from "../memory/session-id";
 
 const workersBinaryPath = resolveWorkersBinaryPath(process.platform, homedir());
 const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, homedir());
@@ -47,7 +48,9 @@ describe("dispatchModules", () => {
 
   test("saves each module report immediately and returns a completed FinalReport", async () => {
     const fakeClaude = writeFakeClaudeScript(projectDir, "fake-claude-ok.sh", 'echo "FAKE_ANALYSIS_OK"\nexit 0');
-    const session = startProjectSession(store, projectDir, "session-completed");
+    // sessionId derivado igual que en producción (startOrResumeSession), para poder
+    // confirmar más abajo que finalizeRun cerró esta sesión reabriéndola por su directorio real.
+    const session = startProjectSession(store, projectDir, deriveSessionId(projectDir));
 
     const result = await dispatchModules(
       store,
@@ -70,6 +73,12 @@ describe("dispatchModules", () => {
 
     expect(isModuleReportSaved(store, session.projectId, "auth")).toBe(true);
     expect(isModuleReportSaved(store, session.projectId, "billing")).toBe(true);
+
+    expect(result.report.pauseCount).toBe(0);
+    // finalizeRun ya cerró la sesión — confirmarlo intentando reabrirla como "ya completa":
+    const { startOrResumeSession } = await import("../memory/run-state");
+    const reopened = startOrResumeSession(store, projectDir);
+    expect(reopened.status).toBe("already-complete");
   });
 
   test("stops on quota_exhausted, leaves the session open, and increments the pause count", async () => {
