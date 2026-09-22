@@ -74,16 +74,21 @@ async function runDispatch(
     return failure("WORKERS_UNREACHABLE", error);
   }
 
-  const result = await dispatchModules(
-    store,
-    options.directory,
-    session,
-    options.workersBinaryPath,
-    options.enginesBinaryPath,
-    engine,
-    capabilities,
-    modules,
-  );
+  let result: Awaited<ReturnType<typeof dispatchModules>>;
+  try {
+    result = await dispatchModules(
+      store,
+      options.directory,
+      session,
+      options.workersBinaryPath,
+      options.enginesBinaryPath,
+      engine,
+      capabilities,
+      modules,
+    );
+  } catch (error) {
+    return failure("WORKERS_FATAL_ERROR", error);
+  }
 
   if (result.status === "fatal_error") {
     return {
