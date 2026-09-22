@@ -31,7 +31,29 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Install Forge614 Engines (real binary, needed by engines-client tests)
         run: curl -fsSL https://github.com/jotredev/forge614-engines/releases/latest/download/install.sh | bash
-      - run: bun test
+      - name: Run the hermetic test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          # forge614-workers has no public release yet (no installer to run here), and
+          # init.test.ts additionally requires a real, authenticated claude-code install —
+          # never something a shared CI runner can or should have. These 3 files are the
+          # only ones in the repo that need either; every other test file is hermetic
+          # (real Engram/Engines, or fixture scripts for AI engines) and runs for real here.
+          exclude=(
+            "./src/modules/cli/init.test.ts"
+            "./src/modules/cli/dispatch-modules.test.ts"
+            "./src/modules/workers-client/run-batch.test.ts"
+          )
+          run_files=()
+          while IFS= read -r file; do
+            skip=0
+            for excluded in "${exclude[@]}"; do
+              [ "$file" != "$excluded" ] || { skip=1; break; }
+            done
+            [ "$skip" -eq 1 ] || run_files+=("$file")
+          done < <(find . -name "*.test.ts" -not -path "*/node_modules/*")
+          bun test "${run_files[@]}"
       - run: bun run typecheck
       - run: git diff --check
       - run: bash -n scripts/install.sh
