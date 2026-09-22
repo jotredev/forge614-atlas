@@ -53,17 +53,18 @@ instalados. Atlas solo consume esos dos contratos.
   - Ligero: Haiku 4.5 / `gpt-5.6-luna` — razonamiento bajo
   - Estándar: Sonnet 5 / `gpt-5.6-terra` — razonamiento medio
   - Profundo: Opus 5 / `gpt-5.6-sol` — razonamiento medio (nunca alto)
-  - **Límite real confirmado en `forge614-engines` v1.5.0:** el flag
+  - **Límite real confirmado en `forge614-engines`:** el flag
     `--reasoning-level` del comando `headless` solo lo soporta Codex
     (`-c model_reasoning_effort=<level>`). Con Claude Code, pedirlo
     lanza `REASONING_LEVEL_UNSUPPORTED` — ese motor solo permite elegir
     `--model`, el nivel de razonamiento queda en el default del modelo.
-    **Resuelto en el diseño de `forge614-workers`** (repo separado, spec en
-    `docs/superpowers/specs/2026-09-20-forge614-workers-design.md` de ese
-    repo): es responsabilidad de Atlas consultar `forge614-engines
-    capabilities`/`agents list` antes de armar una tarea, para nunca pedir
-    `--reasoning-level` a un motor que no lo soporta. Workers solo falla la
-    tarea si de todos modos se lo piden, nunca reintenta ni adivina.
+    **Resuelto e implementado en el Plan 4:** `forge614-engines` v1.11.0
+    expone `supportsReasoningLevel: boolean` en `capabilities`/`agents
+    list` (hoy `false` para `claude-code`, `true` para `codex`); Atlas
+    consulta ese campo antes de armar cada tarea (`resolveTaskConfig`,
+    `src/modules/cli/task-config.ts`) y nunca incluye `reasoningLevel` si
+    el motor no lo soporta — se evita desde antes de construir la tarea,
+    Workers nunca necesita rechazarla.
 - División del trabajo: por carpeta/módulo del propio proyecto, no por
   tamaño fijo.
 - Niveles por percentil dentro del proyecto (no fijos): Ligero ~50%,
@@ -156,24 +157,45 @@ instalados. Atlas solo consume esos dos contratos.
 | 1 | Motor de puntuación de complejidad (`src/modules/scoring/`: descubrimiento de módulos, complejidad ciclomática, fan-in, churn de git, cobertura de pruebas, puntaje compuesto, niveles por percentil) | ✅ Completo, fusionado a main en [PR #1](https://github.com/jotredev/forge614-atlas/pull/1) | `docs/superpowers/plans/2026-09-18-atlas-complexity-scoring.md` |
 | 2 | Integración con Engram (SDK, sesiones progresivas — la detección de motores/asistentes YA NO es parte de este plan, se movió a `forge614-engines`) | ✅ Completo (parte de SDK/sesiones) — fusionado desde la rama `atlas/plan2-engram-sesiones` (dependencia del SDK, ciclo de vida de sesión, guardado de reporte por módulo, cierre de corrida); 🚫 Bloqueado (parte de detección de motores/asistentes) — no puede avanzar hasta que `forge614-engines` exista y publique su contrato (regla de orden obligatorio, contrato del ecosistema sección 11) | `docs/superpowers/plans/2026-09-19-atlas-engram-integration.md` |
 | 3 | Núcleo del CLI (`init`/`resume`, clasificación de módulos) — el selector de motor ya no lo dibuja Atlas, lo presenta Shell | ✅ Completo, fusionado a main | `docs/superpowers/plans/2026-09-20-atlas-cli-core.md` |
-| 4 | Despacho de subagentes (headless, concurrencia, cuota agotada, reporte final) | ⏳ Pendiente | *(sin escribir)* |
+| 4 | Despacho de subagentes (headless, cuota agotada, reporte final) vía `forge614-workers` | ✅ Completo, fusionado a main | `docs/superpowers/plans/2026-09-21-atlas-subagent-dispatch.md` |
 | 5 | Instalador (`curl \| bash`, encadena Engram, registra MCP) | ⏳ Pendiente | *(sin escribir)* |
 
 ### Dependencia: forge614-engines
 
-Ya existe y está en **v1.5.0**. Es un proyecto separado, propio del
+Ya existe y está en **v1.11.0**. Es un proyecto separado, propio del
 ecosistema Forge614 (ver `FORGE614_ECOSYSTEM_CONTRACT.md`), no parte de
 los 5 planes de Atlas: detecta motores/asistentes de IA instalados
 (ejecutable, configuración, capacidades), sin TUI propia y sin escribir
 configuración por su cuenta. Shell y Atlas lo consumen. Comandos CLI
-relevantes para Plan 4 / `forge614-workers`: `detect`, `capabilities
---agent <id>`, y `headless --agent <id> --executable <ruta> --prompt
-<texto> [--timeout-ms] [--model <model-id>] [--reasoning-level
-<low|medium|high>]` (los dos últimos flags agregados en v1.5.0,
-aditivos — ver límite de Claude Code arriba, en la tabla de
-modelo/razonamiento).
+relevantes: `detect`, `agents list` (registro completo de agentes que
+soporta el código, sin importar si están instalados — usado por Workers
+para su test de "registro completo" de adapters), `capabilities --agent
+<id>` (incluye `supportsReasoningLevel: boolean` desde v1.11.0), y
+`headless --agent <id> --executable <ruta> --prompt <texto>
+[--timeout-ms] [--model <model-id>] [--reasoning-level
+<low|medium|high>] [--stdin-prompt] [--readable-dir <ruta>]` — los
+últimos dos flags dan acceso de lectura a una carpeta real del proyecto
+sin romper el aislamiento (`--stdin-prompt` evita que el prompt quede
+visible en `ps`; `--readable-dir` confirmado con pruebas reales que no
+carga el `CLAUDE.md`/`AGENTS.md` del proyecto analizado con Claude Code,
+aunque con Codex sí existe una limitación aceptada de bajo riesgo: puede
+leerlo si explora la carpeta por su cuenta, sin poder escribir nada).
 
-### Pendientes antes del Plan 4
+### Dependencia: forge614-workers
+
+Ya existe y está en **v0.1.0**. Repo separado del ecosistema Forge614,
+dedicado exclusivamente al despacho secuencial (1 a la vez, nunca en
+paralelo) de subagentes headless — consumido hoy por Atlas (Plan 4) y en
+el futuro por `forge614-ai`. Recibe un JSON por `stdin`
+(`{enginesBin, maxOutputBytes?, tasks: TaskSpec[]}`) y emite eventos
+NDJSON por `stdout` (`task_started`, `task_completed`, `task_failed`,
+`quota_exhausted`, `run_completed`, `fatal_error`); exit codes 0
+(completo), 75 (pausado por cuota), 2 (fallo fatal, nada corrió). Nunca
+decide nada ni guarda nada — solo ejecuta lo que se le manda y reporta.
+Binario en la ruta fija `~/.forge614/workers/bin/forge614-workers` (o
+`.exe` en Windows), igual patrón que Engines.
+
+### Bloqueos resueltos antes del Plan 4 (histórico)
 
 Documentados con comentario en el código, dejados a propósito sin
 implementar en el Plan 1:
@@ -203,12 +225,18 @@ implementar en el Plan 1:
 
 ## Siguiente paso
 
-La parte de integración con Engram del Plan 2 (SDK, ciclo de vida de
-sesión, guardado de reporte por módulo, cierre de corrida) ya quedó
-completa y fusionada (`atlas/plan2-engram-sesiones`). Lo único que sigue
-bloqueado es la parte de detección de motores/asistentes, necesaria para el
-selector de motor del CLI del Plan 3: hay que crear `forge614-engines`
-primero (bloqueante, regla de orden obligatorio del contrato del
-ecosistema, sección 11). Hasta que exista, el Plan 3 no puede completar su
-lógica de selección de motor, aunque sí puede avanzar en todo lo demás que
-no dependa de Engines.
+Planes 1-4 completos y fusionados a main. `forge614-atlas init` ya
+despacha subagentes de verdad de punta a punta: arma el plan de módulos
+(Plan 1), resuelve motor/sesión (Planes 2-3), y ejecuta cada módulo vía
+`forge614-workers` guardando cada reporte en Engram en cuanto termina,
+con manejo real de pausa por cuota agotada y reporte final (Plan 4).
+
+Queda pendiente el **Plan 5** (instalador `curl | bash`, encadena
+Engram, registra MCP) — sin bloqueos conocidos, todas sus dependencias
+(`forge614-engram`, `forge614-engines`) ya existen y están integradas.
+
+Pendiente de documentación (fuera del código, vía el proceso normal de
+traspaso a un agente de documentación aparte): actualizar
+`docs/en|es/08-*` (todavía documenta el estado `"ready"` del Plan 3, ya
+reemplazado por `"completed"`/`"paused"` en el Plan 4) y agregar el
+capítulo `09-*` correspondiente al Plan 4.
