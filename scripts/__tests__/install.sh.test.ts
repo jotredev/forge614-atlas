@@ -1,7 +1,7 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const installer = resolve(import.meta.dir, "../install.sh");
 const temporaryDirectories: string[] = [];
@@ -26,6 +26,10 @@ writeFileSync(
     "chmod 700 \"$HOME/.forge614/engram/bin/forge614-engram\"",
   ].join("\n"),
 );
+
+afterAll(() => {
+  rmSync(dirname(defaultEngramInstaller), { recursive: true, force: true });
+});
 
 function temporaryDirectory() {
   const directory = mkdtempSync(join(tmpdir(), "forge614-atlas-installer-"));
