@@ -10,7 +10,7 @@
 
 ---
 
-> **Scope update (2026-09-20):** This document retains the historical Plan 1 detail. Current behavior also includes Plan 2 (progressive Engram sessions) and Plan 3 (`forge614-atlas init`). See [08 (EN). CLI Core and JSON Run Plan](08-cli-core-and-run-plan.md) for the current contract. Plan 4, the only plan that will dispatch subagents, remains pending.
+> **Scope update (2026-09-22):** This document retains the historical Plan 1 detail. Current behavior also includes Plan 2 (progressive Engram sessions), Plan 3 (`forge614-atlas init`), and Plan 4 (real subagent dispatch via `forge614-workers`). See [09 (EN). Real Subagent Dispatch](09-subagent-dispatch.md) for the current contract. Only Plan 5 (the installer) remains pending.
 
 ## 1. What is Forge614 Atlas?
 
