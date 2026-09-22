@@ -1,6 +1,6 @@
 {
   "reviewedProductVersion": "1.0.0",
-  "reviewedCommit": "6952559",
+  "reviewedCommit": "5319ed9",
   "pages": [
     {
       "localPath": "docs/es/08-nucleo-cli-y-plan-de-corrida.md",
@@ -29,13 +29,13 @@
     {
       "localPath": "docs/es/10-instalador-y-release.md",
       "language": "es",
-      "notionUrl": null,
+      "notionUrl": "https://app.notion.com/p/3e321943d12981949ce7e0824399e5f4?pvs=204",
       "contentFingerprint": "plan5-installer-6952559"
     },
     {
       "localPath": "docs/en/10-installer-and-release.md",
       "language": "en",
-      "notionUrl": null,
+      "notionUrl": "https://app.notion.com/p/3e321943d12981e382e7e96ff9a05c9c?pvs=204",
       "contentFingerprint": "plan5-installer-6952559"
     }
   ]
