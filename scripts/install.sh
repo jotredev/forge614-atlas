@@ -48,7 +48,13 @@ replace_path_marker_block() {
   temporary_file="$(mktemp "${configuration_file}.XXXXXX")" || return 1
 
   if [ -f "$configuration_file" ]; then
-    existing_mode="$(stat -f '%Lp' -- "$configuration_file" 2>/dev/null || stat -c '%a' -- "$configuration_file" 2>/dev/null || printf '644')"
+    existing_mode="$(stat -f '%Lp' -- "$configuration_file" 2>/dev/null)"
+    if ! [[ "$existing_mode" =~ ^[0-7]+$ ]]; then
+      existing_mode="$(stat -c '%a' -- "$configuration_file" 2>/dev/null)"
+    fi
+    if ! [[ "$existing_mode" =~ ^[0-7]+$ ]]; then
+      existing_mode='644'
+    fi
     awk -v start="$path_marker_start" -v end="$path_marker_end" '
       $0 == start {
         if (inside_block) { invalid = 1; exit 1 }
