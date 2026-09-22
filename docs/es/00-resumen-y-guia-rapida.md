@@ -10,7 +10,7 @@
 
 ---
 
-> **Actualización de alcance (2026-09-20):** Este documento conserva el detalle histórico del Plan 1. El estado actual incorpora el Plan 2 (sesiones progresivas de Engram) y el Plan 3 (`forge614-atlas init`). Consulta [08. Núcleo del CLI y plan de corrida JSON](08-nucleo-cli-y-plan-de-corrida.md) para el contrato vigente. Plan 4, el único que despachará subagentes, sigue pendiente.
+> **Actualización de alcance (2026-09-22):** Este documento conserva el detalle histórico del Plan 1. El estado actual incorpora el Plan 2 (sesiones progresivas de Engram), el Plan 3 (`forge614-atlas init`), y el Plan 4 (despacho real de subagentes vía `forge614-workers`). Consulta [09. Despacho Real de Subagentes](09-despacho-de-subagentes.md) para el contrato vigente. Solo el Plan 5 (el instalador) sigue pendiente.
 
 ## 1. ¿Qué es Forge614 Atlas?
 

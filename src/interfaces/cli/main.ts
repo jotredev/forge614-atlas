@@ -6,13 +6,13 @@ function flag(args: string[], name: string): string | undefined {
   return index === -1 ? undefined : args[index + 1];
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
 
   if (command === "init") {
     const engine = flag(rest, "--engine");
     const force = rest.includes("--force");
-    runInit(process.cwd(), engine, force);
+    await runInit(process.cwd(), engine, force);
     return;
   }
 
@@ -26,4 +26,21 @@ function main(): void {
   process.exitCode = 1;
 }
 
-main();
+main().catch(error => {
+  // main() ahora es async (Task 8: runInitCommand pasó a async por el streaming
+  // de eventos de Workers) — sin este .catch(), un error inesperado se volvería un
+  // unhandled promise rejection en vez de una salida estructurada, y Node podría
+  // imprimir su propio texto (no JSON) a stderr antes de salir con código 1.
+  console.log(
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        status: "error",
+        error: { code: "UNEXPECTED_ERROR", message: error instanceof Error ? error.message : String(error) },
+      },
+      null,
+      2,
+    ),
+  );
+  process.exitCode = 1;
+});

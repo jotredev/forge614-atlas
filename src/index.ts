@@ -54,3 +54,15 @@ export { buildRunPlan } from "./modules/cli/build-run-plan";
 export type { RunPlanModule, RunPlanResult } from "./modules/cli/build-run-plan";
 export { runInitCommand } from "./modules/cli/init";
 export type { RunInitOptions, InitOutcome } from "./modules/cli/init";
+
+// 11. Módulo Cliente de Workers (Despacho de Subagentes)
+export { resolveWorkersBinaryPath } from "./modules/workers-client/binary-path";
+export { runWorkersBatch } from "./modules/workers-client/run-batch";
+export type { WorkersTask, WorkersEvent } from "./modules/workers-client/run-batch";
+export { resolveModuleFiles } from "./modules/cli/module-files";
+export { resolveTaskConfig } from "./modules/cli/task-config";
+export type { TaskModelConfig } from "./modules/cli/task-config";
+export { buildAnalysisPrompt } from "./modules/cli/analysis-prompt";
+export { dispatchModules } from "./modules/cli/dispatch-modules";
+export type { DispatchResult } from "./modules/cli/dispatch-modules";
+export { readPauseCount, recordPause } from "./modules/memory/pause-count";
