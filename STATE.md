@@ -158,7 +158,7 @@ instalados. Atlas solo consume esos dos contratos.
 | 2 | Integración con Engram (SDK, sesiones progresivas — la detección de motores/asistentes YA NO es parte de este plan, se movió a `forge614-engines`) | ✅ Completo (parte de SDK/sesiones) — fusionado desde la rama `atlas/plan2-engram-sesiones` (dependencia del SDK, ciclo de vida de sesión, guardado de reporte por módulo, cierre de corrida); 🚫 Bloqueado (parte de detección de motores/asistentes) — no puede avanzar hasta que `forge614-engines` exista y publique su contrato (regla de orden obligatorio, contrato del ecosistema sección 11) | `docs/superpowers/plans/2026-09-19-atlas-engram-integration.md` |
 | 3 | Núcleo del CLI (`init`/`resume`, clasificación de módulos) — el selector de motor ya no lo dibuja Atlas, lo presenta Shell | ✅ Completo, fusionado a main | `docs/superpowers/plans/2026-09-20-atlas-cli-core.md` |
 | 4 | Despacho de subagentes (headless, cuota agotada, reporte final) vía `forge614-workers` | ✅ Completo, fusionado a main | `docs/superpowers/plans/2026-09-21-atlas-subagent-dispatch.md` |
-| 5 | Instalador (`curl \| bash`, encadena Engram, registra MCP) | ⏳ Pendiente | *(sin escribir)* |
+| 5 | Instalador (`curl \| bash`, encadena solo a Engram — Engines llega transitivo; el instalador NUNCA registra MCP) | ✅ Completo, listo para fusionar a main | `docs/superpowers/plans/2026-09-22-atlas-installer.md` |
 
 ### Dependencia: forge614-engines
 
@@ -195,6 +195,27 @@ decide nada ni guarda nada — solo ejecuta lo que se le manda y reporta.
 Binario en la ruta fija `~/.forge614/workers/bin/forge614-workers` (o
 `.exe` en Windows), igual patrón que Engines.
 
+### Dependencia: forge614-engram (consumida por el instalador, Plan 5)
+
+Ya existe y está en **v1.5.0**, publicada en GitHub Releases
+(`jotredev/forge614-engram`). Su propio `scripts/install.sh` ya resuelve
+`forge614-engines` como dependencia transitiva por su cuenta, así que el
+instalador de Atlas solo necesita encadenar a Engram
+(`https://github.com/jotredev/forge614-engram/releases/latest/download/install.sh`)
+para terminar con los 3 componentes (Atlas + Engram + Engines) instalados.
+
+### Riesgo aceptado de diseño (Plan 5): cadena de confianza del instalador
+
+El instalador de Atlas verifica su propio binario por checksum SHA-256
+antes de instalarlo, pero el instalador de Engram que encadena se
+descarga y ejecuta (`bash`) sin checksum ni firma — decisión deliberada
+del spec (mismo patrón que usa el propio instalador de Engram para
+encadenar a Engines). Esto significa que la cadena de confianza de todo
+el ecosistema, instalado de punta a punta vía `curl | bash`, queda
+acotada por quien controle los assets de release de Engram. Riesgo
+aceptado explícitamente, no un defecto — documentado aquí para que quede
+visible a cualquier lector futuro que asuma lo contrario.
+
 ### Bloqueos resueltos antes del Plan 4 (histórico)
 
 Documentados con comentario en el código, dejados a propósito sin
@@ -225,18 +246,24 @@ implementar en el Plan 1:
 
 ## Siguiente paso
 
-Planes 1-4 completos y fusionados a main. `forge614-atlas init` ya
-despacha subagentes de verdad de punta a punta: arma el plan de módulos
-(Plan 1), resuelve motor/sesión (Planes 2-3), y ejecuta cada módulo vía
-`forge614-workers` guardando cada reporte en Engram en cuanto termina,
-con manejo real de pausa por cuota agotada y reporte final (Plan 4).
+**Los 5 planes del roadmap de Atlas están completos.** `forge614-atlas
+init` despacha subagentes de verdad de punta a punta (Planes 1-4), y
+ahora existe además un instalador público real (Plan 5):
+`scripts/install.sh` descarga, verifica por checksum, e instala el
+binario de Atlas, encadenando `forge614-engram` como única dependencia
+(Engines llega transitivo); `.github/workflows/release.yml` compila y
+publica 4 binarios (macOS arm64/x64, Linux x64/arm64) a un GitHub
+Release cuando se empuja un tag `v*`. El instalador nunca registra MCP
+ni toca configuración de asistentes de IA — eso sigue siendo, en
+tiempo de ejecución, responsabilidad exclusiva de `forge614-atlas init`
+vía `forge614-engines` + confirmación de Shell cuando aplica.
 
-Queda pendiente el **Plan 5** (instalador `curl | bash`, encadena
-Engram, registra MCP) — sin bloqueos conocidos, todas sus dependencias
-(`forge614-engram`, `forge614-engines`) ya existen y están integradas.
+Pendiente, fuera del ciclo de desarrollo de este plan: publicar el
+primer release real `v1.0.0` (tag + push, con confirmación explícita
+del usuario en ese momento) y la documentación bilingüe local + Notion
+del Plan 5 (capítulo `10-*` de instalación, siguiendo el mismo patrón
+que los Planes 1-4).
 
-Pendiente de documentación (fuera del código, vía el proceso normal de
-traspaso a un agente de documentación aparte): actualizar
-`docs/en|es/08-*` (todavía documenta el estado `"ready"` del Plan 3, ya
-reemplazado por `"completed"`/`"paused"` en el Plan 4) y agregar el
-capítulo `09-*` correspondiente al Plan 4.
+No queda ningún plan sin empezar en el roadmap original de Atlas.
+Trabajo futuro más allá de este roadmap (si lo hay) requiere una nueva
+sesión de `superpowers:brainstorming` desde cero.
