@@ -62,8 +62,12 @@ export async function dispatchModules(
 
   const onEvent = (event: WorkersEvent) => {
     if (event.event === "task_completed") {
-      recordModuleReport(store, directory, session, event.taskId, event.stdout);
-      analyzedModuleNames.push(event.taskId);
+      if (event.stdoutTruncated) {
+        skippedModuleNames.push(event.taskId);
+      } else {
+        recordModuleReport(store, directory, session, event.taskId, event.stdout);
+        analyzedModuleNames.push(event.taskId);
+      }
     } else if (event.event === "task_failed") {
       skippedModuleNames.push(event.taskId);
     } else if (event.event === "quota_exhausted") {
@@ -106,6 +110,8 @@ export async function dispatchModules(
     tierBreakdown,
     engineByTier,
     totalWorkersByTier,
+    // Deliberado: Workers nunca interpreta el contenido de la respuesta de la IA (por diseño,
+    // documentado en la spec de Workers), así que Atlas no tiene de dónde sacar un conteo real de tokens hoy.
     tokensConsumed: 0,
     totalTimeMs: runCompletedEvent?.totalDurationMs ?? 0,
     pauseCount: readPauseCount(store, session.projectId),
