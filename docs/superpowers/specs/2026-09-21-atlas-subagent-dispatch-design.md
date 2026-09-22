@@ -73,9 +73,10 @@ Por cada módulo, según su nivel (`tier`) y el motor ya resuelto (`engine.id`):
 1. Buscar en la tabla fija de `STATE.md` (Ligero/Estándar/Profundo × Claude Code/Codex) el modelo
    correspondiente.
 2. Antes de incluir `reasoningLevel` en la tarea, confirmar con `getCapabilities` (ya existe, Plan 3)
-   si el motor resuelto soporta razonamiento configurable. Si no (ej. Claude Code), la tarea se manda
-   **sin** `reasoningLevel` — nunca se intenta y se deja que Workers falle la tarea; se evita desde
-   antes de construirla.
+   el campo `supportsReasoningLevel: boolean` (agregado en `forge614-engines` v1.11.0, confirmado real:
+   `false` para `claude-code`, `true` para `codex`). Si es `false`, la tarea se manda **sin**
+   `reasoningLevel` — nunca se intenta y se deja que Workers falle la tarea; se evita desde antes de
+   construirla.
 3. `timeoutMs` se omite (Workers ya aplica un default razonable) — no hay necesidad identificada hoy
    de un valor distinto por tarea.
 
