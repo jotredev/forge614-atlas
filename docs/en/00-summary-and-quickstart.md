@@ -10,7 +10,7 @@
 
 ---
 
-> **Scope update (2026-09-22):** This document retains the historical Plan 1 detail. Current behavior also includes Plan 2 (progressive Engram sessions), Plan 3 (`forge614-atlas init`), and Plan 4 (real subagent dispatch via `forge614-workers`). See [09 (EN). Real Subagent Dispatch](09-subagent-dispatch.md) for the current contract. Only Plan 5 (the installer) remains pending.
+> **Scope update (2026-09-22):** This document retains the historical Plan 1 detail. Current behavior also includes Plan 2 (progressive Engram sessions), Plan 3 (`forge614-atlas init`), Plan 4 (real subagent dispatch via `forge614-workers`), and Plan 5 (the public `curl | bash` installer). See [09 (EN). Real Subagent Dispatch](09-subagent-dispatch.md) and [10 (EN). Public Installer and Release Pipeline](10-installer-and-release.md) for the current contract. **All 5 plans in Atlas's roadmap are now complete.**
 
 ## 1. What is Forge614 Atlas?
 
@@ -154,3 +154,5 @@ All documentation adheres to strict two-digit sequential numbering across both l
 | **06** | [Referencia de API Pública en TypeScript](../es/06-referencia-api-typescript.md) | [TypeScript API Reference](06-typescript-api-reference.md) | Type signatures, module interfaces, and production-ready usage examples. |
 | **07** | [Estructura del Proyecto y Código Fuente](../es/07-estructura-codigo-linea-por-linea.md) | [Project Structure & Source Code](07-project-structure-documented-source-code.md) | Master index to 9 modular subpages with complete code and line-by-line analysis of all 19 files. |
 | **08** | [Núcleo del CLI y plan de corrida JSON](../es/08-nucleo-cli-y-plan-de-corrida.md) | [CLI Core and JSON Run Plan](08-cli-core-and-run-plan.md) | `init` contract, Engines, Engram, JSON outcomes, and limits. |
+| **09** | [Despacho Real de Subagentes](../es/09-despacho-de-subagentes.md) | [Real Subagent Dispatch](09-subagent-dispatch.md) | Real dispatch via `forge614-workers`, tier order, `readableDir`, final report. |
+| **10** | [Instalador Público y Pipeline de Release](../es/10-instalador-y-release.md) | [Public Installer and Release Pipeline](10-installer-and-release.md) | `curl \| bash`, Engram chaining, 4-job release workflow, accepted risk. |

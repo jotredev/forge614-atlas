@@ -20,6 +20,7 @@ Welcome to the official technical documentation of **Forge614 Atlas**. All docum
 | **07** | [07. Estructura del Proyecto y Código Fuente Documentado (índice maestro, 9 subpáginas)](es/07-estructura-codigo-linea-por-linea.md) | [07 (EN). Project Structure and Documented Source Code (master index, 9 subpages)](en/07-project-structure-documented-source-code.md) | Vigente / Verified |
 | **08** | [08. Núcleo del CLI y plan de corrida JSON](es/08-nucleo-cli-y-plan-de-corrida.md) | [08 (EN). CLI Core and JSON Run Plan](en/08-cli-core-and-run-plan.md) | Vigente / Verified |
 | **09** | [09. Despacho Real de Subagentes](es/09-despacho-de-subagentes.md) | [09 (EN). Real Subagent Dispatch](en/09-subagent-dispatch.md) | Vigente / Verified |
+| **10** | [10. Instalador Público y Pipeline de Release](es/10-instalador-y-release.md) | [10 (EN). Public Installer and Release Pipeline](en/10-installer-and-release.md) | Vigente / Verified |
 
 ---
 
@@ -29,3 +30,4 @@ Welcome to the official technical documentation of **Forge614 Atlas**. All docum
 - **Plan de Implementación del Motor de Puntuación (Plan 1/5):** [`docs/superpowers/plans/2026-09-18-atlas-complexity-scoring.md`](superpowers/plans/2026-09-18-atlas-complexity-scoring.md)
 - **Diseño y plan del núcleo del CLI (Plan 3/5):** [`docs/superpowers/specs/2026-09-20-atlas-cli-core-design.md`](superpowers/specs/2026-09-20-atlas-cli-core-design.md) y [`docs/superpowers/plans/2026-09-20-atlas-cli-core.md`](superpowers/plans/2026-09-20-atlas-cli-core.md)
 - **Diseño y plan del despacho real de subagentes (Plan 4/5):** [`docs/superpowers/specs/2026-09-21-atlas-subagent-dispatch-design.md`](superpowers/specs/2026-09-21-atlas-subagent-dispatch-design.md) y [`docs/superpowers/plans/2026-09-21-atlas-subagent-dispatch.md`](superpowers/plans/2026-09-21-atlas-subagent-dispatch.md)
+- **Diseño y plan del instalador público (Plan 5/5, roadmap cerrado):** [`docs/superpowers/specs/2026-09-22-atlas-installer-design.md`](superpowers/specs/2026-09-22-atlas-installer-design.md) y [`docs/superpowers/plans/2026-09-22-atlas-installer.md`](superpowers/plans/2026-09-22-atlas-installer.md)

@@ -10,7 +10,7 @@
 
 ---
 
-> **Actualización de alcance (2026-09-22):** Este documento conserva el detalle histórico del Plan 1. El estado actual incorpora el Plan 2 (sesiones progresivas de Engram), el Plan 3 (`forge614-atlas init`), y el Plan 4 (despacho real de subagentes vía `forge614-workers`). Consulta [09. Despacho Real de Subagentes](09-despacho-de-subagentes.md) para el contrato vigente. Solo el Plan 5 (el instalador) sigue pendiente.
+> **Actualización de alcance (2026-09-22):** Este documento conserva el detalle histórico del Plan 1. El estado actual incorpora el Plan 2 (sesiones progresivas de Engram), el Plan 3 (`forge614-atlas init`), el Plan 4 (despacho real de subagentes vía `forge614-workers`), y el Plan 5 (instalador público `curl | bash`). Consulta [09. Despacho Real de Subagentes](09-despacho-de-subagentes.md) y [10. Instalador Público y Pipeline de Release](10-instalador-y-release.md) para el contrato vigente. **Los 5 planes del roadmap de Atlas están completos.**
 
 ## 1. ¿Qué es Forge614 Atlas?
 
@@ -154,3 +154,5 @@ La documentación del proyecto sigue una indexación secuencial estricta de dos 
 | **06** | [Referencia de API Pública en TypeScript](06-referencia-api-typescript.md) | [TypeScript API Reference](../en/06-referencia-api-typescript.md) | Firmas de tipos, interfaces de entrada/salida y código de integración de ejemplo. |
 | **07** | [Estructura del Proyecto y Código Fuente](07-estructura-codigo-linea-por-linea.md) | [Project Structure & Source Code](../en/07-project-structure-documented-source-code.md) | Índice maestro hacia 9 subpáginas modulares con código completo y análisis línea por línea de los 19 archivos. |
 | **08** | [Núcleo del CLI y plan de corrida JSON](08-nucleo-cli-y-plan-de-corrida.md) | [CLI Core and JSON Run Plan](../en/08-cli-core-and-run-plan.md) | Contrato de `init`, Engines, Engram, resultados JSON y límites. |
+| **09** | [Despacho Real de Subagentes](09-despacho-de-subagentes.md) | [Real Subagent Dispatch](../en/09-subagent-dispatch.md) | Despacho real vía `forge614-workers`, orden de niveles, `readableDir`, reporte final. |
+| **10** | [Instalador Público y Pipeline de Release](10-instalador-y-release.md) | [Public Installer and Release Pipeline](../en/10-installer-and-release.md) | `curl \| bash`, encadenado de Engram, workflow de release de 4 jobs, riesgo aceptado. |
