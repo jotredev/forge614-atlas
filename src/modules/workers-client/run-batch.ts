@@ -32,7 +32,11 @@ export type WorkersEvent =
       reason: "timeout" | "engine_unsupported" | "spawn_error" | "generic_error";
       exitCode: number | null;
       stdout: string;
+      stdoutBytes: number;
+      stdoutTruncated: boolean;
       stderr: string;
+      stderrBytes: number;
+      stderrTruncated: boolean;
     }
   | {
       event: "quota_exhausted";
@@ -40,7 +44,11 @@ export type WorkersEvent =
       agentId: string;
       matchedPattern: string;
       stdout: string;
+      stdoutBytes: number;
+      stdoutTruncated: boolean;
       stderr: string;
+      stderrBytes: number;
+      stderrTruncated: boolean;
     }
   | {
       event: "run_completed";
@@ -51,7 +59,7 @@ export type WorkersEvent =
       pausedByQuota: boolean;
       totalDurationMs: number;
     }
-  | { event: "fatal_error"; reason: "invalid_input" | "engines_bin_not_found"; message: string };
+  | { event: "fatal_error"; reason: "invalid_input" | "engines_bin_not_found" | "unexpected_error"; message: string };
 
 export function runWorkersBatch(
   workersBinaryPath: string,
@@ -60,20 +68,41 @@ export function runWorkersBatch(
   onEvent: (event: WorkersEvent) => void,
 ): Promise<number> {
   return new Promise((resolve, reject) => {
-    const child = spawn(workersBinaryPath, [], { stdio: ["pipe", "pipe", "pipe"] });
-
-    child.on("error", reject);
-
+    const child = spawn(workersBinaryPath, [], { stdio: ["pipe", "pipe", "ignore"] });
     const rl = createInterface({ input: child.stdout });
+
+    const rejectAndKill = (error: Error) => {
+      rl.close();
+      child.kill();
+      reject(error);
+    };
+
+    child.on("error", rejectAndKill);
+
     rl.on("line", line => {
       const trimmed = line.trim();
       if (!trimmed) return;
+
+      let parsed: WorkersEvent;
       try {
-        onEvent(JSON.parse(trimmed) as WorkersEvent);
+        parsed = JSON.parse(trimmed) as WorkersEvent;
       } catch (error) {
-        reject(
+        const preview = trimmed.length > 200 ? `${trimmed.slice(0, 200)}...` : trimmed;
+        rejectAndKill(
           new Error(
-            `runWorkersBatch: failed to parse NDJSON line from forge614-workers: ${trimmed}`,
+            `runWorkersBatch: failed to parse NDJSON line from forge614-workers: ${preview}`,
+            { cause: error },
+          ),
+        );
+        return;
+      }
+
+      try {
+        onEvent(parsed);
+      } catch (error) {
+        rejectAndKill(
+          new Error(
+            `runWorkersBatch: onEvent handler threw while processing a "${parsed.event}" event`,
             { cause: error },
           ),
         );
