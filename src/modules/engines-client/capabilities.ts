@@ -6,6 +6,7 @@ export interface Capabilities {
   supportsMcp: boolean;
   supportsHooks: boolean;
   supportsHeadlessExec: boolean;
+  supportsReasoningLevel: boolean;
 }
 
 export function getCapabilities(binaryPath: string, agentId: string): Capabilities {
