@@ -68,7 +68,16 @@ export function runWorkersBatch(
     rl.on("line", line => {
       const trimmed = line.trim();
       if (!trimmed) return;
-      onEvent(JSON.parse(trimmed) as WorkersEvent);
+      try {
+        onEvent(JSON.parse(trimmed) as WorkersEvent);
+      } catch (error) {
+        reject(
+          new Error(
+            `runWorkersBatch: failed to parse NDJSON line from forge614-workers: ${trimmed}`,
+            { cause: error },
+          ),
+        );
+      }
     });
 
     child.on("close", code => resolve(code ?? 1));

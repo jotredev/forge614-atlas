@@ -68,4 +68,24 @@ describe("runWorkersBatch", () => {
 
     rmSync(dir, { recursive: true, force: true });
   });
+
+  test("rejects the promise instead of throwing when a stdout line is not valid JSON", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "atlas-run-batch-badjson-"));
+    // Reemplaza el binario real de Workers por uno de mentiras que imprime una línea
+    // de texto plano en vez de NDJSON, para forzar el fallo de parseo sin depender de
+    // que forge614-workers real produzca output inválido.
+    const fakeWorkersBinary = join(dir, "fake-workers.sh");
+    writeFileSync(
+      fakeWorkersBinary,
+      ["#!/bin/sh", "cat > /dev/null", 'echo "this is not json"', "exit 0"].join("\n"),
+    );
+    chmodSync(fakeWorkersBinary, 0o755);
+
+    const events: WorkersEvent[] = [];
+    await expect(
+      runWorkersBatch(fakeWorkersBinary, enginesBinaryPath, [], event => events.push(event)),
+    ).rejects.toThrow();
+
+    rmSync(dir, { recursive: true, force: true });
+  });
 });
