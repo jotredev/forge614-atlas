@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { MemoryWorkspace, WorkspaceConfig, startProjectSession } from "forge614-engram";
 import { runInitCommand } from "./init";
 import { resolveEnginesBinaryPath } from "../engines-client/binary-path";
+import { resolveWorkersBinaryPath } from "../workers-client/binary-path";
 import { deriveSessionId } from "../memory/session-id";
 import { recordModuleReport } from "../memory/module-report";
 
@@ -38,30 +39,34 @@ function engramStore(engramRoot: string) {
 // ecosistema, con Claude Code también instalado y con soporte headless
 // (ambos confirmados presentes en esta máquina de desarrollo).
 const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, homedir());
+const workersBinaryPath = resolveWorkersBinaryPath(process.platform, homedir());
 
 describe("runInitCommand", () => {
-  test("resolves the requested engine, starts a fresh session, and returns the pending module plan", () => {
+  // Timeout ampliado en las pruebas que llegan a "completed": invocan un motor real
+  // (claude-code) en modo headless contra la API, lo que puede tardar más de los
+  // 5000ms por defecto de bun:test.
+  test("resolves the requested engine, starts a fresh session, and completes the run for real", async () => {
     const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-fresh-"));
     const repo = realRepoWithAuth();
     const store = engramStore(engramRoot);
 
-    const outcome = runInitCommand(store, {
-      directory: repo, enginesBinaryPath, requestedEngineId: "claude-code", force: false,
+    const outcome = await runInitCommand(store, {
+      directory: repo, enginesBinaryPath, workersBinaryPath, requestedEngineId: "claude-code", force: false,
     });
 
-    expect(outcome.status).toBe("ready");
-    if (outcome.status === "ready") {
+    expect(outcome.status).toBe("completed");
+    if (outcome.status === "completed") {
       expect(outcome.engine.id).toBe("claude-code");
       expect(outcome.session.resumed).toBe(false);
-      expect(outcome.modules.map(m => m.name)).toEqual(["auth"]);
+      expect(outcome.report.analyzedModuleNames).toEqual(["auth"]);
     }
 
     store.close();
     rmSync(engramRoot, { recursive: true, force: true });
     rmSync(repo, { recursive: true, force: true });
-  });
+  }, 60000);
 
-  test("a repo whose session was already closed reports already-complete", () => {
+  test("a repo whose session was already closed reports already-complete", async () => {
     const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-done-"));
     const repo = realRepoWithAuth();
     const store = engramStore(engramRoot);
@@ -69,8 +74,8 @@ describe("runInitCommand", () => {
     const session = startProjectSession(store, repo, sessionId);
     store.endSession(session.projectId, session.sessionId);
 
-    const outcome = runInitCommand(store, {
-      directory: repo, enginesBinaryPath, requestedEngineId: "claude-code", force: false,
+    const outcome = await runInitCommand(store, {
+      directory: repo, enginesBinaryPath, workersBinaryPath, requestedEngineId: "claude-code", force: false,
     });
 
     expect(outcome.status).toBe("already-complete");
@@ -80,7 +85,7 @@ describe("runInitCommand", () => {
     rmSync(repo, { recursive: true, force: true });
   });
 
-  test("force re-analyzes everything, in a new session, even when the previous one is closed", () => {
+  test("force re-analyzes everything, in a new session, even when the previous one is closed", async () => {
     const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-force-"));
     const repo = realRepoWithAuth();
     const store = engramStore(engramRoot);
@@ -89,28 +94,28 @@ describe("runInitCommand", () => {
     recordModuleReport(store, repo, session, "auth", "ya analizado antes");
     store.endSession(session.projectId, session.sessionId);
 
-    const outcome = runInitCommand(store, {
-      directory: repo, enginesBinaryPath, requestedEngineId: "claude-code", force: true,
+    const outcome = await runInitCommand(store, {
+      directory: repo, enginesBinaryPath, workersBinaryPath, requestedEngineId: "claude-code", force: true,
     });
 
-    expect(outcome.status).toBe("ready");
-    if (outcome.status === "ready") {
+    expect(outcome.status).toBe("completed");
+    if (outcome.status === "completed") {
       expect(outcome.session.sessionId).not.toBe(sessionId);
-      expect(outcome.modules.map(m => m.name)).toEqual(["auth"]);
+      expect(outcome.report.analyzedModuleNames).toEqual(["auth"]);
     }
 
     store.close();
     rmSync(engramRoot, { recursive: true, force: true });
     rmSync(repo, { recursive: true, force: true });
-  });
+  }, 60000);
 
-  test("returns engine-invalid when the requested engine is not a real candidate", () => {
+  test("returns engine-invalid when the requested engine is not a real candidate", async () => {
     const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-invalid-"));
     const repo = realRepoWithAuth();
     const store = engramStore(engramRoot);
 
-    const outcome = runInitCommand(store, {
-      directory: repo, enginesBinaryPath, requestedEngineId: "not-a-real-engine", force: false,
+    const outcome = await runInitCommand(store, {
+      directory: repo, enginesBinaryPath, workersBinaryPath, requestedEngineId: "not-a-real-engine", force: false,
     });
 
     expect(outcome.status).toBe("engine-invalid");
@@ -123,13 +128,13 @@ describe("runInitCommand", () => {
     rmSync(repo, { recursive: true, force: true });
   });
 
-  test("returns an ENGINES_UNREACHABLE error when the Engines binary path is invalid", () => {
+  test("returns an ENGINES_UNREACHABLE error when the Engines binary path is invalid", async () => {
     const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-unreachable-"));
     const repo = realRepoWithAuth();
     const store = engramStore(engramRoot);
 
-    const outcome = runInitCommand(store, {
-      directory: repo, enginesBinaryPath: "/nonexistent/forge614-engines",
+    const outcome = await runInitCommand(store, {
+      directory: repo, enginesBinaryPath: "/nonexistent/forge614-engines", workersBinaryPath,
       requestedEngineId: "claude-code", force: false,
     });
 
@@ -143,15 +148,15 @@ describe("runInitCommand", () => {
     rmSync(repo, { recursive: true, force: true });
   });
 
-  test("returns an ANALYSIS_FAILED error, not a crash, on a plain directory that was never git-init'd", () => {
+  test("returns an ANALYSIS_FAILED error, not a crash, on a plain directory that was never git-init'd", async () => {
     const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-nogit-"));
     const directory = mkdtempSync(join(tmpdir(), "atlas-init-nogit-repo-"));
     mkdirSync(join(directory, "auth"), { recursive: true });
     writeFileSync(join(directory, "auth", "login.ts"), "export const login = () => true;");
     const store = engramStore(engramRoot);
 
-    const outcome = runInitCommand(store, {
-      directory, enginesBinaryPath, requestedEngineId: "claude-code", force: false,
+    const outcome = await runInitCommand(store, {
+      directory, enginesBinaryPath, workersBinaryPath, requestedEngineId: "claude-code", force: false,
     });
 
     expect(outcome.status).toBe("error");
@@ -164,7 +169,7 @@ describe("runInitCommand", () => {
     rmSync(directory, { recursive: true, force: true });
   });
 
-  test("returns an ANALYSIS_FAILED error, not a crash, on a git repo with zero commits", () => {
+  test("returns an ANALYSIS_FAILED error, not a crash, on a git repo with zero commits", async () => {
     const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-zerocommits-"));
     const directory = mkdtempSync(join(tmpdir(), "atlas-init-zerocommits-repo-"));
     git(directory, ["init", "-q"]);
@@ -174,8 +179,8 @@ describe("runInitCommand", () => {
     writeFileSync(join(directory, "auth", "login.ts"), "export const login = () => true;");
     const store = engramStore(engramRoot);
 
-    const outcome = runInitCommand(store, {
-      directory, enginesBinaryPath, requestedEngineId: "claude-code", force: false,
+    const outcome = await runInitCommand(store, {
+      directory, enginesBinaryPath, workersBinaryPath, requestedEngineId: "claude-code", force: false,
     });
 
     expect(outcome.status).toBe("error");
@@ -186,5 +191,52 @@ describe("runInitCommand", () => {
     store.close();
     rmSync(engramRoot, { recursive: true, force: true });
     rmSync(directory, { recursive: true, force: true });
+  });
+
+  test("completes the run for real and returns status: completed with a FinalReport", async () => {
+    const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-completed-"));
+    const repo = realRepoWithAuth();
+    const store = engramStore(engramRoot);
+
+    const outcome = await runInitCommand(store, {
+      directory: repo,
+      enginesBinaryPath,
+      workersBinaryPath,
+      // El resto de este archivo usa "claude-code" porque en esta máquina de
+      // desarrollo hay más de un motor headless instalado (deja requestedEngineId
+      // sin definir aquí y resolveEngine devuelve "engine-ambiguous").
+      requestedEngineId: "claude-code",
+      force: false,
+    });
+
+    expect(outcome.status).toBe("completed");
+    if (outcome.status !== "completed") throw new Error("unreachable");
+    expect(Array.isArray(outcome.report.analyzedModuleNames)).toBe(true);
+
+    store.close();
+    rmSync(engramRoot, { recursive: true, force: true });
+    rmSync(repo, { recursive: true, force: true });
+  }, 60000);
+
+  test("reports WORKERS_UNREACHABLE when the workers binary path does not exist", async () => {
+    const engramRoot = mkdtempSync(join(tmpdir(), "atlas-init-workers-unreachable-"));
+    const repo = realRepoWithAuth();
+    const store = engramStore(engramRoot);
+
+    const outcome = await runInitCommand(store, {
+      directory: repo,
+      enginesBinaryPath,
+      workersBinaryPath: "/no/existe/forge614-workers",
+      requestedEngineId: "claude-code",
+      force: false,
+    });
+
+    expect(outcome.status).toBe("error");
+    if (outcome.status !== "error") throw new Error("unreachable");
+    expect(outcome.error.code).toBe("WORKERS_UNREACHABLE");
+
+    store.close();
+    rmSync(engramRoot, { recursive: true, force: true });
+    rmSync(repo, { recursive: true, force: true });
   });
 });

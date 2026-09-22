@@ -6,13 +6,13 @@ function flag(args: string[], name: string): string | undefined {
   return index === -1 ? undefined : args[index + 1];
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
 
   if (command === "init") {
     const engine = flag(rest, "--engine");
     const force = rest.includes("--force");
-    runInit(process.cwd(), engine, force);
+    await runInit(process.cwd(), engine, force);
     return;
   }
 
