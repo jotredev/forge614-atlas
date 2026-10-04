@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  # A pull request that touches the release machinery runs verify, build and assemble (never publish).
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - ".github/actions/install-forge614-dependencies/action.yml"
+      - "scripts/install.sh"
   workflow_dispatch:
 
 permissions:
@@ -31,22 +37,22 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
+      - name: Install the Engram copy's own dependencies
+        working-directory: forge614-engram
+        run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
-      - name: Install Forge614 Engines (real binary, needed by engines-client tests)
-        run: curl -fsSL https://github.com/jotredev/forge614-engines/releases/latest/download/install.sh | bash
-      - name: Run the hermetic test suite
+      - name: Install pinned Forge614 Engines 1.17.0 and Workers 1.0.0 into a disposable FORGE614_HOME
+        uses: ./forge614-atlas/.github/actions/install-forge614-dependencies
+      - name: Run the test suite
         shell: bash
         run: |
           set -euo pipefail
-          # forge614-workers has no public release yet (no installer to run here), and
-          # init.test.ts additionally requires a real, authenticated claude-code install —
-          # never something a shared CI runner can or should have. These 3 files are the
-          # only ones in the repo that need either; every other test file is hermetic
-          # (real Engram/Engines, or fixture scripts for AI engines) and runs for real here.
+          # init.test.ts is the only file left out: its tests resolve "claude-code" and the "completed" ones
+          # launch a real, authenticated Claude Code, which a shared CI runner neither has nor should have.
+          # Every other file runs for real, including run-batch.test.ts and dispatch-modules.test.ts, which
+          # call the pinned Workers and Engines (their AI engine is a fixture script).
           exclude=(
             "./src/modules/cli/init.test.ts"
-            "./src/modules/cli/dispatch-modules.test.ts"
-            "./src/modules/workers-client/run-batch.test.ts"
           )
           run_files=()
           while IFS= read -r file; do
@@ -60,6 +66,13 @@ jobs:
       - run: bun run typecheck
       - run: git diff --check
       - run: bash -n scripts/install.sh
+      - name: Verify the CHANGELOG has an entry for the package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_version="$(bun -e 'console.log(require("./package.json").version)')"
+          grep -Fxq "## ${package_version}" CHANGELOG.md \
+            || { echo "CHANGELOG.md has no '## ${package_version}' entry for the package.json version" >&2; exit 1; }
       - name: Verify the release tag matches package.json
         if: github.ref_type == 'tag'
         run: |
@@ -107,6 +120,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ matrix.bun_version }}
+      - name: Install the Engram copy's own dependencies
+        working-directory: forge614-engram
+        run: bun install --frozen-lockfile
       - run: bun install --frozen-lockfile
       - name: Create the disposable build directory
         run: mkdir dist

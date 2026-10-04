@@ -1,0 +1,68 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+env:
+  # Release tag of Forge614 Engram that Atlas is compiled against (the same variable release.yml uses).
+  ENGRAM_REF: v1.8.7
+
+jobs:
+  unix:
+    name: Unix checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: forge614-atlas
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: forge614-atlas
+      # Atlas depends on Engram through "file:../forge614-engram", so the pinned release is checked out
+      # as a sibling folder and its own dependencies are installed inside it, exactly as in local development.
+      - uses: actions/checkout@v4
+        with:
+          repository: jotredev/forge614-engram
+          ref: ${{ env.ENGRAM_REF }}
+          path: forge614-engram
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: Install the Engram copy's own dependencies
+        working-directory: forge614-engram
+        run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+      - name: Install pinned Forge614 Engines 1.17.0 and Workers 1.0.0 into a disposable FORGE614_HOME
+        uses: ./forge614-atlas/.github/actions/install-forge614-dependencies
+      - name: Run the test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          # init.test.ts is the only file left out: its tests resolve "claude-code" and the "completed" ones
+          # launch a real, authenticated Claude Code, which a shared CI runner neither has nor should have.
+          # Every other file runs for real, including the ones that call the pinned Engines and Workers
+          # (their AI engine is a fixture script).
+          exclude=(
+            "./src/modules/cli/init.test.ts"
+          )
+          run_files=()
+          while IFS= read -r file; do
+            skip=0
+            for excluded in "${exclude[@]}"; do
+              [ "$file" != "$excluded" ] || { skip=1; break; }
+            done
+            [ "$skip" -eq 1 ] || run_files+=("$file")
+          done < <(find . -name "*.test.ts" -not -path "*/node_modules/*")
+          bun test "${run_files[@]}"
+      - run: bun run typecheck
+      - run: git diff --check
+      - run: bash -n scripts/install.sh

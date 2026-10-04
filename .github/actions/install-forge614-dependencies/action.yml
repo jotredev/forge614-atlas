@@ -1,0 +1,84 @@
+name: Install pinned Forge614 Engines and Workers
+description: >-
+  Installs Forge614 Engines and Forge614 Workers at FIXED versions, each verified against its published
+  checksum, into a disposable FORGE614_HOME, so the tests that call the real binaries never depend on
+  the latest release or on the runner's own home folder.
+
+inputs:
+  engines-version:
+    description: Forge614 Engines version (without the leading v).
+    default: "1.17.0"
+  workers-version:
+    description: Forge614 Workers version (without the leading v).
+    default: "1.0.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Point FORGE614_HOME at a disposable folder
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$RUNNER_TEMP/forge614"
+        echo "FORGE614_HOME=$RUNNER_TEMP/forge614" >> "$GITHUB_ENV"
+
+    - name: Install Forge614 Engines (pinned; the tests use the real binary)
+      shell: bash
+      env:
+        ENGINES_VERSION: ${{ inputs.engines-version }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64)   combo=linux-x64 ;;
+          Linux-ARM64) combo=linux-arm64 ;;
+          macOS-ARM64) combo=darwin-arm64 ;;
+          macOS-X64)   combo=darwin-x64 ;;
+          *) echo "Unsupported runner: $RUNNER_OS-$RUNNER_ARCH" >&2; exit 1 ;;
+        esac
+        name="forge614-engines-${ENGINES_VERSION}-${combo}"
+        base="https://github.com/jotredev/forge614-engines/releases/download/v${ENGINES_VERSION}"
+        dir="$RUNNER_TEMP/engines-download"
+        mkdir -p "$dir"
+        curl --fail --location --silent --show-error --output "$dir/$name.tar.gz" "$base/$name.tar.gz"
+        curl --fail --location --silent --show-error --output "$dir/$name.tar.gz.sha256" "$base/$name.tar.gz.sha256"
+        (cd "$dir" && shasum -a 256 -c "$name.tar.gz.sha256")
+        tar -xzf "$dir/$name.tar.gz" -C "$dir"
+        test -x "$dir/$name/forge614-engines"
+        mkdir -p "$FORGE614_HOME/engines/bin"
+        install -m 755 "$dir/$name/forge614-engines" "$FORGE614_HOME/engines/bin/forge614-engines"
+        bin="$FORGE614_HOME/engines/bin/forge614-engines"
+        [ "$("$bin" --version)" = "forge614-engines ${ENGINES_VERSION}" ] \
+          || { echo "Installed Engines does not report version ${ENGINES_VERSION}" >&2; exit 1; }
+        # A wrong or too-old Engines must fail here with a clear message, not as a pile of confusing test failures.
+        capabilities="$("$bin" capabilities --agent claude-code)"
+        grep -Eq '"supportsReadOnly": *true' <<< "$capabilities" \
+          || { echo "Engines ${ENGINES_VERSION} does not guarantee the read-only lock" >&2; exit 1; }
+
+    - name: Install Forge614 Workers (pinned; the tests use the real binary)
+      shell: bash
+      env:
+        WORKERS_VERSION: ${{ inputs.workers-version }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64)   combo=linux-x64 ;;
+          Linux-ARM64) combo=linux-arm64 ;;
+          macOS-ARM64) combo=darwin-arm64 ;;
+          macOS-X64)   combo=darwin-x64 ;;
+          *) echo "Unsupported runner: $RUNNER_OS-$RUNNER_ARCH" >&2; exit 1 ;;
+        esac
+        name="forge614-workers-${combo}"
+        base="https://github.com/jotredev/forge614-workers/releases/download/v${WORKERS_VERSION}"
+        dir="$RUNNER_TEMP/workers-download"
+        mkdir -p "$dir"
+        curl --fail --location --silent --show-error --output "$dir/$name" "$base/$name"
+        curl --fail --location --silent --show-error --output "$dir/SHA256SUMS" "$base/SHA256SUMS"
+        # Check the binary against exactly its own line of the release's SHA256SUMS.
+        grep -E "^[0-9a-f]{64}  ${name}\$" "$dir/SHA256SUMS" > "$dir/$name.sha256"
+        test "$(wc -l < "$dir/$name.sha256" | tr -d ' ')" = 1
+        (cd "$dir" && shasum -a 256 -c "$name.sha256")
+        mkdir -p "$FORGE614_HOME/workers/bin"
+        install -m 755 "$dir/$name" "$FORGE614_HOME/workers/bin/forge614-workers"
+        bin="$FORGE614_HOME/workers/bin/forge614-workers"
+        [ "$("$bin" --version < /dev/null)" = "forge614-workers ${WORKERS_VERSION}" ] \
+          || { echo "Installed Workers does not report version ${WORKERS_VERSION}" >&2; exit 1; }
