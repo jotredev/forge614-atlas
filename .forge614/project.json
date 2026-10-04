@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "id": "f35e737c-1648-40b0-bfa2-aa4e7f37334d",
+    "name": "forge614-atlas"
+  },
+  "ecosystem": {
+    "id": "e0b3e1c9-ffbb-4b6b-8a55-79fbf3e8f0b4",
+    "name": "forge614"
+  }
+}
