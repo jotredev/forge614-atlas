@@ -1,3 +1,7 @@
+/**
+ * Implementa el recorrido de `atlas init`: elige un motor disponible, confirma los requisitos de ejecución de solo
+ * lectura y convierte el análisis de módulos en la respuesta JSON estable que consume la interfaz de línea de comandos.
+ */
 import { startProjectSession, type MemoryStore, type Session } from "forge614-engram";
 import { detectAgents, type AgentDetection } from "../engines-client/detect";
 import { getCapabilities, type Capabilities } from "../engines-client/capabilities";
@@ -87,6 +91,7 @@ function failure(code: InitErrorCode, error: unknown): InitOutcome {
  * @param resumed Si la sesión se reanudó en vez de abrirse nueva.
  * @param session Sesión de Engram de esta corrida.
  * @param modules Módulos por analizar con su nivel.
+ * @returns El resultado de `init`: completo con el reporte, pausado con los conteos, o un sobre de error si Workers falla o rechaza solo lectura.
  */
 async function runDispatch(
   store: MemoryStore,

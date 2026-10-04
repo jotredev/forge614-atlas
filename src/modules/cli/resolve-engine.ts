@@ -1,6 +1,11 @@
+/**
+ * Reduce la detección de Engines a un único motor apto para ejecutar tareas sin pantalla, o a la razón por la que no puede elegirlo.
+ * La selección parte siempre de los datos actuales de Engines, incluso si quien invoca `init` pidió un identificador concreto.
+ */
 import type { AgentDetection } from "../engines-client/detect";
 import type { Capabilities } from "../engines-client/capabilities";
 
+/** Resultado de resolver el motor: elegido, inexistente, ambiguo o distinto del identificador solicitado. */
 export type EngineResolution =
   | { status: "resolved"; id: string; executable: string }
   | { status: "engine-ambiguous"; candidates: { id: string; executable: string }[] }
@@ -8,9 +13,11 @@ export type EngineResolution =
   | { status: "engine-invalid"; requestedId: string; candidates: { id: string; executable: string }[] };
 
 /**
- * Engines es siempre la fuente de verdad: incluso con requestedId, se
- * valida contra la lista real de candidatos (instalados + soporte
- * headless), nunca se confía el flag a ciegas.
+ * Elige el motor solicitado o el único candidato instalado que Engines declara capaz de ejecución sin pantalla (headless).
+ * @param agents Detecciones de Engines; solo pasan los agentes instalados que además exponen una ruta ejecutable.
+ * @param capabilitiesById Capacidades obtenidas de Engines por identificador; `supportsHeadlessExec` filtra los candidatos.
+ * @param requestedId Identificador recibido con `--engine`; si no coincide con un candidato se devuelve `engine-invalid`.
+ * @returns El motor resuelto, la lista de candidatos si hay ambigüedad o invalidez, o `engine-unavailable` si la lista queda vacía.
  */
 export function resolveEngine(
   agents: AgentDetection[],
