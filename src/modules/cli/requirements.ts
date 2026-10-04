@@ -1,3 +1,7 @@
+/**
+ * Verifica antes de abrir una sesión que Engines garantice solo lectura y que Workers exista y tenga una versión compatible.
+ * Sus mensajes se conservan aquí para que `init` entregue el mismo diagnóstico tanto al validar como al rechazar una tarea después.
+ */
 import { spawnSync } from "node:child_process";
 import { accessSync, constants } from "node:fs";
 import type { Capabilities } from "../engines-client/capabilities";
@@ -13,7 +17,9 @@ export type RequirementsErrorCode = "READ_ONLY_UNSUPPORTED" | "WORKERS_UNREACHAB
 
 /** Un requisito que no se cumple, listo para convertirse en el sobre de error de `init`. */
 export interface RequirementsFailure {
+  /** Código legible por el CLI que identifica el requisito que impidió iniciar el análisis. */
   code: RequirementsErrorCode;
+  /** Explicación lista para mostrar al usuario, incluida la acción de actualización cuando aplica. */
   message: string;
 }
 
@@ -23,6 +29,7 @@ const WORKERS_VERSION_PATTERN = /^forge614-workers\s+([0-9]+)\.([0-9]+)\.([0-9]+
 /**
  * Da el mensaje de error cuando Engines no garantiza ayudantes de solo lectura.
  * @param engineId Identificador del agente elegido.
+ * @returns El texto que explica que Engines debe actualizarse para garantizar `readOnly` en ese agente.
  */
 export function readOnlyUnsupportedMessage(engineId: string): string {
   return `Forge614 Engines does not guarantee read-only helpers for "${engineId}" (Engines 1.17.0 or newer is required). Update it with: forge614-engines update`;
@@ -31,6 +38,7 @@ export function readOnlyUnsupportedMessage(engineId: string): string {
 /**
  * Da el mensaje de error cuando Workers es más viejo que 1.0.0 o no responde bien a `--version`.
  * @param found Versión leída, o `undefined` si no se pudo leer.
+ * @returns El texto que nombra la versión detectada, o `unknown`, y da la orden de instalación.
  */
 export function workersOutdatedMessage(found: string | undefined): string {
   return `Forge614 Workers 1.0.0 or newer is required (found: ${found ?? "unknown"}). Install it with: curl -fsSL https://github.com/jotredev/forge614-workers/releases/latest/download/install.sh | bash`;
@@ -59,7 +67,7 @@ function readWorkersVersion(workersBinaryPath: string, timeoutMs: number): { maj
  * Comprueba, ANTES de abrir ninguna sesión de Engram, que Atlas puede mandar ayudantes de solo lectura: que Engines
  * garantice el candado, que el binario de Workers exista y que Workers sea 1.0.0 o posterior (un
  * Workers anterior ignoraría `readOnly` sin avisar y el ayudante correría sin candado).
- * @param input.engineId Agente elegido.
+ * @param input Datos de la elección de motor y de Workers que se validan antes de crear una sesión.
  * @param input.capabilities Capacidades que Engines declaró para ese agente.
  * @param input.workersBinaryPath Ruta del binario de Workers.
  * @param input.workersVersionTimeoutMs Tope para `--version`; por defecto 10 s.

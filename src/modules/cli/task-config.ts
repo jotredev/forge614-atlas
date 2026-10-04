@@ -1,8 +1,13 @@
+/** Nivel de profundidad que el plan asigna a un módulo y que indexa la tabla de modelos. */
 type Tier = "ligero" | "estandar" | "profundo";
+/** Identificadores de los motores que tienen una fila explícita en la tabla fija de Atlas. */
 type EngineId = "claude-code" | "codex";
 
+/** Configuración que se entrega a Workers para una tarea ya clasificada por nivel y motor. */
 export interface TaskModelConfig {
+  /** Nombre exacto del modelo que el motor debe ejecutar. */
   model: string;
+  /** Intensidad de razonamiento que se manda solo cuando Engines declara que el motor la acepta. */
   reasoningLevel?: "low" | "medium";
 }
 

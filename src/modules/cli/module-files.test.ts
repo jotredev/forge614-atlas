@@ -1,10 +1,16 @@
+/**
+ * Comprueba que la relación entre módulos y archivos conserva los nombres solicitados, incluidos los que el descubrimiento no conoce.
+ * Usa una carpeta temporal con dos módulos reales para no depender de los archivos del repositorio que ejecuta la prueba.
+ */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveModuleFiles } from "./module-files";
 
+/** Agrupa el contrato de `resolveModuleFiles`: rutas absolutas para módulos conocidos y listas vacías para desconocidos. */
 describe("resolveModuleFiles", () => {
+  /** Comprueba que `auth` devuelve su único archivo, `unknown-module` se conserva como vacío y `billing` no aparece si no se pidió. */
   test("returns the absolute file list for each named module, empty for unknown names", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-module-files-"));
     mkdirSync(join(root, "auth"), { recursive: true });
