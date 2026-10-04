@@ -10,9 +10,9 @@ import { existsSync } from "node:fs";
 import { isTestFile, type ModuleDescriptor } from "./discovery";
 
 /**
- * Comprueba si un archivo fuente productivo tiene un archivo de pruebas hermano (sibling test).
+ * Comprueba si un archivo fuente productivo tiene un archivo de pruebas hermano (sibling test: el que está en la misma carpeta, con el mismo nombre).
  * 
- * Convención estándar de la industria (co-located tests):
+ * Convención que sigue Atlas (la prueba vive al lado del archivo):
  * - Para un archivo como `/src/auth/jwt.ts`, se buscan dos variantes hermanas directas:
  *   1. `/src/auth/jwt.test.ts` (o con la extensión original: .tsx, .js, .jsx)
  *   2. `/src/auth/jwt.spec.ts`
@@ -40,15 +40,14 @@ function hasSiblingTest(filePath: string): boolean {
  * Calcula la Brecha de Cobertura de Pruebas (Test Coverage Gap) para cada módulo.
  * 
  * Definición y Fundamento de Calidad:
- * - El "Test Coverage Gap" cuantifica la proporción de archivos fuente productivos que
- *   carecen de una suite de pruebas unitarias asociada.
+ * - El "Test Coverage Gap" cuantifica la proporción de archivos fuente productivos que no tienen un archivo de pruebas al lado (`.test` o `.spec`).
  * - Rango normalizado: `[0.0, 1.0]`.
  *   - `0.0`: Cobertura de pruebas completa (todos los archivos tienen su test hermano).
- *   - `1.0`: Brecha total (ningún archivo productivo cuenta con pruebas automatizadas).
+ *   - `1.0`: Brecha total (ningún archivo productivo tiene un archivo de pruebas al lado).
  * 
  * Algoritmo paso a paso:
  * 1. Por cada módulo, filtra exclusivamente sus archivos productivos excluyendo los tests existentes.
- * 2. Caso borde: Si el módulo no contiene archivos productivos (ej. solo configuración o vacío),
+ * 2. Caso borde: Si el módulo no contiene archivos productivos (por ejemplo, un módulo con solo archivos de prueba),
  *    la brecha es estrictamente 0.0 para no penalizar módulos que no ejecutan lógica de negocio.
  * 3. Cuenta cuántos de esos archivos productivos poseen un archivo hermano de prueba (`withTests`).
  * 4. Aplica la fórmula complementaria:

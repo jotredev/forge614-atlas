@@ -10,8 +10,7 @@ import { detectAgents } from "./detect";
 import { resolveEnginesBinaryPath } from "./binary-path";
 import { resolveForgeHome } from "../forge-home/forge-home";
 
-// Estos tests requieren forge614-engines instalado en la ruta fija del
-// ecosistema (confirmado presente en esta máquina de desarrollo).
+// El primer test necesita forge614-engines instalado en la ruta fija del ecosistema; el segundo usa una ruta que no existe.
 const binaryPath = resolveEnginesBinaryPath(process.platform, resolveForgeHome(process.env, homedir()));
 
 /**

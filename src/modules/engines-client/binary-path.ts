@@ -2,7 +2,7 @@
  * Arma la ruta fija donde vive el lanzador de Forge614 Engines (el programa que Atlas ejecuta para preguntarle qué agentes hay
  * y qué sabe hacer cada uno).
  * Existe para que Atlas encuentre ese programa siempre en el mismo lugar, con el sufijo `.exe` y las barras de Windows cuando toca.
- * Lo llama `src/interfaces/cli/commands.ts` y `src/index.ts` lo reexporta; varias pruebas (`detect`, `capabilities` e `init`)
+ * Lo llama `src/interfaces/cli/commands.ts` y `src/index.ts` lo reexporta; varias pruebas (`detect`, `capabilities`, `init`, `run-batch` y `dispatch-modules`)
  * también lo usan para llegar al Engines real.
  * Pieza: `resolveEnginesBinaryPath`.
  */

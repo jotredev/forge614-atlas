@@ -7,7 +7,7 @@ import { resolveEnginesBinaryPath } from "./binary-path";
 
 /**
  * Comprueba `resolveEnginesBinaryPath` en dos casos: plataformas tipo Unix y Windows.
- * Importa porque `runInit` ejecuta Engines con esa ruta; si sale mal, `init` no puede hablar con Engines.
+ * Importa porque `runInit` arma esta ruta y `init` ejecuta Engines con ella; si sale mal, `init` no puede hablar con Engines.
  */
 describe("resolveEnginesBinaryPath", () => {
   /**

@@ -31,7 +31,7 @@ const EXCLUDED_DIRS = new Set([
  * Descriptor canónico de un módulo descubierto en disco.
  */
 export interface ModuleDescriptor {
-  /** Nombre del directorio raíz de primer nivel que define el módulo */
+  /** Nombre del módulo: su ruta relativa a la raíz escaneada, con `/` (por ejemplo `auth` o `src/auth`) */
   name: string;
   /** Ruta absoluta en el sistema de archivos hacia la carpeta del módulo */
   path: string;
@@ -44,8 +44,7 @@ export interface ModuleDescriptor {
  * 
  * Regla de concordancia:
  * - Extensiones admitidas: .test.ts, .test.tsx, .test.js, .test.jsx, .spec.ts, .spec.tsx, etc.
- * - Utilizado por los motores de ciclomática y fan-in para excluir aserciones de prueba
- *   y no inflar artificialmente la complejidad del código de producción.
+ * Lo usan `cyclomatic.ts`, `fan-in.ts` y `test-coverage-gap.ts` para dejar fuera los archivos de prueba de sus cuentas.
  * 
  * @param filePath - Ruta relativa o absoluta del archivo a inspeccionar
  * @returns `true` si el nombre finaliza en `.(test|spec).[tj]sx?`
@@ -65,14 +64,17 @@ export function isTestFile(filePath: string): boolean {
  * - Si contiene archivos de código directamente Y subcarpetas (carpeta mixta), los
  *   archivos sueltos forman su propio módulo, y cada subcarpeta se evalúa aparte.
  * - Si no tiene subcarpetas (o ya no quedan), es un módulo completo si contiene al
- *   menos un archivo de código, igual que el comportamiento original.
+ *   menos un archivo de código.
  *
  * El nombre de cada módulo es su ruta relativa a `root` (ej. `src/auth`), no solo el
  * nombre de la carpeta final — así dos carpetas con el mismo nombre en ramas distintas
  * (ej. `src/auth` y `tests/auth`) nunca chocan como si fueran el mismo módulo.
  *
+ * Los archivos que están sueltos directamente en `root` no forman módulo: solo se recorren sus carpetas.
+ *
  * @param root - Ruta absoluta del repositorio del proyecto
  * @returns Lista de módulos descubiertos ordenada alfabéticamente por nombre
+ * @throws Error del sistema de archivos (por ejemplo `ENOENT`) si `root` no existe o no se puede leer; la función no lo captura.
  */
 export function discoverModules(root: string): ModuleDescriptor[] {
   const topLevelDirs = readdirSync(root, { withFileTypes: true })

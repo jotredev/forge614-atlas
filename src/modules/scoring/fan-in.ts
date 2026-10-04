@@ -18,9 +18,9 @@ import { isTestFile, type ModuleDescriptor } from "./discovery";
  * dentro de un archivo de código TypeScript/JavaScript usando su AST.
  * 
  * Alcance sintáctico soportado:
- * 1. Declaraciones ESM estáticas: `import { x } from "./ruta"`
+ * 1. Declaraciones ESM estáticas (el sistema de módulos moderno de JavaScript): las que traen algo de una ruta relativa, como `./ruta`
  * 2. Declaraciones ESM de re-exportación: `export { y } from "../otro/modulo"`
- * 3. Llamadas dinámicas de CommonJS: `const z = require("./modulo")`
+ * 3. Llamadas a `require` (CommonJS, el sistema de módulos antiguo de Node): `const z = require("./modulo")`
  * 
  * Regla de filtrado:
  * - Solo se retornan especificadores que comiencen con punto (`.` o `..`),
@@ -29,7 +29,7 @@ import { isTestFile, type ModuleDescriptor } from "./discovery";
  *   ya que estas no forman parte de los módulos de primer nivel del repositorio.
  * 
  * @param sourceText - Código fuente del archivo en texto
- * @param fileName - Nombre del archivo para contexto del compilador
+ * @param fileName - Nombre del archivo; su extensión decide cómo se lee el código (por ejemplo, `.tsx` admite JSX). Por omisión `module.ts`.
  * @returns Lista de cadenas con los especificadores relativos encontrados
  */
 export function extractRelativeImportSpecifiers(sourceText: string, fileName = "module.ts"): string[] {
@@ -73,12 +73,12 @@ export function extractRelativeImportSpecifiers(sourceText: string, fileName = "
  * Resuelve una ruta de importación relativa al archivo físico real en disco.
  * 
  * Desafío en TypeScript:
- * - Los desarrolladores escriben `import { x } from "../utils/helper"`, pero en disco
+ * - Los desarrolladores escriben la ruta sin extensión (por ejemplo `../utils/helper`), pero en disco
  *   el archivo físico se llama `helper.ts`, `helper.tsx`, o bien `helper/index.ts`.
  * 
  * Algoritmo de resolución de candidatos:
  * 1. Calcula la ruta base absoluta resolviendo `specifier` relativo a la carpeta de `fromFile`.
- * 2. Genera un arreglo de candidatos posibles ordenados por probabilidad:
+ * 2. Genera una lista de candidatos en orden de prioridad (gana el primero que exista en disco):
  *    - Ruta base exacta (por si ya incluye la extensión o es un directorio directo).
  *    - Ruta base con extensiones: `.ts`, `.tsx`, `.js`, `.jsx`.
  *    - Resolución de módulo contenedor de índice: `/index.ts`, `/index.tsx`, `/index.js`.
@@ -132,8 +132,7 @@ function resolveImportPath(fromFile: string, specifier: string): string | null {
  *    con la ruta del módulo seguida por el separador del sistema (`/` en POSIX o `\` en Windows).
  *    Esto previene falsos positivos catastróficos si existen carpetas como `auth` y `auth-legacy`.
  * 4. Exclusión de Archivos de Prueba:
- *    Los archivos de test (`.test.ts`) se omiten del análisis para evitar que los imports
- *    de prueba distorsionen la topología arquitectónica de producción.
+ *    Los archivos de prueba (los que terminan en `.test` o `.spec` seguido de ts, tsx, js o jsx) no se leen como emisores, para evitar que los imports de prueba distorsionen la topología arquitectónica de producción.
  * 
  * @param modules - Lista de módulos registrados en el proyecto
  * @returns Mapa `Map<string, number>` con el valor de Fan-In por cada módulo
@@ -169,7 +168,7 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
         // 5. Determinar a qué módulo pertenece el archivo importado
         const toModule = modules.find(module => {
           const modulePath = module.path;
-          // Pertenece al módulo si es su misma carpeta o está dentro de ella; el separador evita confundir `auth` con `auth-legacy`.
+          // Pertenece al módulo si es su misma carpeta o está dentro de ella (el separador evita confundir `auth` con `auth-legacy`); gana el primer módulo de la lista, así que con una carpeta mixta (`src` y `src/auth`) un archivo de `src/auth` se atribuye a `src`.
           return resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep);
         });
 

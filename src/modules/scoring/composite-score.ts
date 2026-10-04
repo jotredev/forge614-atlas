@@ -15,11 +15,11 @@ export interface ModuleSignals {
   name: string;
   /** Suma acumulada de complejidad ciclomática de código productivo */
   cyclomatic: number;
-  /** Cantidad de otros módulos dependientes (in-degree en el grafo) */
+  /** Cantidad de otros módulos que dependen de este (cuántas flechas de dependencia le llegan) */
   fanIn: number;
-  /** Total de modificaciones históricas en commits de Git */
+  /** Total de cambios de archivos de este módulo en el historial de Git */
   churn: number;
-  /** Brecha de cobertura de pruebas unitarias en rango [0.0, 1.0] */
+  /** Parte de los archivos fuente del módulo que no tiene archivo de pruebas al lado, de 0.0 (todos lo tienen) a 1.0 (ninguno) */
   testGap: number;
 }
 
@@ -40,8 +40,8 @@ export interface ModuleScore {
  * - Las tres señales estructurales manejan escalas de magnitud completamente dispares:
  *   - Complejidad Ciclomática: Típicamente entre 1 y 500.
  *   - Centralidad Fan-In: Típicamente entre 0 y 20 (acotada por la cantidad de módulos).
- *   - Volatilidad Git Churn: Puede superar los 1,000 commits en proyectos maduros.
- * - Si se sumaran directamente, el Churn dominaría el 95% de la decisión, invisibilizando
+ *   - Volatilidad Git Churn: Puede superar los 1,000 cambios de archivos en proyectos maduros.
+ * - Si se sumaran directamente, el Churn dominaría la suma, invisibilizando
  *   módulos arquitectónicamente críticos pero estables.
  * 
  * Solución de Normalización Min-Max:
@@ -92,9 +92,7 @@ export function computeCompositeScores(signals: ModuleSignals[]): ModuleScore[] 
  * Función pura auxiliar que proyecta un arreglo numérico al rango [0.0, 1.0] usando Min-Max.
  * 
  * Manejo de estabilidad numérica:
- * - Si el arreglo tiene longitud 0 o 1, o todos los valores son idénticos,
- *   $\max(V) = \min(V)$ produce un divisor de cero. En ese escenario, retorna un arreglo
- *   de ceros preservando la longitud original.
+ * Si todos los valores son idénticos (o solo hay uno), max(V) = min(V) produciría una división entre cero; en ese caso devuelve ceros con la misma longitud. Con una lista vacía devuelve una lista vacía.
  * 
  * @param values - Vector numérico a normalizar
  * @returns Nuevo vector numérico escalado a [0.0, 1.0]
