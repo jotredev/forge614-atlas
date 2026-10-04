@@ -1,4 +1,4 @@
-import type { MemoryStore, Session } from "forge614-engram";
+import { MemoryError, type MemoryStore, type Session } from "forge614-engram";
 import type { Capabilities } from "../engines-client/capabilities";
 import type { FinalReport } from "../memory/finalize-run";
 import { resolveModuleFiles } from "./module-files";
@@ -74,6 +74,7 @@ export async function dispatchModules(
   const tierByModuleName = new Map(orderedModules.map(m => [m.name, m.tier]));
   const analyzedModuleNames: string[] = [];
   const skippedModuleNames: string[] = [];
+  const rejectedReportModuleNames: string[] = [];
   let quotaExhausted = false;
   let fatalErrorMessage: string | undefined;
   let readOnlyRejected = false;
@@ -84,8 +85,17 @@ export async function dispatchModules(
       if (event.stdoutTruncated) {
         skippedModuleNames.push(event.taskId);
       } else {
-        recordModuleReport(store, directory, session, event.taskId, event.stdout);
-        analyzedModuleNames.push(event.taskId);
+        try {
+          recordModuleReport(store, directory, session, event.taskId, event.stdout);
+          analyzedModuleNames.push(event.taskId);
+        } catch (error) {
+          // Engram rechaza guardar un texto que parece un secreto. Un solo módulo con una cadena
+          // parecida a una clave no debe tumbar un análisis largo: se omite y se reintenta luego.
+          // Cualquier otro error se sigue propagando.
+          if (!(error instanceof MemoryError && error.code === "SECRET_REJECTED")) throw error;
+          skippedModuleNames.push(event.taskId);
+          rejectedReportModuleNames.push(event.taskId);
+        }
       }
     } else if (event.event === "task_failed") {
       if (typeof event.stderr === "string" && event.stderr.startsWith(READ_ONLY_UNSUPPORTED_PREFIX)) {
@@ -145,6 +155,7 @@ export async function dispatchModules(
     pauseCount: readPauseCount(store, session.projectId),
     analyzedModuleNames,
     skippedModuleNames,
+    rejectedReportModuleNames,
   };
   finalizeRun(store, session, report);
   return { status: "completed", report };

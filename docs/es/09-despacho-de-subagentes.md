@@ -28,7 +28,8 @@ La salida de `init` ya no se detiene en `"ready"`. Ese estado desapareció. Dos 
     "totalTimeMs": 184320,
     "pauseCount": 0,
     "analyzedModuleNames": ["src/auth", "src/billing"],
-    "skippedModuleNames": []
+    "skippedModuleNames": [],
+    "rejectedReportModuleNames": []
   }
 }
 ```
@@ -89,7 +90,7 @@ El prompt de análisis siempre pide un resumen narrativo — nunca "el contenido
 
 Atlas le manda a `forge614-workers` **un solo lote** por corrida de `init` — nunca una invocación por módulo — con la lista completa y ordenada de tareas por `stdin`. Luego lee los eventos NDJSON de `stdout` conforme llegan:
 
-- `task_completed` → el reporte del módulo se guarda en Engram **de inmediato** (`recordModuleReport`), nunca se acumula hasta el final. Si la salida reportada quedó truncada (`stdoutTruncated: true`, es decir, llegó al límite de bytes), el módulo se trata como saltado en vez de guardado, para que el siguiente `init`/resume lo reintente en vez de quedarse para siempre con un análisis cortado.
+- `task_completed` → el reporte del módulo se guarda en Engram **de inmediato** (`recordModuleReport`), nunca se acumula hasta el final. Si la salida reportada quedó truncada (`stdoutTruncated: true`, es decir, llegó al límite de bytes), el módulo se trata como saltado en vez de guardado, para que el siguiente `init`/resume lo reintente en vez de quedarse para siempre con un análisis cortado. Si Engram se niega a guardar el reporte porque su texto parece un secreto (error `SECRET_REJECTED`, un filtro que Engram aplica a todo guardado), ese módulo también se cuenta como saltado — una sola línea que parezca una clave no debe tumbar un análisis largo — y su nombre aparece en el campo nuevo `rejectedReportModuleNames` del reporte final (campo aditivo: `skippedModuleNames` lo sigue incluyendo, y el resumen de cierre en Engram dice por qué). El lote sigue, y el siguiente `init` reintenta ese módulo. Cualquier otro error al guardar sigue deteniendo la corrida, como antes.
 - `task_failed` → el módulo se registra como saltado; el despacho continúa con el resto. La única excepción es un `stderr` que empieza con `READ_ONLY_UNSUPPORTED` (la segunda defensa de arriba): eso termina la corrida con ese error.
 - `quota_exhausted` → el despacho se detiene de inmediato. La sesión de Engram queda **abierta a propósito** — ese estado abierto **es** la señal de "esta corrida quedó incompleta" para el siguiente `init`, que retoma automáticamente (el mismo mecanismo que ya construyó el Plan 2). Un contador de pausas, guardado también en Engram (`atlas:meta:pause-count`), se incrementa para que el `pauseCount` del reporte de cierre eventual refleje toda la vida del proyecto, no solo la corrida final.
 - `fatal_error` → todo el lote no produjo nada utilizable; se mapea a `WORKERS_FATAL_ERROR`.

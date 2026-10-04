@@ -75,4 +75,33 @@ describe("finalizeRun", () => {
     rmSync(root, { recursive: true, force: true });
     rmSync(repoDir, { recursive: true, force: true });
   });
+
+  test("nextSteps says why a module was skipped when Engram rejected its report as a secret", () => {
+    const root = mkdtempSync(join(tmpdir(), "atlas-finalize-rejected-"));
+    const repoDir = mkdtempSync(join(tmpdir(), "atlas-finalize-rejected-repo-"));
+    const { store, session } = freshSession(root, repoDir, "atlas:test-finalize-rejected");
+
+    const report: FinalReport = {
+      repoName: "mi-repo",
+      tierBreakdown: { deep: 1, standard: 0, light: 0 },
+      engineByTier: { deep: "claude", standard: "claude", light: "claude" },
+      totalWorkersByTier: { deep: 1, standard: 0, light: 0 },
+      tokensConsumed: 100,
+      totalTimeMs: 5000,
+      pauseCount: 0,
+      analyzedModuleNames: ["auth"],
+      skippedModuleNames: ["billing", "payments"],
+      rejectedReportModuleNames: ["payments"],
+    };
+
+    finalizeRun(store, session, report);
+
+    const summary = store.getByTopic(session.projectId, `session/${session.sessionId}/summary`);
+    expect(summary?.content).toContain("Módulos saltados o fallidos: billing, payments.");
+    expect(summary?.content).toContain("Engram rechazó el reporte de estos módulos por parecer un secreto: payments.");
+
+    store.close();
+    rmSync(root, { recursive: true, force: true });
+    rmSync(repoDir, { recursive: true, force: true });
+  });
 });
