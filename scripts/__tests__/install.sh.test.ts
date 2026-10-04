@@ -549,6 +549,7 @@ describe("dependencies and FORGE614_HOME", () => {
     expect(run.calls).toEqual([]);
     expect(run.result.stdout).toContain("Forge614 Engram is compatible");
     expect(run.result.stdout).toContain("Forge614 Workers is compatible");
+    expect(run.result.stdout).toContain("Forge614 Engines is compatible");
     expect(existsSync(run.atlasBinary)).toBe(true);
   });
 
