@@ -1,3 +1,12 @@
+/**
+ * Descubre y agrupa los archivos de código fuente en "módulos" recorriendo las carpetas del proyecto.
+ * Existe para decidir qué carpetas son módulos: una carpeta con solo subcarpetas no es módulo y se baja a sus subcarpetas,
+ * una mixta da un módulo con sus archivos sueltos más uno por subcarpeta, y el nombre del módulo es su ruta relativa a la raíz.
+ * Lo usan `buildRunPlan` (`build-run-plan.ts`) y `resolveModuleFiles` (`module-files.ts`), ambos en `src/modules/cli/`;
+ * `ModuleDescriptor` también lo usan `churn.ts`, `cyclomatic.ts`, `fan-in.ts` y `test-coverage-gap.ts`, e `isTestFile` lo usan
+ * `cyclomatic.ts`, `fan-in.ts` y `test-coverage-gap.ts`; `src/index.ts` reexporta sus funciones principales.
+ * Piezas principales: `ModuleDescriptor`, `discoverModules`, `isTestFile`.
+ */
 import { Glob } from "bun";
 import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -120,6 +129,10 @@ function collectModules(root: string, dirPath: string, modules: ModuleDescriptor
  * Calcula el nombre de módulo como la ruta relativa a `root`, normalizada a separadores
  * `/` sin importar el sistema operativo, para que los nombres sean estables entre
  * macOS, Linux y Windows (se usan como claves de mapa y como parte de topic keys de Engram).
+ *
+ * @param root Ruta absoluta del repositorio, base del nombre.
+ * @param dirPath Ruta absoluta de la carpeta encontrada.
+ * @returns Nombre del módulo normalizado (ej. "src/auth/legacy").
  */
 function relativeModuleName(root: string, dirPath: string): string {
   return relative(root, dirPath).split(sep).join("/");

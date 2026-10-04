@@ -1,4 +1,13 @@
 /**
+ * Calcula la puntuación compuesta de complejidad (composite score) de los módulos a partir de sus señales.
+ * Existe para normalizar (llevar a 0–1) y ponderar cuatro señales: ciclomática (caminos del código), fan-in (cuántos módulos
+ * dependen de él), churn (cambios en git) y brecha de pruebas (qué parte no tiene pruebas), en una sola calificación de riesgo
+ * por módulo; no ordena, el orden lo da `assignTiers`.
+ * Lo usa `buildRunPlan` (en `src/modules/cli/build-run-plan.ts`); `assignTiers` convierte sus puntuaciones en el nivel de
+ * análisis de cada módulo; `src/index.ts` lo reexporta.
+ * Pieza principal: `computeCompositeScores`.
+ */
+/**
  * Señales cuantitativas sin procesar recopiladas para un módulo determinado.
  */
 export interface ModuleSignals {

@@ -1,9 +1,20 @@
+/**
+ * Pruebas para `discoverModules`.
+ * Comprueba que el explorador de archivos identifique y agrupe correctamente los archivos fuente en módulos,
+ * descartando directorios ignorados como node_modules y resolviendo carpetas anidadas hasta dos niveles (`src/auth`),
+ * carpetas mixtas, orden alfabético y carpetas que empiezan con punto.
+ * Importa porque de estos módulos sale el plan de análisis.
+ */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { discoverModules } from "./discovery";
 
+/**
+ * Comprueba `discoverModules`, que agrupa los archivos .ts/.tsx/.js/.jsx en módulos por carpeta.
+ * Importa para verificar que no se pierda ninguna carpeta con código y que se omitan las de la lista de exclusión y las que empiezan con punto.
+ */
 describe("discoverModules", () => {
   let root: string;
 
@@ -35,6 +46,10 @@ describe("discoverModules", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  /**
+   * Comprueba que al escanear `src` salga un solo módulo, `auth`, con su archivo `login.ts`.
+   * Importa como caso base de la detección.
+   */
   test("finds top-level folders that contain source files", () => {
     // Escaneo dentro de 'src': debe encontrar 'auth' y listar 'login.ts'
     const modules = discoverModules(join(root, "src"));
@@ -43,6 +58,10 @@ describe("discoverModules", () => {
     expect(modules[0]?.files).toEqual([join(root, "src", "auth", "login.ts")]);
   });
 
+  /**
+   * Comprueba que una carpeta con solo CSS (`styles`) no aparezca como módulo; solo cuentan .ts, .tsx, .js y .jsx.
+   * Importa para no procesar como código de negocio carpetas de estilos o documentación.
+   */
   test("excludes folders with no ts/tsx/js/jsx files", () => {
     // Escaneo dentro de 'src': 'styles' contiene solo CSS, por ende no califica
     const modules = discoverModules(join(root, "src"));
@@ -50,6 +69,10 @@ describe("discoverModules", () => {
     expect(names).not.toContain("styles");
   });
 
+  /**
+   * Comprueba que `node_modules` (carpeta de la lista de exclusión) no aparezca como módulo al escanear desde la raíz del repositorio.
+   * Importa para evitar que el analizador evalúe código de terceros.
+   */
   test("ignores node_modules even when scanning from the repo root", () => {
     // Escaneo desde la raíz: 'node_modules' está en la lista de exclusión y debe omitirse
     const modules = discoverModules(root);
@@ -57,6 +80,10 @@ describe("discoverModules", () => {
     expect(names).not.toContain("node_modules");
   });
 
+  /**
+   * Comprueba que se ignoren las subcarpetas que comienzan con punto (como .cache).
+   * Importa para excluir archivos generados o internos sin tener que listarlos individualmente.
+   */
   test("excludes nested dot-directories from file scanning", () => {
     const srcPath = join(root, "src");
     // Crear una subcarpeta oculta '.cache' dentro de un módulo válido
@@ -71,6 +98,11 @@ describe("discoverModules", () => {
     expect(modules[0]?.files).toEqual([join(srcPath, "auth", "login.ts")]);
   });
 
+  /**
+   * Comprueba que una carpeta que solo contiene subcarpetas (aquí `src`) no se vuelva un módulo y que el módulo `src/auth` se
+   * llame con su ruta relativa a la raíz.
+   * Importa para que un contenedor como `src` no se convierta en un solo módulo que junte a sus subcarpetas.
+   */
   test("descends into a purely-nested container folder instead of collapsing it into one module", () => {
     // 'src' solo contiene subcarpetas (auth, styles) — no debe convertirse en un módulo único.
     // 'src/auth' debe ser su propio módulo, nombrado con la ruta relativa completa.
@@ -81,6 +113,11 @@ describe("discoverModules", () => {
     expect(authModule?.files).toEqual([join(root, "src", "auth", "login.ts")]);
   });
 
+  /**
+   * Comprueba que `src` (con `index.ts` suelto y las subcarpetas `auth` y `billing`) dé tres módulos: `src` (solo `index.ts`),
+   * `src/auth` y `src/billing`.
+   * Importa para que un `index.ts` suelto no esconda los módulos de sus subcarpetas.
+   */
   test("splits a mixed folder (loose files + subfolders) into a loose-files module plus one module per subfolder", () => {
     const mixedRoot = mkdtempSync(join(tmpdir(), "atlas-discovery-mixed-"));
 
@@ -105,6 +142,10 @@ describe("discoverModules", () => {
     rmSync(mixedRoot, { recursive: true, force: true });
   });
 
+  /**
+   * Comprueba que una carpeta de primer nivel con código directo (`auth/login.ts`) dé el módulo `auth`.
+   * Importa para no romper los proyectos sin carpeta `src`.
+   */
   test("keeps flat top-level modules working exactly as before (no regression)", () => {
     const flatRoot = mkdtempSync(join(tmpdir(), "atlas-discovery-flat-"));
 
@@ -117,6 +158,11 @@ describe("discoverModules", () => {
     rmSync(flatRoot, { recursive: true, force: true });
   });
 
+  /**
+   * Comprueba que los módulos (`apple`, `mango`, `zebra`) y los archivos de `apple` salgan en orden alfabético aunque se hayan
+   * creado en otro orden.
+   * Importa para que el plan de corrida no cambie según el orden en que el disco devuelve las carpetas.
+   */
   test("returns modules and files in stable, alphabetically sorted order regardless of creation order", () => {
     const stableRoot = mkdtempSync(join(tmpdir(), "atlas-discovery-stable-"));
 
