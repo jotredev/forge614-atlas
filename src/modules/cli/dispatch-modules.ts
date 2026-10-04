@@ -41,6 +41,9 @@ export type DispatchResult =
  * @param engine Motor elegido.
  * @param capabilities Capacidades de ese motor (decide si se manda nivel de razonamiento).
  * @param modules Módulos pendientes con su nivel.
+ * @returns `completed` con el reporte final; `paused` si se agotó la cuota (la sesión queda abierta);
+ * `fatal_error` si Workers no pudo correr el lote; o `read_only_unsupported` si Workers se negó a correr las
+ * tareas por falta de candado de solo lectura (tampoco se cierra la sesión).
  */
 export async function dispatchModules(
   store: MemoryStore,
@@ -121,7 +124,6 @@ export async function dispatchModules(
   if (readOnlyRejected) {
     return { status: "read_only_unsupported" };
   }
-
 
   if (quotaExhausted) {
     recordPause(store, directory, session);

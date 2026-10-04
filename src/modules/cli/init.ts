@@ -11,10 +11,15 @@ import { checkDispatchRequirements, readOnlyUnsupportedMessage } from "./require
 
 /** Opciones de `init`. */
 export interface RunInitOptions {
+  /** Carpeta del proyecto a contextualizar. */
   directory: string;
+  /** Ruta del binario de Forge614 Engines. */
   enginesBinaryPath: string;
+  /** Ruta del binario de Forge614 Workers. */
   workersBinaryPath: string;
+  /** Motor pedido con `--engine`; si falta y hay varios, `init` responde `engine-ambiguous`. */
   requestedEngineId?: string;
+  /** Si es `true`, rehace un análisis que ya estaba completo (`--force`). */
   force: boolean;
   /** Tope, en milisegundos, para `forge614-workers --version` al iniciar (por defecto 10 s); se baja en las pruebas. */
   workersVersionTimeoutMs?: number;
@@ -56,6 +61,12 @@ export type InitOutcome =
       error: { code: InitErrorCode; message: string };
     };
 
+/**
+ * Arma el sobre de error de `init`.
+ * @param code Código del error.
+ * @param error Lo que falló: un `Error` (se usa su mensaje) o el texto ya armado.
+ * @returns La respuesta `status: "error"` con `schemaVersion: 1`.
+ */
 function failure(code: InitErrorCode, error: unknown): InitOutcome {
   return {
     schemaVersion: 1,
@@ -64,6 +75,19 @@ function failure(code: InitErrorCode, error: unknown): InitOutcome {
   };
 }
 
+/**
+ * Manda el lote a Workers y convierte el resultado en la respuesta de `init`: `completed`, `paused` o un
+ * error (`WORKERS_FATAL_ERROR`, y `READ_ONLY_UNSUPPORTED` si Workers se negó a correr las tareas por falta
+ * de candado, que es la segunda defensa tras la comprobación al iniciar).
+ * @param store Memoria de Engram.
+ * @param options Opciones de `init`.
+ * @param engine Motor elegido.
+ * @param capabilities Capacidades de ese motor.
+ * @param sessionId Identificador de la sesión de esta corrida.
+ * @param resumed Si la sesión se reanudó en vez de abrirse nueva.
+ * @param session Sesión de Engram de esta corrida.
+ * @param modules Módulos por analizar con su nivel.
+ */
 async function runDispatch(
   store: MemoryStore,
   options: RunInitOptions,
@@ -156,7 +180,7 @@ export async function runInitCommand(store: MemoryStore, options: RunInitOptions
   const engine = { id: resolution.id, executable: resolution.executable };
   const capabilities = capabilitiesById.get(resolution.id)!;
 
-  // Antes de tocar Engram: sin candado de solo lectura garantizado no se manda ningún ayudante.
+  // Antes de abrir ninguna sesión de Engram: sin candado de solo lectura garantizado no se manda ningún ayudante.
   const unmet = checkDispatchRequirements({
     engineId: engine.id,
     capabilities,

@@ -11,8 +11,12 @@ export function helpText(version: string): string {
     "Usage:",
     "  forge614-atlas init [--engine <id>] [--force]   Contextualize the project in the current folder",
     "  forge614-atlas update                           Update to the latest release",
-    "  forge614-atlas uninstall [--confirmed]          Remove Atlas; never touches Engram, Engines, Shell or Workers",
-    "  forge614-atlas --version                        Print the product name and version",
-    "  forge614-atlas --help                           Print this help",
+    "  forge614-atlas uninstall [--from forge614-engram] [--confirmed]",
+    "                                                  Remove Atlas; never touches Engram, Engines, Shell or Workers",
+    "  forge614-atlas --version, -v                    Print the product name and version",
+    "  forge614-atlas --help, -h                       Print this help (also answered in any position, e.g. init --help)",
+    "",
+    "Environment:",
+    "  FORGE614_HOME   Absolute path that replaces ~/.forge614 as the Forge614 folder",
   ].join("\n");
 }

@@ -7,6 +7,12 @@ export function makeFakeDir(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
+/**
+ * Escribe un script de shell ejecutable con el cuerpo dado.
+ * @param path Ruta del archivo a crear.
+ * @param body Líneas que van después de `#!/bin/sh`.
+ * @returns La misma ruta, ya con permiso de ejecución.
+ */
 function writeExecutable(path: string, body: string): string {
   writeFileSync(path, `#!/bin/sh\n${body}\n`);
   chmodSync(path, 0o755);

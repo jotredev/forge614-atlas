@@ -94,6 +94,5 @@ export async function runUninstall(args: string[]): Promise<void> {
     isTerminal: process.stdin.isTTY === true,
     ask: askInTerminal,
     print: printJson,
-    warn: message => console.error(message),
   });
 }
