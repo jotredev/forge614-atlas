@@ -39,7 +39,7 @@ import type { ModuleDescriptor } from "./discovery";
  * @param repoRoot - Ruta absoluta del directorio raíz del repositorio Git
  * @param modules - Lista de descriptores de módulos descubiertos
  * @returns Diccionario `Map<string, number>` asociando el nombre de cada módulo con su churn total
- * @throws Error si la ejecución de `git log` falla
+ * @throws Error con el mensaje "git log failed in <repoRoot>: <salida de error>" si git termina con código distinto de cero (por ejemplo, sin repositorio o sin commits) o no se puede ejecutar.
  */
 export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number> {
   // 1. Ejecución síncrona del comando de bajo nivel git log
@@ -70,7 +70,7 @@ export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map
     // Encontrar el módulo al que pertenece el archivo modificado
     const matchedModule = modules.find(module => {
       const modulePath = module.path;
-      // Comprobar coincidencia exacta de carpeta o prefijo con separador de ruta para evitar colisiones
+      // Coincide si la ruta es la carpeta del módulo o está dentro de ella (prefijo con separador, para no mezclar `auth` con `auth-legacy`); gana el primer módulo de la lista, así que con una carpeta mixta (`src` y `src/auth`) un archivo de `src/auth` se cuenta en `src`.
       return absolutePath === modulePath || absolutePath.startsWith(modulePath + sep);
     });
 

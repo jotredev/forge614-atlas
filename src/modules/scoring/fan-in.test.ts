@@ -1,7 +1,7 @@
 /**
  * Pruebas de `computeFanIn` con carpetas y archivos de ejemplo creados en una carpeta temporal.
  * Comprueban que el fan-in (cuántos otros módulos importan a un módulo) cuente módulos distintos y no imports, y que no cuente
- * los imports dentro del mismo módulo ni los de archivos de prueba, ni confunda carpetas con prefijo parecido (`auth` y `auth-legacy`).
+ * los imports dentro del mismo módulo ni los de archivos de prueba; el caso de `auth` y `auth-legacy` solo comprueba que un import de `auth-legacy` a `auth` sume 1 a `auth`, no la frontera del prefijo.
  */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
@@ -81,12 +81,10 @@ describe("computeFanIn", () => {
   /**
    * Comprueba que `auth-legacy`, al importar `../auth` (que se resuelve a la propia carpeta de `auth`), sume 1 al fan-in de
    * `auth` y deje el suyo en 0.
-   * Importa para que dos carpetas con prefijo parecido no se confundan al decidir a qué módulo pertenece la ruta importada.
+   * Importa como caso de módulos hermanos con nombres parecidos; no verifica la frontera del prefijo, porque la ruta importada (`.../auth`) nunca empieza con la carpeta `auth-legacy`.
    */
   test("handles sibling modules with overlapping names correctly (path-prefix collision)", () => {
-    // Escenario de colisión de prefijo: 'auth' vs 'auth-legacy'.
-    // Si 'auth-legacy' importa de 'auth', solo 'auth' debe recibir +1 en Fan-In,
-    // y 'auth-legacy' no debe ser confundido por coincidencia parcial de texto.
+    // Escenario: 'auth-legacy' importa de 'auth'; solo 'auth' debe recibir +1 en Fan-In.
     const root = mkdtempSync(join(tmpdir(), "atlas-fanin-collision-"));
     const authPath = join(root, "auth");
     const authLegacyPath = join(root, "auth-legacy");

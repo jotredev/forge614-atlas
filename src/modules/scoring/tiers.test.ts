@@ -14,7 +14,7 @@ describe("assignTiers", () => {
   /**
    * Comprueba que 20 módulos con puntuaciones de 20 a 1 se repartan en 3 profundos, 7 estándar y 10 ligeros, y que los profundos
    * sean `module-0`, `module-1` y `module-2` (los de mayor puntuación).
-   * Importa porque fija el reparto aproximado 15 / 35 / 50 % y que el nivel siga el orden de la puntuación.
+   * Importa porque fija el reparto aproximado 15 / 35 / 50 % y que los profundos sean los de mayor puntuación; no revisa qué módulos son estándar o ligeros.
    */
   test("splits 20 modules into roughly 50/35/15 by descending score", () => {
     // Escenario de monorrepo estándar con 20 módulos:

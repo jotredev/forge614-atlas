@@ -122,7 +122,7 @@ describe("computeChurn", () => {
   /**
    * Comprueba que el módulo `señales` (con ñ) cuente 1 cambio. Sin la opción `core.quotepath=false` git escribiría la ruta
    * con códigos numéricos entre comillas (octal, como `"\303\261"` para la ñ) y no coincidiría con la carpeta.
-   * Importa para que las carpetas con caracteres fuera de ASCII (letras sin tilde ni ñ) no se queden sin contar.
+   * Importa para que las carpetas con caracteres fuera de ASCII (como la ñ o las vocales con tilde) no se queden sin contar.
    */
   test("correctly attributes churn for modules with non-ASCII names", () => {
     // Escenario UTF-8 crítico: Módulo llamado 'señales' con letra 'ñ'.

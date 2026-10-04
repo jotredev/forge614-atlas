@@ -12,8 +12,8 @@ import { readFileSync } from "node:fs";
 import { isTestFile, type ModuleDescriptor } from "./discovery";
 
 /**
- * Calcula la Complejidad Ciclomática de McCabe para un archivo fuente individual
- * analizando su Árbol de Sintaxis Abstracta (AST) con el compilador oficial de TypeScript.
+ * Calcula la Complejidad Ciclomática de McCabe de un archivo entero: parte de 1 y suma las ramas de todas sus funciones juntas (no una cuenta por función).
+ * Analiza su Árbol de Sintaxis Abstracta (AST) con el compilador oficial de TypeScript.
  * 
  * Fundamento Matemático (Thomas J. McCabe, 1976):
  * - M = E - N + 2P
@@ -37,7 +37,7 @@ import { isTestFile, type ModuleDescriptor } from "./discovery";
  * 6. Invoca recursivamente `ts.forEachChild` para explorar todos los nodos descendientes.
  * 
  * @param sourceText - Contenido textual completo del archivo de código fuente
- * @param fileName - Nombre virtual del archivo para asociar información de diagnóstico
+ * @param fileName - Nombre del archivo; su extensión decide cómo se lee el código (por ejemplo, `.tsx` admite JSX). Por omisión `module.ts`.
  * @returns Número entero positivo representando la puntuación de complejidad ciclomática
  */
 export function fileCyclomaticComplexity(sourceText: string, fileName = "module.ts"): number {
@@ -97,7 +97,7 @@ export function fileCyclomaticComplexity(sourceText: string, fileName = "module.
  * Calcula la suma total de complejidad ciclomática para cada módulo de una colección.
  * 
  * Reglas arquitectónicas esenciales:
- * 1. Los archivos de prueba (`.test.ts`, `.spec.ts`) se excluyen estrictamente mediante `isTestFile`.
+ * 1. Los archivos de prueba (los que terminan en `.test` o `.spec` seguido de ts, tsx, js o jsx) se excluyen estrictamente mediante `isTestFile`.
  *    Justificación: Las pruebas contienen numerosas aserciones y datos simulados que no reflejan
  *    complejidad cognitiva ni lógica de producción. Incluirlos penalizaría injustamente a los
  *    módulos bien probados.
@@ -105,6 +105,7 @@ export function fileCyclomaticComplexity(sourceText: string, fileName = "module.
  * 
  * @param modules - Lista de descriptores de módulos descubiertos
  * @returns Diccionario `Map<string, number>` asociando el nombre de cada módulo con su suma ciclomática
+ * @throws Error del sistema de archivos (por ejemplo `ENOENT`) si `readFileSync` no puede leer un archivo del módulo; la función no lo captura.
  */
 export function computeCyclomaticComplexity(modules: ModuleDescriptor[]): Map<string, number> {
   const result = new Map<string, number>();

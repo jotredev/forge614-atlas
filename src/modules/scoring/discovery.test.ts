@@ -70,7 +70,7 @@ describe("discoverModules", () => {
   });
 
   /**
-   * Comprueba que `node_modules` (carpeta de la lista de exclusión) no aparezca como módulo al escanear desde la raíz del repositorio.
+   * Comprueba que, al escanear desde la raíz, ningún módulo se llame `node_modules`; el expect no detecta un módulo `node_modules/some-package` (compara nombres exactos).
    * Importa para evitar que el analizador evalúe código de terceros.
    */
   test("ignores node_modules even when scanning from the repo root", () => {
