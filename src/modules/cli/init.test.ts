@@ -1,6 +1,7 @@
 /**
  * Ejecuta los caminos integrados de `runInitCommand` con repositorios y memoria temporales, pero con Engines y Workers instalados.
- * Protege las respuestas que el CLI entrega al elegir motor, abrir o retomar sesiones y convertir fallos de análisis en sobres de error.
+ * Protege las respuestas que el CLI entrega al elegir motor, abrir una sesión nueva, detectar una sesión ya cerrada o forzar un
+ * análisis nuevo, y convertir fallos de Engines, de Workers y del análisis en sobres de error.
  */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
@@ -17,7 +18,9 @@ import { recordModuleReport } from "../memory/module-report";
 
 /**
  * Ejecuta git en el repositorio temporal y detiene la prueba si el comando no termina con código 0.
- * @param cwd Carpeta del repositorio temporal. @param args Argumentos de git. @throws Error si git falla.
+ * @param cwd Carpeta del repositorio temporal.
+ * @param args Argumentos de git.
+ * @throws Error si git falla.
  */
 function git(cwd: string, args: string[]): void {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
@@ -41,8 +44,10 @@ function realRepoWithAuth(): string {
 }
 
 /**
- * Abre una memoria temporal con sesiones habilitadas para aislar cada caso de `init`.
- * @param engramRoot Carpeta temporal que alojará la memoria. @returns El almacén abierto que el caso debe cerrar.
+ * Abre una memoria de Engram en la carpeta temporal dada (así cada caso tiene la suya) y habilita las sesiones, que `init`
+ * necesita para abrir la suya.
+ * @param engramRoot Carpeta temporal que alojará la memoria.
+ * @returns El almacén abierto que el caso debe cerrar.
  */
 function engramStore(engramRoot: string) {
   const workspace = new MemoryWorkspace(new WorkspaceConfig(engramRoot));

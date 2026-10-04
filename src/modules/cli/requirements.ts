@@ -1,6 +1,8 @@
 /**
  * Verifica antes de abrir una sesión que Engines garantice solo lectura y que Workers exista y tenga una versión compatible.
- * Sus mensajes se conservan aquí para que `init` entregue el mismo diagnóstico tanto al validar como al rechazar una tarea después.
+ * El mensaje de solo lectura se comparte con `init.ts`, para dar el mismo diagnóstico al validar al iniciar y al rechazar
+ * Workers una tarea después; `dispatch-modules.ts` usa el prefijo `READ_ONLY_UNSUPPORTED` para reconocer ese rechazo.
+ * Lo llama `init.ts`. Piezas: `checkDispatchRequirements`, los dos mensajes, el prefijo y el tope de tiempo por omisión.
  */
 import { spawnSync } from "node:child_process";
 import { accessSync, constants } from "node:fs";

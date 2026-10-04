@@ -1,6 +1,7 @@
 /**
  * Prueba los requisitos previos de `init` y su segunda defensa con binarios falsos, sin depender de Engines, Workers ni un motor real.
- * Cada caso confirma también que un requisito fallido no abre una sesión en la memoria temporal de Engram.
+ * Los siete casos de requisito fallido al iniciar confirman además que no se abre ninguna sesión en la memoria temporal de
+ * Engram; el control comprueba lo contrario y el caso de la segunda defensa no mira las sesiones.
  */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -15,15 +16,19 @@ const READ_ONLY_MESSAGE =
 
 /**
  * Forma el mensaje esperado de Workers desactualizado para comparar exactamente el texto público que entrega `init`.
- * @param found Versión que el doble dijo haber encontrado. @returns El mensaje completo esperado.
+ * @param found Versión que debe aparecer en el mensaje (o `unknown` si no se pudo leer).
+ * @returns El mensaje completo esperado.
  */
 function outdatedMessage(found: string): string {
   return `Forge614 Workers 1.0.0 or newer is required (found: ${found}). Install it with: curl -fsSL https://github.com/jotredev/forge614-workers/releases/latest/download/install.sh | bash`;
 }
 
 /**
- * Ejecuta git en el repositorio temporal y hace fallar la preparación si no puede crear su único commit.
- * @param cwd Carpeta del repositorio. @param args Argumentos de git. @throws Error si git falla.
+ * Ejecuta git en el repositorio temporal y hace fallar la preparación si cualquiera de sus pasos (init, config, add, commit)
+ * no termina con código 0.
+ * @param cwd Carpeta del repositorio.
+ * @param args Argumentos de git.
+ * @throws Error si git falla.
  */
 function git(cwd: string, args: string[]): void {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
@@ -63,14 +68,20 @@ describe("runInitCommand requirements check", () => {
     for (const dir of [repo, engramDir, fakeDir]) rmSync(dir, { recursive: true, force: true });
   });
 
-  /** Crea la carpeta exclusiva donde se escribe el binario falso de Engines. @returns Ruta de esa carpeta nueva. */
+  /**
+   * Crea la carpeta exclusiva donde se escribe el binario falso de Engines.
+   * @returns Ruta de esa carpeta nueva.
+   */
   function enginesDir(): string {
     const dir = join(fakeDir, "engines");
     mkdirSync(dir);
     return dir;
   }
 
-  /** Crea la carpeta exclusiva donde se escribe el binario falso de Workers. @returns Ruta de esa carpeta nueva. */
+  /**
+   * Crea la carpeta exclusiva donde se escribe el binario falso de Workers.
+   * @returns Ruta de esa carpeta nueva.
+   */
   function workersDir(): string {
     const dir = join(fakeDir, "workers");
     mkdirSync(dir);
@@ -78,8 +89,11 @@ describe("runInitCommand requirements check", () => {
   }
 
   /**
-   * Llama a `init` variando binarios y tiempo de versión. @param enginesBinaryPath Ruta del doble Engines. @param workersBinaryPath Ruta del doble Workers.
-   * @param workersVersionTimeoutMs Tope opcional para `--version`. @returns El resultado JSON de `init`.
+   * Llama a `init` variando binarios y tiempo de versión.
+   * @param enginesBinaryPath Ruta del doble Engines.
+   * @param workersBinaryPath Ruta del doble Workers.
+   * @param workersVersionTimeoutMs Tope opcional para `--version`.
+   * @returns El resultado JSON de `init`.
    */
   async function runWith(enginesBinaryPath: string, workersBinaryPath: string, workersVersionTimeoutMs?: number): Promise<InitOutcome> {
     return runInitCommand(store, {
@@ -89,8 +103,10 @@ describe("runInitCommand requirements check", () => {
   }
 
   /**
-   * Comprueba el sobre de error completo. @param outcome Resultado recibido. @param code Código esperado. @param message Texto esperado.
-   * Así se protege versión, estado, código y mensaje como contrato público único.
+   * Comprueba el sobre de error completo; así se protege versión, estado, código y mensaje como contrato público único.
+   * @param outcome Resultado recibido.
+   * @param code Código esperado.
+   * @param message Texto esperado.
    */
   function expectError(outcome: InitOutcome, code: InitErrorCode, message: string): void {
     expect(outcome).toEqual({ schemaVersion: 1, status: "error", error: { code, message } });
@@ -148,7 +164,7 @@ describe("runInitCommand requirements check", () => {
     expectNoSessionOpened();
   });
 
-  /** Comprueba que una versión mayor cero se rechaza y que el diagnóstico conserva `0.1.0` como versión encontrada. */
+  /** Comprueba que una versión con número principal 0 (0.1.0) se rechaza y que el mensaje conserva `0.1.0` como versión encontrada. */
   test("Workers 0.1.0 -> WORKERS_OUTDATED naming the version found, before any session", async () => {
     const engines = writeFakeEngines(enginesDir(), { supportsReadOnly: true });
     const workers = writeFakeWorkers(workersDir(), { ...goodWorkers, versionOutput: "forge614-workers 0.1.0" });

@@ -1,6 +1,7 @@
 /**
- * Implementa el recorrido de `atlas init`: elige un motor disponible, confirma los requisitos de ejecución de solo
+ * Implementa el recorrido de `forge614-atlas init`: elige un motor disponible, confirma los requisitos de ejecución de solo
  * lectura y convierte el análisis de módulos en la respuesta JSON estable que consume la interfaz de línea de comandos.
+ * Lo llama `src/interfaces/cli/commands.ts` y `src/index.ts` lo reexporta.
  */
 import { startProjectSession, type MemoryStore, type Session } from "forge614-engram";
 import { detectAgents, type AgentDetection } from "../engines-client/detect";
