@@ -10,16 +10,17 @@ import { spawnSync } from "node:child_process";
  * Resuelve la identidad real del repositorio (no la ruta tal cual se pasó),
  * usando el mismo comando que Engram usa internamente para identidad de
  * proyecto (`--git-common-dir`). Esto garantiza que invocar Atlas desde la
- * raíz del repo o desde una subcarpeta — o incluso desde un git worktree (otra carpeta de trabajo ligada al mismo repositorio)
- * distinto del mismo repo — produzca el mismo sessionId. Sin esto, la
+ * raíz del repo, desde una subcarpeta o desde otro worktree del mismo repo (una carpeta de trabajo adicional que
+ * comparte el historial con la principal) produzca el mismo sessionId. Sin esto, la
  * detección de "este repo ya se analizó" (`startOrResumeSession`) se rompe
  * silenciosamente: dos rutas del mismo proyecto generarían dos sesiones
  * distintas en Engram.
  *
- * Si el comando de git falla (directorio que no es un repo git), se cae de
- * vuelta a `realpathSync(directory)` directo,
- * como hace Engram con una carpeta que no es repo git; Atlas lo hace ante cualquier fallo de git, mientras Engram
- * solo con «not a git repository» y da `PROJECT_IDENTITY_UNAVAILABLE` en los demás.
+ * Si el comando de git falla o no entrega una ruta (por ejemplo, una carpeta que no es repo git), se usa
+ * `realpathSync(directory)` directo. Engram hace lo mismo con una carpeta que no es repo git, pero solo cuando git
+ * responde «not a git repository» y no hay ninguna entrada `.git` en la carpeta ni en sus padres; ante otros fallos
+ * de git, al crear o vincular un proyecto, Engram da `PROJECT_IDENTITY_UNAVAILABLE`. Atlas usa la ruta real ante
+ * cualquier fallo.
  * @param directory Carpeta del proyecto o una de sus subcarpetas.
  * @returns Ruta real del directorio Git común, o ruta real de `directory` si Git no la reconoce.
  * @throws Error del sistema de archivos (por ejemplo `ENOENT`: la ruta no existe) si `realpathSync` no puede resolver la ruta elegida.
@@ -45,7 +46,7 @@ function repositoryIdentity(directory: string): string {
  * ruta literal que se pasó — para que dos proyectos nunca choquen entre sí,
  * y para que la misma repo, vista desde cualquier subcarpeta o worktree,
  * produzca siempre el mismo id.
- * @param directory Carpeta del repositorio; puede ser su raíz, subcarpeta o un árbol de trabajo (worktree: copia ligada al mismo repositorio).
+ * @param directory Carpeta del repositorio; puede ser su raíz, una subcarpeta o un árbol de trabajo (worktree: otra carpeta de trabajo del mismo repositorio, no una copia).
  * @returns Identificador `atlas:` seguido de los primeros 16 caracteres del hash (resumen estable) SHA-256 de la identidad real.
  * @throws Error del sistema de archivos (por ejemplo `ENOENT`: la ruta no existe) si la ruta de identidad no puede resolverse.
  */
@@ -56,8 +57,8 @@ export function deriveSessionId(directory: string): string {
 }
 
 /**
- * Para una corrida forzada (`--force`): `init` la usa siempre que se pide `--force`. Una sesión cerrada no puede reabrirse con el mismo id,
- * así que se genera uno nuevo y distinto.
+ * Da el ID de sesión de una corrida forzada (`--force`): el estable seguido de la hora actual. `init` lo usa siempre
+ * que se pide `--force`. Una sesión cerrada no puede reabrirse con el mismo id, así que se genera uno nuevo y distinto.
  * @param directory Carpeta del repositorio cuya corrida se fuerza.
  * @returns El identificador estable del repositorio, dos puntos y la hora actual en milisegundos desde 1970 (`atlas:<hash>:<milisegundos>`).
  * @throws Error del sistema de archivos (por ejemplo `ENOENT`: la ruta no existe) si la ruta de identidad no puede resolverse.

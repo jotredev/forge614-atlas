@@ -1,7 +1,7 @@
 /**
- * Prueba `scripts/install.sh` ejecutándolo de verdad con `bash` en carpetas temporales, contra una release y contra
- * Engram, Workers y Engines FALSOS: la publicación del PATH (la lista de carpetas donde la terminal busca programas),
- * los permisos, el rechazo de huellas y direcciones de prueba inseguras, y el manejo de las dependencias y de `FORGE614_HOME`.
+ * Prueba `scripts/install.sh` con `bash` en carpetas temporales, contra una release FALSA (servidor local) y contra Engram, Workers y Engines FALSOS:
+ * publicación del PATH (lista de carpetas donde la terminal busca programas), permisos, rechazo de huellas SHA-256 (código que identifica un archivo)
+ * y de direcciones de prueba inseguras, y manejo de las dependencias y de `FORGE614_HOME`.
  */
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -29,7 +29,7 @@ const goodEngines: EnginesSpec = { version: "1.17.0", supportsReadOnly: true };
 
 /**
  * Escribe un binario FALSO que responde `--version` con `<name> <version>`; con `version` en `null` no
- * responde `--version` (sale con error), como un Workers anterior a 1.0.0. Con cualquier otro argumento sale con 0.
+ * responde `--version` (sale con 1), como un programa viejo sin esa opción. Con cualquier otro argumento sale con 0.
  * @param path Ruta del programa falso; se crean las carpetas que falten y se marca ejecutable.
  * @param name Nombre que el programa imprime antes de la versión (por ejemplo `forge614-workers`).
  * @param version Versión que imprime, o `null` para que `--version` falle.
@@ -71,14 +71,14 @@ interface InstallerBehavior {
   fails?: boolean;
   /** Versión que imprime el binario que deja instalado (`null`: un binario sin `--version`). Por defecto la mínima. */
   installs?: string | null;
-  /** Solo para Workers: el Engines que deja instalado, como haría el instalador real de Workers. */
+  /** Pensado solo para Workers: el Engines que deja instalado, como haría el instalador real de Workers (`writeFakeInstaller` no lo restringe). */
   engines?: EnginesSpec;
 }
 
 /**
  * Escribe un instalador publicado FALSO de Engram o de Workers. Anota cada llamada en `logFile` como
- * `<producto>|<FORGE614_HOME que recibió>|<argumentos>` y deja su binario en `$FORGE614_HOME/<producto>/bin`.
- * @param directory Carpeta donde se escriben el binario falso que se instalará (`<producto>-payload`) y el instalador.
+ * `<producto>|<FORGE614_HOME que recibió>|<argumentos>` y, salvo que falle, deja su binario en `$FORGE614_HOME/<producto>/bin`.
+ * @param directory Carpeta donde se escriben el binario falso que se instalará (`<producto>-payload`), el instalador y, si hay `engines`, el Engines falso (`engines-payload`).
  * @param product Producto que imita: `"engram"` o `"workers"`.
  * @param behavior Si falla, qué versión deja instalada y si deja además un Engines (ver `InstallerBehavior`).
  * @param logFile Archivo al que el instalador falso agrega una línea por cada vez que se le llama.
@@ -119,9 +119,9 @@ function writeFakeInstaller(directory: string, product: "engram" | "workers", be
 
 // Las primeras pruebas de este archivo son anteriores a las dependencias que Atlas instala antes de
 // copiar su binario. Ninguna fija sus propios instaladores de Engram y Workers, así que sin un valor por
-// omisión caerían a las URL reales y dejarían de ser herméticas: todas las corridas apuntan a estos dos
-// instaladores locales (que dejan Engram 1.8.7, Workers 1.0.0 y un Engines 1.17.0 con candado), salvo que
-// la prueba ponga el suyo.
+// omisión caerían a las URL reales y dejarían de estar aisladas de la red: todas las corridas apuntan a estos dos
+// instaladores locales (que dejan Engram 1.8.7, Workers 1.0.0 y un Engines 1.17.0 con el candado de solo lectura, la
+// garantía de Engines de que un ayudante no modifica archivos), salvo que la prueba ponga el suyo.
 const defaultsDirectory = mkdtempSync(join(tmpdir(), "forge614-atlas-default-installers-"));
 const defaultEngramInstaller = writeFakeInstaller(defaultsDirectory, "engram", {}, "/dev/null");
 const defaultWorkersInstaller = writeFakeInstaller(defaultsDirectory, "workers", { engines: goodEngines }, "/dev/null");
@@ -204,11 +204,11 @@ async function runInstaller(args: string[]) {
  * Corre `operation` con `HOME`, `SHELL` y las variables de prueba del instalador puestas, y las deja como
  * estaban al terminar. `FORGE614_HOME` se borra salvo que `extraEnv` la fije (un `undefined` borra la
  * variable), para que una variable real de la persona que corre las pruebas nunca llegue al instalador.
- * Las URL de los instaladores falsos de Engram y Workers valen las de omisión si no estaban ya puestas.
+ * Las URL de los instaladores falsos de Engram y Workers valen las de los instaladores locales por omisión si no estaban ya puestas.
  * @param home Carpeta que hace de `HOME`.
  * @param releaseBaseUrl Dirección base de la release falsa (`FORGE614_ATLAS_TEST_RELEASE_BASE_URL`).
  * @param operation Lo que se corre con ese entorno, normalmente una llamada a `runInstaller`.
- * @param includeTestSentinel Si es `false`, no se pone `FORGE614_ATLAS_INSTALLER_TEST` (el aviso de modo de pruebas).
+ * @param includeTestSentinel Si es `false`, se borra `FORGE614_ATLAS_INSTALLER_TEST` (la variable que activa el modo de pruebas del instalador).
  * @param shell Valor de `SHELL`; `undefined` borra la variable.
  * @param extraEnv Variables que se aplican al final y pisan a las anteriores; un valor `undefined` borra la variable.
  * @returns Lo que devuelva `operation`.
@@ -265,6 +265,7 @@ async function withFixtureEnvironment<T>(
  * @param artifact Nombre del binario de release que se anuncia y se sirve.
  * @param fixturePath Ruta del archivo cuyo contenido se sirve como ese binario y del que sale la huella correcta.
  * @returns El servidor; quien lo crea debe pararlo con `stop(true)`.
+ * @throws Error con la salida de error de `shasum` (ver `sha256`) si no se puede calcular la huella del binario de prueba.
  */
 function fixtureReleaseServer(artifact: string, fixturePath: string) {
   const digest = sha256(fixturePath);
@@ -411,7 +412,8 @@ test("default install uses the product bin with locked-down permissions", async 
 
 /**
  * Comprueba que una segunda instalación sobre el mismo destino, sin `--force`, termine con un código distinto de 0 y
- * deje el binario con el contenido de la primera. Importa para no pisar una instalación existente sin que se pida.
+ * que el binario siga con el contenido de la release de prueba (las dos copias son idénticas, así que no detecta un
+ * reemplazo). Importa para no pisar una instalación existente sin que se pida.
  */
 test("refuses replacement without force", async () => {
   const root = temporaryDirectory();
@@ -532,7 +534,7 @@ test("rejects non-loopback release asset URLs from a test fixture", async () => 
 /**
  * Comprueba que, con un instalador de Engram FALSO, Atlas deje Engram en `<HOME>/.forge614/engram/bin` y no cree
  * `.claude.json` ni `.codex/config.toml` (la configuración de Claude Code y de Codex).
- * Importa porque instalar la dependencia no debe tocar la configuración de ningún asistente.
+ * Importa porque instalar la dependencia no debe tocar la configuración de esos dos asistentes (no se revisa ninguna otra).
  */
 test("installs Forge614 Engram as a dependency without configuring an AI client", async () => {
   const root = temporaryDirectory();
@@ -604,7 +606,7 @@ test("rejects a non-file Workers installer override", async () => {
   }
 });
 
-/** Qué hay ya instalado antes de correr el instalador: una versión, `null` (sin `--version`) o nada. */
+/** Un escenario de corrida: qué hay ya instalado (una versión, `null` sin `--version`, o nada), cómo se portan los instaladores falsos, el valor de `FORGE614_HOME` y las opciones. */
 interface Scenario {
   /** Engram falso ya instalado: su versión, `null` si no responde `--version`, o sin el campo si no hay Engram. */
   engram?: string | null;
@@ -623,10 +625,11 @@ interface Scenario {
 }
 
 /**
- * Corre el instalador en un `HOME` y un `FORGE614_HOME` temporales, con Engram, Workers y Engines FALSOS ya
- * instalados según `scenario` y con instaladores publicados FALSOS. Nunca toca el `HOME` real.
+ * Corre el instalador con un `HOME` temporal, con Engram, Workers y Engines FALSOS ya instalados según `scenario`, con
+ * instaladores publicados FALSOS y con `FORGE614_HOME` según `scenario.forgeHome` (por omisión, una carpeta temporal).
+ * Nunca toca el `HOME` real.
  * @param scenario Qué hay ya instalado, cómo se portan los instaladores falsos, qué valor tiene `FORGE614_HOME` y qué opciones recibe el instalador.
- * @returns El resultado, las carpetas usadas y las llamadas que recibieron los instaladores falsos.
+ * @returns El resultado, las carpetas usadas (`home` y `forgeHome`), la ruta esperada del binario de Atlas (`atlasBinary`) y las llamadas que recibieron los instaladores falsos.
  */
 async function runScenario(scenario: Scenario) {
   const root = temporaryDirectory();
@@ -811,7 +814,7 @@ describe("dependencies and FORGE614_HOME", () => {
 
   /**
    * Comprueba que `--help` termine con salida 0, nombre `FORGE614_HOME` y las versiones mínimas de Engram (1.8.7) y de
-   * Workers (1.0.0), y no corra ningún instalador. Importa para que la ayuda diga lo que el instalador exige.
+ * Workers (1.0.0), y no corra ningún instalador. Importa para que la ayuda diga lo que el instalador exige de ellos (la de Engines, 1.17.0, no se verifica).
    */
   test("--help names FORGE614_HOME and the minimum versions, and exits 0", async () => {
     const run = await runScenario({ args: ["--help"] });

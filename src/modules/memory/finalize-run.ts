@@ -8,11 +8,11 @@ import { type MemoryStore, type Session, type SummaryFields } from "forge614-eng
 export interface FinalReport {
   /** Nombre o ruta del proyecto (`dispatchModules` manda la ruta de la carpeta); aparece en el objetivo (`goal`) del resumen. */
   repoName: string;
-  /** Número de módulos analizados con éxito en cada nivel de análisis (los saltados no se cuentan). */
+  /** Número de módulos analizados con éxito en esta corrida en cada nivel de análisis (los saltados no se cuentan, ni los que ya tenían informe de una corrida anterior). */
   tierBreakdown: { deep: number; standard: number; light: number };
   /** Nombre del motor elegido para cada nivel. */
   engineByTier: Record<"deep" | "standard" | "light", string>;
-  /** Número de trabajadores (ayudantes de IA, uno por módulo) que terminaron su módulo en cada nivel. */
+  /** Número de trabajadores (ayudantes de IA, uno por módulo) que terminaron su módulo en esta corrida en cada nivel. */
   totalWorkersByTier: Record<"deep" | "standard" | "light", number>;
   /** Total de tokens (las unidades de texto que procesa la IA) consumidos por los trabajadores; hoy `dispatchModules` manda 0 porque Workers no los cuenta. */
   tokensConsumed: number;
@@ -20,7 +20,7 @@ export interface FinalReport {
   totalTimeMs: number;
   /** Número de pausas por cuota registradas para el proyecto. */
   pauseCount: number;
-  /** Nombres de los módulos cuyo informe se guardó en Engram. */
+  /** Nombres de los módulos cuyo informe se guardó en Engram en esta corrida. */
   analyzedModuleNames: string[];
   /** Nombres de módulos saltados o fallidos que quedan en los pasos siguientes. */
   skippedModuleNames: string[];

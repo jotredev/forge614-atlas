@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Instalador de Forge614 Atlas: baja de GitHub el binario de una release publicada, verifica su huella SHA-256
-# (código que identifica el contenido de un archivo), comprueba o instala las tres dependencias de Atlas
-# (Engram, Workers y Engines) y copia el binario a la carpeta elegida. Los errores previstos terminan con
-# `fail` (código 1); si una dependencia no se puede cumplir, no se instala nada de Atlas.
+# (código que identifica el contenido de un archivo), instala o actualiza Engram y Workers cuando faltan o son más
+# viejos, comprueba Engines (si falta o no sirve, lo deja instalado el instalador de Workers), copia el binario a la
+# carpeta elegida y, si puede, la agrega al PATH (la lista de carpetas donde la terminal busca programas). Los errores
+# previstos terminan con `fail` (código 1); si una dependencia no se puede cumplir, no se instala nada de Atlas.
 # Uso: bash scripts/install.sh [--version TAG] [--bin-dir PATH] [--force]; `--help` lo detalla.
 
-# Termina ante cualquier comando que falle (-e), variable sin definir (-u) o fallo dentro de una tubería (pipefail).
+# Termina ante un comando que falle fuera de una condición (`if`, `&&`, `||`), una variable sin definir (-u) o un fallo
+# en cualquier parte de una tubería (comandos encadenados con `|`; pipefail).
 set -euo pipefail
 
 # Imprime la ayuda del instalador (la que muestra `--help`) en la salida estándar. No recibe argumentos y devuelve 0.
@@ -38,19 +40,21 @@ path_marker_end='# <<< forge614-atlas PATH <<<'
 
 # Imprime las dos líneas con las que la persona puede agregar a mano la carpeta $1 al PATH (la lista de carpetas
 # donde la terminal busca programas): un aviso y la orden `export PATH=...` con la ruta escapada por `%q`.
-# Se usa cuando no se pudo editar la configuración de la terminal. Devuelve 0.
+# Se usa cuando `publish_path_for_future_shell` devuelve algo distinto de 0 (no se pudo editar la configuración o la
+# terminal no está soportada). Devuelve 0.
 manual_path_guidance() {
   local bin_dir="$1"
   printf '%s\n' 'Add this directory to your terminal PATH manually:'
   printf 'export PATH=%q:"$PATH"\n' "$bin_dir"
 }
 
-# Crea la carpeta de destino ($bin_dir, variable global) y deja listos sus permisos. Devuelve 0 si quedó bien y 1
-# si alguna comprobación falla (por ejemplo, una carpeta que es un enlace simbólico, o sea, un acceso directo).
+# Crea la carpeta de destino ($bin_dir, variable global; también lee $forge_home) y, solo si es la de por omisión,
+# deja sus permisos en modo 700. Devuelve 0 si quedó bien y 1 si alguna comprobación falla (por ejemplo, una carpeta
+# que es un enlace simbólico, o sea, un acceso directo).
 prepare_bin_directory() {
   local product_home
-  # Carpeta elegida con --bin-dir: solo se crea (con sus padres) y se exige que sea una carpeta real, no un enlace.
-  # No se le cambian los permisos.
+  # Carpeta distinta de la de por omisión (la elegida con --bin-dir): solo se crea (con sus padres) y se exige que sea
+  # una carpeta real, no un enlace. No se le cambian los permisos.
   if [ "$bin_dir" != "$forge_home/atlas/bin" ]; then
     mkdir -p -- "$bin_dir"
     [ -d "$bin_dir" ] && [ ! -L "$bin_dir" ] || return 1
@@ -74,7 +78,8 @@ prepare_bin_directory() {
 # que agrega la carpeta al PATH). Conserva el resto del archivo, sin el bloque anterior si lo había, y también sus
 # permisos. Escribe en un archivo temporal junto al original y lo mueve encima al final, así el original nunca
 # queda a medias. Devuelve 0 si lo logra y 1 si el archivo es un enlace o no es un archivo normal, si los
-# marcadores están desbalanceados o si falla cualquier paso (el temporal se borra).
+# marcadores están desbalanceados o si falla cualquier paso (el temporal se borra si fallan `awk`, la escritura del
+# bloque nuevo, el cambio de permisos o el movimiento).
 replace_path_marker_block() {
   local configuration_file="$1"
   local path_command="$2"
@@ -139,8 +144,9 @@ replace_path_marker_block() {
 
 # Agrega la carpeta $1 al PATH de las terminales nuevas, escribiendo en el archivo de configuración que corresponde
 # a la terminal de la persona (variable SHELL), y avisa con un mensaje. Devuelve 0 si lo logra, 1 si no se pudo
-# editar el archivo de forma segura y 2 si la terminal o el sistema no están soportados. Quien la llama trata
-# cualquier valor distinto de 0 como «hay que hacerlo a mano».
+# editar el archivo de forma segura (o si, en macOS con bash, crear `.bash_profile` dejaría sin efecto a otro archivo
+# de inicio que ya existe) y 2 si la terminal o el sistema no están soportados. Quien la llama trata cualquier valor
+# distinto de 0 como «hay que hacerlo a mano».
 publish_path_for_future_shell() {
   local bin_dir="$1"
   local configuration_file path_command
@@ -180,21 +186,23 @@ publish_path_for_future_shell() {
 }
 
 # Tiene éxito (0) solo si la dirección $1 es una URL de pruebas: `http://127.0.0.1:<puerto>` o
-# `http://localhost:<puerto>`, con un puerto numérico explícito entre 1 y 65535 y una ruta opcional sin `?` ni `#`.
+# `http://localhost:<puerto>`, con un puerto numérico explícito entre 1 y 65535 y una ruta opcional sin `?`, `#` ni `\`.
 # Una dirección con usuario incrustado (como `http://127.0.0.1:5432@localhost:1`) no la cumple. Si no, devuelve 1.
 is_loopback_test_url() {
   local url="$1"
   local port
-  # La expresión regular exige esa forma exacta y deja el puerto en el grupo 2 de BASH_REMATCH.
+  # La expresión regular (patrón de texto) exige esa forma exacta y deja el puerto en el grupo 2 de BASH_REMATCH (la
+  # variable de bash donde quedan las partes del texto que coincidieron).
   [[ "$url" =~ ^http://(127\.0\.0\.1|localhost):([0-9]+)(/[^\?#]*)?$ ]] || return 1
   port="${BASH_REMATCH[2]}"
-  # `10#` fuerza base decimal para que un puerto con ceros a la izquierda no se lea como octal.
+  # `10#` fuerza base decimal para que un puerto con ceros a la izquierda no se lea como octal (base 8).
   (( 10#$port >= 1 && 10#$port <= 65535 ))
 }
 
-# Imprime X.Y.Z cuando `<binario> --version` imprime `<nombre> X.Y.Z`; falla en cualquier otro caso (no existe, no
-# es ejecutable, no acepta --version, otro texto). $1 es la ruta del binario y $2 el nombre esperado. Al binario se
-# le da una entrada vacía (/dev/null) para que uno viejo que espere datos no se quede colgado.
+# Imprime X.Y.Z cuando la salida de `<binario> --version` empieza con `<nombre> X.Y.Z` (lo que siga, como un sufijo
+# `-rc.1`, se ignora); falla en cualquier otro caso (no existe, no es ejecutable, no acepta --version, otro texto). $1
+# es la ruta del binario y $2 el nombre esperado. Al binario se le da una entrada vacía (/dev/null) para que uno viejo
+# que espere datos no se quede colgado.
 installed_version() {
   local binary="$1" name="$2" output
   local pattern="^${name}[[:space:]]+([0-9]+\\.[0-9]+\\.[0-9]+)"
@@ -290,9 +298,10 @@ ensure_workers() {
     || fail "Forge614 Workers is still missing or older than ${workers_min_version}. Atlas was not changed. $workers_hint"
 }
 
-# Tiene éxito (0) solo cuando el Engines instalado corre, tiene al menos la versión mínima y declara
-# `supportsReadOnly: true` para Claude Code en `capabilities` (la misma comprobación que hace el instalador de
-# Workers). Devuelve 1 si falla cualquiera de esas tres condiciones.
+# Tiene éxito (0) solo cuando el Engines instalado corre, tiene al menos la versión mínima y declara `supportsReadOnly:
+# true` (garantiza el candado de solo lectura: que un ayudante no modifique archivos) en la respuesta de
+# `capabilities --agent claude-code` (la misma comprobación que hace el instalador de Workers). Devuelve 1 si falla
+# cualquiera de esas tres condiciones.
 engines_is_compatible() {
   local capabilities
   tool_is_compatible "$engines_command" forge614-engines "$engines_min_version" || return 1
@@ -319,7 +328,7 @@ seen_bin_dir=0
 seen_version=0
 
 # Lee las opciones de la línea de comandos. --version y --bin-dir se aceptan una sola vez y exigen un valor que no
-# empiece con `--`; --help imprime la ayuda y sale con 0; cualquier otra opción termina con `fail`.
+# empiece con `--`; --help (o -h) imprime la ayuda y sale con 0; cualquier otra opción termina con `fail`.
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
@@ -341,13 +350,14 @@ while [ "$#" -gt 0 ]; do
 done
 
 # La etiqueta de versión debe ser una versión semántica: X.Y.Z, con una `v` opcional al inicio y un sufijo opcional
-# (por ejemplo `-rc.1`).
+# empiece con `-` o `.` (por ejemplo `-rc.1`).
 if [ -n "$version" ] && ! [[ "$version" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
   fail 'Invalid release tag. Use a semantic version tag such as v1.2.3.'
 fi
 
-# Misma regla que el código de Atlas (src/modules/forge-home): sin la variable, la carpeta Forge614 es
-# ~/.forge614; con ella, debe ser una ruta absoluta no vacía (una vacía o relativa es un error).
+# Casi la misma regla que el código de Atlas (src/modules/forge-home): sin la variable, la carpeta Forge614 es
+# ~/.forge614; con ella, debe ser una ruta absoluta no vacía (una vacía o relativa es un error). El código además
+# normaliza la ruta (quita `..` y barras sobrantes); aquí se usa tal cual.
 if [ "${FORGE614_HOME+set}" = 'set' ]; then
   case "$FORGE614_HOME" in
     /*) forge_home="$FORGE614_HOME" ;;
@@ -400,7 +410,8 @@ test_endpoint=0
 
 # Este endpoint está disponible únicamente para las pruebas desechables del instalador.
 # No es una opción de instalación soportada ni forma parte de la ayuda para el usuario.
-# Con él, la dirección base debe ser HTTP local (loopback) y curl también puede usar HTTP.
+# Exige además FORGE614_ATLAS_INSTALLER_TEST=1. Con él, la dirección base debe ser HTTP local (loopback: la propia
+# máquina) y curl también puede usar HTTP.
 if [ -n "${FORGE614_ATLAS_TEST_RELEASE_BASE_URL:-}" ]; then
   [ "${FORGE614_ATLAS_INSTALLER_TEST:-}" = '1' ] || fail 'The release endpoint override is reserved for test fixtures.'
   test_base_url="${FORGE614_ATLAS_TEST_RELEASE_BASE_URL%/}"
@@ -422,14 +433,15 @@ cleanup() {
 trap cleanup EXIT
 
 # Descarga la dirección $1 al archivo $2 usando solo los protocolos de `curl_protocol` (HTTPS; en modo de pruebas
-# también HTTP) y TLS 1.2 o más nuevo. Con --fail, un error HTTP del servidor hace que curl devuelva distinto de 0.
+# también HTTP) y TLS 1.2 (cifrado de la conexión) o más nuevo. Con --fail, un error HTTP del servidor hace que curl
+# devuelva distinto de 0.
 download() {
   curl --fail --location --proto "$curl_protocol" --tlsv1.2 --silent --show-error "$1" --output "$2"
 }
 
 # Imprime la dirección de descarga del archivo de la release cuyo nombre es $1, leyendo `release.json`: parte el
-# JSON en líneas, saca los valores de `browser_download_url` y se queda con los que terminan en ese nombre. Devuelve
-# 1 si no hay exactamente uno.
+# JSON en cada `{`, saca los valores de `browser_download_url` y se queda con los que terminan con ese texto (basta
+# que la dirección acabe igual que el nombre). Devuelve 1 si no hay exactamente uno.
 asset_url() {
   local asset_name="$1"
   tr '{' '\n' < "$download_dir/release.json" \
@@ -451,7 +463,8 @@ asset_url() {
 download "$release_json_url" "$download_dir/release.json" || fail 'Could not download release metadata.'
 manifest_url="$(asset_url SHA256SUMS)" || fail 'The release is missing SHA256SUMS.'
 binary_url="$(asset_url "$artifact")" || fail "The release is missing the ${artifact} binary."
-# En la vía de pruebas ambas direcciones deben ser HTTP locales; en la normal, HTTPS.
+# En la vía de pruebas ambas direcciones deben ser HTTP locales. En la normal, esta comprobación solo exige que la del
+# manifiesto empiece con https://; la del binario la limita `download`, que solo admite HTTPS.
 if [ "$test_endpoint" -eq 1 ]; then
   is_loopback_test_url "$manifest_url" || fail 'Release metadata contains an unsafe test fixture URL.'
   is_loopback_test_url "$binary_url" || fail 'Release metadata contains an unsafe test fixture URL.'
@@ -460,7 +473,7 @@ else
 fi
 
 # Baja el manifiesto y el binario. La huella esperada sale del manifiesto (debe haber exactamente una línea válida para
-# este binario, con 64 caracteres hexadecimales); la real se calcula sobre lo descargado y deben coincidir.
+# este binario, con 64 caracteres hexadecimales en minúscula); la real se calcula sobre lo descargado y deben coincidir.
 download "$manifest_url" "$download_dir/SHA256SUMS" || fail 'Could not download SHA256SUMS.'
 download "$binary_url" "$download_dir/$artifact" || fail "Could not download ${artifact}."
 expected_digest="$(awk -v artifact="$artifact" '
@@ -475,7 +488,7 @@ fi
 [ "$expected_digest" = "$actual_digest" ] || fail "Checksum verification failed for ${artifact}."
 
 # Dependencias, antes de crear nada de Atlas: Engram y Workers se instalan si faltan o son viejos; Engines solo se
-# comprueba (el instalador de Workers lo instala cuando hace falta).
+# comprueba (si esos instaladores corren, el de Engram lo instala cuando falta y el de Workers cuando falta o no sirve).
 ensure_engram
 ensure_workers
 ensure_engines
@@ -486,8 +499,9 @@ if { [ -e "$destination" ] || [ -L "$destination" ]; } && [ "$force" -ne 1 ]; th
   fail 'The command already exists. Use --force to replace it explicitly.'
 fi
 # Copia el binario descargado a un archivo temporal en la carpeta de destino y le da permisos 755. Con --force lo
-# mueve encima del destino (`mv -f`); sin --force crea un enlace duro con `ln`, que falla si el destino apareció
-# mientras tanto, y luego borra el temporal. Después `staging` queda vacío porque ya no hay temporal que borrar.
+# mueve encima del destino (`mv -f`); sin --force crea un enlace duro con `ln` (un segundo nombre para el mismo
+# archivo), que falla si el destino apareció mientras tanto, y luego borra el temporal. Después `staging` queda vacío
+# porque ya no hay temporal que borrar.
 staging="$(mktemp "$bin_dir/.forge614-atlas.XXXXXX")"
 cp -- "$download_dir/$artifact" "$staging"
 chmod 755 "$staging"
