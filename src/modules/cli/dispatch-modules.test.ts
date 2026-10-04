@@ -1,3 +1,7 @@
+/**
+ * Prueba `dispatchModules` con los programas reales de Workers y Engines (sus rutas se resuelven desde la carpeta
+ * de Forge614 del usuario) y un motor Claude FALSO (script de shell): reporte completo, pausa por cuota y error fatal.
+ */
 import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, rmSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
@@ -16,6 +20,14 @@ const workersBinaryPath = resolveWorkersBinaryPath(process.platform, forgeHome);
 const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, forgeHome);
 const capabilities = { id: "claude-code", label: "Claude Code", supportsMcp: true, supportsHooks: true, supportsHeadlessExec: true, supportsReasoningLevel: false, supportsReadOnly: true };
 
+/**
+ * Escribe un script de shell ejecutable que hace de motor Claude FALSO: descarta lo que recibe por su entrada
+ * estándar (stdin, la entrada de datos del programa), para que quien lo lanza no quede esperando, y luego ejecuta el comportamiento pedido.
+ * @param dir Carpeta existente donde se crea el script.
+ * @param name Nombre del archivo del script.
+ * @param behavior Líneas de shell que decide qué imprime y con qué código sale, p. ej. `echo "ok"\nexit 0`.
+ * @returns La ruta del script, ya con permiso de ejecución.
+ */
 function writeFakeClaudeScript(dir: string, name: string, behavior: string): string {
   const scriptPath = join(dir, name);
   writeFileSync(scriptPath, `#!/bin/sh\ncat > /dev/null\n${behavior}\n`);
@@ -23,6 +35,10 @@ function writeFakeClaudeScript(dir: string, name: string, behavior: string): str
   return scriptPath;
 }
 
+/**
+ * Agrupa las pruebas de `dispatchModules` sobre un proyecto temporal con los módulos `auth` y `billing`
+ * y una memoria de Engram temporal; cada prueba empieza con ambos recién creados y los borra al terminar.
+ */
 describe("dispatchModules", () => {
   let projectDir: string;
   let engramDir: string;
@@ -48,6 +64,10 @@ describe("dispatchModules", () => {
     rmSync(engramDir, { recursive: true, force: true });
   });
 
+  /**
+   * Con un Claude falso que responde bien, ambos módulos quedan guardados, el desglose por nivel es 1 profundo y
+   * 1 ligero, no hay pausas y la sesión queda cerrada; protege el camino feliz completo, de Workers a Engram.
+   */
   test("saves each module report immediately and returns a completed FinalReport", async () => {
     const fakeClaude = writeFakeClaudeScript(projectDir, "fake-claude-ok.sh", 'echo "FAKE_ANALYSIS_OK"\nexit 0');
     // sessionId derivado igual que en producción (startOrResumeSession), para poder
@@ -83,6 +103,10 @@ describe("dispatchModules", () => {
     expect(reopened.status).toBe("already-complete");
   });
 
+  /**
+   * Con un Claude falso que dice «usage limit reached» y sale con error, el resultado es `paused`, el módulo
+   * `auth` no queda guardado y el contador de pausas sube a 1; protege que una cuota agotada se registre.
+   */
   test("stops on quota_exhausted, leaves the session open, and increments the pause count", async () => {
     const fakeClaude = writeFakeClaudeScript(
       projectDir,
@@ -110,6 +134,10 @@ describe("dispatchModules", () => {
     expect(readPauseCount(store, session.projectId)).toBe(1);
   });
 
+  /**
+   * Con una ruta de Engines que no existe, Workers rechaza el lote y el resultado es `fatal_error` sin guardar
+   * nada de `auth`; protege que un fallo de configuración no se confunda con módulos omitidos.
+   */
   test("reports fatal_error when forge614-workers rejects the batch (e.g. bad enginesBin)", async () => {
     const fakeClaude = writeFakeClaudeScript(projectDir, "fake-claude-unreached.sh", "exit 0");
     const session = startProjectSession(store, projectDir, "session-fatal");

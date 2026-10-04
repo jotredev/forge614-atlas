@@ -1,3 +1,7 @@
+/**
+ * Prueba `dispatchModules` cuando Engram rechaza un reporte por parecer un secreto (contraseña o clave) con un
+ * Workers FALSO: el módulo se omite y se lista aparte, y cualquier otro error al guardar sigue propagándose.
+ */
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -21,7 +25,13 @@ const modules = [
 // contenga un secreto literal. Engram 1.8.x lo rechaza con SECRET_REJECTED al guardarlo.
 const secretText = ["pass", "word = ", "hunter2hunter2"].join("");
 
-/** Evento `task_completed` de Workers con la salida dada. */
+/**
+ * Evento `task_completed` de Workers con la salida dada.
+ * @param taskId Nombre del módulo cuya tarea terminó (el id de la tarea es el nombre del módulo).
+ * @param stdout Texto de respuesta (stdout, la salida normal del programa) que `dispatchModules` intenta guardar
+ * como reporte del módulo.
+ * @returns El evento con código de salida 0, sin errores y sin truncar.
+ */
 function taskCompleted(taskId: string, stdout: string): object {
   return {
     event: "task_completed", taskId, exitCode: 0, durationMs: 10,
@@ -62,6 +72,11 @@ describe("dispatchModules with a report that Engram rejects as a secret", () => 
     for (const dir of [projectDir, engramDir, fakeDir]) rmSync(dir, { recursive: true, force: true });
   });
 
+  /**
+   * Si la respuesta de `auth` parece una contraseña y la de `billing` es normal, `billing` se guarda y `auth` queda
+   * omitido y listado en `rejectedReportModuleNames`, el lote termina `completed` y el secreto no aparece en el
+   * reporte; protege que un solo módulo con texto sospechoso no tumbe un análisis largo ni filtre el valor.
+   */
   test("skips only that module, saves the others, lists it apart and finishes the batch", async () => {
     const workers = writeFakeWorkers(fakeDir, {
       versionOutput: "forge614-workers 1.0.0",
@@ -81,6 +96,10 @@ describe("dispatchModules with a report that Engram rejects as a secret", () => 
     expect(JSON.stringify(result.report)).not.toContain("hunter2");
   });
 
+  /**
+   * Con dos respuestas normales, las listas de módulos rechazados y omitidos quedan vacías; protege que la
+   * lista de rechazados no se llene cuando no hubo ningún secreto.
+   */
   test("a batch with no rejected report lists no rejected modules", async () => {
     const workers = writeFakeWorkers(fakeDir, {
       versionOutput: "forge614-workers 1.0.0",
@@ -95,6 +114,11 @@ describe("dispatchModules with a report that Engram rejects as a secret", () => 
     expect(result.report.skippedModuleNames).toEqual([]);
   });
 
+  /**
+   * Con la base de Engram ya cerrada, guardar el reporte falla con un error que no es `SECRET_REJECTED`, y
+   * `dispatchModules` se rechaza con el mensaje de «onEvent handler threw» de `runWorkersBatch`; protege que
+   * solo el rechazo por secretos se absorba y que cualquier otro fallo siga a la vista.
+   */
   test("any other error while saving a report still propagates and is not swallowed", async () => {
     const workers = writeFakeWorkers(fakeDir, {
       versionOutput: "forge614-workers 1.0.0",
