@@ -1,3 +1,9 @@
+/**
+ * Pruebas para `computeChurn`.
+ * Comprueba que el churn (cuántos cambios de archivos hubo por módulo en el historial de git) se cuente bien: un archivo
+ * cambiado en 2 commits suma 2, las carpetas con prefijo parecido no se mezclan y un módulo con ñ se cuenta.
+ * Importa porque un prefijo compartido (`auth` y `auth-legacy`) o un nombre con ñ podrían sumar el churn al módulo equivocado o perderlo.
+ */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -7,14 +13,26 @@ import { computeChurn } from "./churn";
 import type { ModuleDescriptor } from "./discovery";
 
 /**
- * Función auxiliar para ejecutar comandos git de forma síncrona en el fixture temporal.
+ * Función auxiliar que ejecuta un comando git (esperando a que termine) dentro de la carpeta temporal de la prueba
+ * (el repositorio de ejemplo).
+ * @param cwd Ruta del directorio donde se ejecuta el comando.
+ * @param args Lista de argumentos para el comando git.
+ * @throws Error con el mensaje "git <argumentos> failed: <salida de error>" si git termina con código distinto de cero o no se puede ejecutar.
  */
 function git(cwd: string, args: string[]): void {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
 }
 
+/**
+ * Comprueba `computeChurn`, que cuenta los cambios de archivos por módulo en el historial de git.
+ * Importa para verificar que cada archivo del historial se cuente en su módulo exacto, incluso con prefijos parecidos y nombres con ñ.
+ */
 describe("computeChurn", () => {
+  /**
+   * Comprueba que `auth` (un archivo cambiado en 2 commits) cuente 2 y `billing` (1 commit) cuente 1.
+   * Importa porque es el caso base del conteo: un cambio por cada commit en que aparece el archivo.
+   */
   test("counts changed-file entries per module across commit history", () => {
     // Escenario: Se inicializa un repo Git real y se simula el flujo de commits.
     // auth/login.ts se modifica en 2 commits.
@@ -60,6 +78,10 @@ describe("computeChurn", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  /**
+   * Comprueba que `auth` y `auth-legacy` (un commit cada uno) cuenten 1 cada uno, sin mezclarse.
+   * Importa porque `auth-legacy/old-login.ts` empieza con el texto `auth`, y un cruce sumaría el cambio al módulo equivocado.
+   */
   test("correctly attributes files to modules with prefix-overlapping names", () => {
     // Escenario de colisión de prefijo en Git: 'auth' vs 'auth-legacy'.
     // Cada módulo recibe 1 commit de forma aislada.
@@ -97,6 +119,11 @@ describe("computeChurn", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  /**
+   * Comprueba que el módulo `señales` (con ñ) cuente 1 cambio. Sin la opción `core.quotepath=false` git escribiría la ruta
+   * con códigos numéricos entre comillas (octal, como `"\303\261"` para la ñ) y no coincidiría con la carpeta.
+   * Importa para que las carpetas con caracteres fuera de ASCII (letras sin tilde ni ñ) no se queden sin contar.
+   */
   test("correctly attributes churn for modules with non-ASCII names", () => {
     // Escenario UTF-8 crítico: Módulo llamado 'señales' con letra 'ñ'.
     // Gracias al argumento `git -c core.quotepath=false`, Git no escapa en octal ("\303\261")

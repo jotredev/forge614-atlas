@@ -1,3 +1,11 @@
+/**
+ * Calcula el churn (cuántos cambios de archivos hubo en el historial de git) por módulo: suma una unidad por cada archivo
+ * del módulo que aparece en cada commit.
+ * Existe para medir el riesgo y la volatilidad de cada módulo, y para que `buildRunPlan` lo entregue como señal a la puntuación compuesta.
+ * Lo usa `buildRunPlan` (en `src/modules/cli/build-run-plan.ts`) para calificar los módulos antes de la corrida;
+ * `src/index.ts` lo reexporta.
+ * Pieza principal: `computeChurn`.
+ */
 import { spawnSync } from "node:child_process";
 import { join, sep } from "node:path";
 import type { ModuleDescriptor } from "./discovery";

@@ -1,3 +1,12 @@
+/**
+ * Calcula la complejidad ciclomática (cuántos caminos distintos tiene el código) de los módulos leyendo sus archivos y
+ * contando los caminos de control en el AST (árbol de sintaxis abstracta: el código ya leído como árbol).
+ * Existe para medir qué tan enredado y difícil de entender es el código productivo de cada módulo, y para que `buildRunPlan`
+ * lo pase a la puntuación compuesta.
+ * Lo usa `buildRunPlan` (en `src/modules/cli/build-run-plan.ts`) para la puntuación de los módulos;
+ * `src/index.ts` reexporta sus funciones.
+ * Piezas: `fileCyclomaticComplexity`, `computeCyclomaticComplexity`.
+ */
 import ts from "typescript";
 import { readFileSync } from "node:fs";
 import { isTestFile, type ModuleDescriptor } from "./discovery";
