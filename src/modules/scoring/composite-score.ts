@@ -38,9 +38,9 @@ export interface ModuleScore {
  * 
  * Desafío Matemático:
  * - Las tres señales estructurales manejan escalas de magnitud completamente dispares:
- *   - Complejidad Ciclomática: Típicamente entre 1 y 500.
- *   - Centralidad Fan-In: Típicamente entre 0 y 20 (acotada por la cantidad de módulos).
- *   - Volatilidad Git Churn: Puede superar los 1,000 cambios de archivos en proyectos maduros.
+ *   - Complejidad Ciclomática: puede llegar a cientos en un módulo grande.
+ *   - Centralidad Fan-In: va de 0 al número de otros módulos (acotada por la cantidad de módulos).
+ *   - Volatilidad Git Churn: puede superar los 1,000 cambios de archivos en proyectos maduros.
  * - Si se sumaran directamente, el Churn dominaría la suma, invisibilizando
  *   módulos arquitectónicamente críticos pero estables.
  * 

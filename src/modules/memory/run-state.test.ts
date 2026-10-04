@@ -20,7 +20,7 @@ function freshStore(root: string) {
   return store;
 }
 
-/** Comprueba los cuatro estados observables al abrir o reabrir sesiones de proyectos. */
+/** Comprueba cuatro escenarios al abrir o reabrir sesiones: proyecto nuevo, reanudación, dos proyectos distintos y sesión ya cerrada. */
 describe("startOrResumeSession", () => {
   /** Comprueba que un proyecto nuevo quede activo y sin informe guardado para `auth`. */
   test("starts a fresh, active session for a repo never analyzed before", () => {

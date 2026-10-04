@@ -1,16 +1,15 @@
 /**
  * Guarda el texto que entregó un trabajador bajo el tema del módulo en la sesión actual.
- * `dispatch-modules.ts` lo llama al recibir un informe; las pruebas de planificación crean informes previos con él.
+ * `dispatch-modules.ts` lo llama al recibir un informe; `build-run-plan.test.ts` e `init.test.ts` crean informes previos con él.
  */
 import { saveProjectMemoryWithSession, type MemoryStore, type Session, type SessionSaveResult } from "forge614-engram";
 import { moduleTopicKey } from "./module-topic";
 
 /**
- * Guardar dos veces bajo el mismo topicKey sin pasar expectedVersion
- * lanza VERSION_CONFLICT en Engram. Por eso se revisa primero si ya
- * existe (getByTopic) para pasar su versión actual y que sea una
- * actualización limpia, no un choque — necesario para que una
- * re-corrida (--force) sobre un módulo ya guardado no falle.
+ * Guarda el informe de un módulo bajo su clave de tema (`topicKey`: identificador estable de la memoria dentro del proyecto).
+ * Guardar dos veces bajo la misma clave sin pasar `expectedVersion` (la versión que se cree vigente) lanza `VERSION_CONFLICT`
+ * en Engram. Por eso primero se consulta con `getByTopic` si ya existe y se pasa su versión actual: así es una
+ * actualización limpia y no un choque, necesario para que una re-corrida (`--force`) sobre un módulo ya guardado no falle.
  * @param store Base de memorias abierta donde se guarda el informe.
  * @param directory Carpeta del proyecto al que pertenece el módulo.
  * @param session Sesión a la que se vincula el guardado.

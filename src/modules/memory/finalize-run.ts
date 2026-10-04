@@ -6,21 +6,21 @@ import { type MemoryStore, type Session, type SummaryFields } from "forge614-eng
 
 /** Datos de módulos, niveles, consumo y pausas necesarios para el resumen final de Atlas. */
 export interface FinalReport {
-  /** Nombre del repositorio que aparece en la meta del resumen. */
+  /** Nombre o ruta del proyecto (`dispatchModules` manda la ruta de la carpeta); aparece en el objetivo (`goal`) del resumen. */
   repoName: string;
-  /** Número de módulos asignados a cada nivel de análisis. */
+  /** Número de módulos analizados con éxito en cada nivel de análisis (los saltados no se cuentan). */
   tierBreakdown: { deep: number; standard: number; light: number };
   /** Nombre del motor elegido para cada nivel. */
   engineByTier: Record<"deep" | "standard" | "light", string>;
-  /** Número de trabajadores asignados por nivel. */
+  /** Número de trabajadores (ayudantes de IA, uno por módulo) que terminaron su módulo en cada nivel. */
   totalWorkersByTier: Record<"deep" | "standard" | "light", number>;
-  /** Total de unidades de texto consumidas por los trabajadores. */
+  /** Total de tokens (las unidades de texto que procesa la IA) consumidos por los trabajadores; hoy `dispatchModules` manda 0 porque Workers no los cuenta. */
   tokensConsumed: number;
   /** Duración acumulada de la corrida en milisegundos. */
   totalTimeMs: number;
   /** Número de pausas por cuota registradas para el proyecto. */
   pauseCount: number;
-  /** Nombres de los módulos cuyos informes sí forman parte del resultado. */
+  /** Nombres de los módulos cuyo informe se guardó en Engram. */
   analyzedModuleNames: string[];
   /** Nombres de módulos saltados o fallidos que quedan en los pasos siguientes. */
   skippedModuleNames: string[];
@@ -40,9 +40,9 @@ export interface FinalReport {
  * interrumpida a medias (ej. cuota de la suscripción agotada) NUNCA debe
  * llamar a esta función: `finalizeRun` cierra la sesión de forma
  * incondicional (`endSession`), y una sesión cerrada no puede reabrirse con
- * el mismo `sessionId` (ver spec sección 4). Representar una pausa es
+ * el mismo `sessionId` (ver sección 4 de `docs/superpowers/specs/2026-09-19-atlas-engram-integration-design.md`). Representar una pausa es
  * simplemente detenerse sin llamar nada más — dejar la sesión abierta ES la
- * señal de "quedó a medias" (spec sección 6); el siguiente `init`/`resume`
+ * señal de "quedó a medias" (sección 6 del mismo documento); el siguiente `init`
  * la encuentra abierta automáticamente.
  * @param store Base de memorias donde se escribe el resumen y se cierra la sesión.
  * @param session Sesión de la corrida ya terminada.

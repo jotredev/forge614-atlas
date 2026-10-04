@@ -1,11 +1,11 @@
 /**
- * Envía tareas de Atlas al programa Workers y entrega sus eventos según llegan por líneas de salida.
+ * Envía tareas de Atlas a Forge614 Workers (el programa que corre ayudantes de IA en lote) y entrega sus eventos según llegan, una línea por evento.
  * `dispatch-modules.ts` usa esta conexión para seguir cada módulo y reconocer una pausa por cuota.
  */
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
-/** Niveles de razonamiento que Workers acepta; Engines valida cuáles admite el agente elegido. */
+/** Niveles de razonamiento que Workers acepta; Engines (el programa que sabe qué admite cada agente) valida cuáles admite el agente elegido. */
 export type WorkersReasoningLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
 /** Datos de un módulo que Atlas entrega a Workers para ejecutar un trabajador. */
@@ -18,7 +18,7 @@ export interface WorkersTask {
   executable: string;
   /** Instrucción de análisis que recibe el agente. */
   prompt: string;
-  /** Carpeta del proyecto que el agente puede leer. */
+  /** Carpeta extra a la que se da acceso al agente (Workers la pasa a Engines como `--readable-dir`); por sí sola no limita al agente a solo lectura, para eso está `readOnly`. */
   readableDir?: string;
   /**
    * Si es `true`, Workers pide a Engines el candado de solo lectura y se niega a correr la tarea
@@ -29,13 +29,13 @@ export interface WorkersTask {
   model?: string;
   /** Nivel de razonamiento enviado solo cuando la configuración lo incluye. */
   reasoningLevel?: WorkersReasoningLevel;
-  /** Límite de tiempo de la tarea en milisegundos, si se establece. */
+  /** Límite de tiempo de la tarea en milisegundos; si se omite, Workers usa 10 minutos (600000). Atlas no lo manda. */
   timeoutMs?: number;
 }
 
 /**
  * Un evento que Workers imprime como una línea de NDJSON (un objeto JSON por línea) mientras corre el lote. `task_failed`
- * con `reason: "engine_unsupported"` y `stderr` que empieza con `READ_ONLY_UNSUPPORTED` es la negativa a
+ * con `reason: "engine_unsupported"` y `stderr` (la salida de errores de la tarea) que empieza con `READ_ONLY_UNSUPPORTED` es la negativa a
  * correr una tarea sin candado de solo lectura. `fatal_error` puede aparecer antes de iniciar tareas por entrada inválida
  * o Engines ausente, o después de eventos de tarea si falla inesperadamente el control del lote.
  */
@@ -93,9 +93,9 @@ export type WorkersEvent =
  * salida a `onEvent`. Si una línea no es JSON válido o `onEvent` lanza un error, mata a Workers y rechaza.
  * @param workersBinaryPath Ruta del binario de Workers.
  * @param enginesBin Ruta del binario de Engines, que Workers usa para armar cada comando.
- * @param tasks Las tareas del lote.
+ * @param tasks Una tarea por módulo; Workers las corre una tras otra, en este orden.
  * @param onEvent Función que recibe cada evento, en orden.
- * @returns El código de salida de Workers (0 completo, 75 pausado por cuota, 2 entrada inválida o Engines ausente, 1 fallo inesperado).
+ * @returns El código de salida de Workers: 0 si el lote terminó sin pausa por cuota (aunque alguna tarea haya fallado), 75 si se pausó por cuota, 2 por entrada inválida o Engines ausente, 1 por fallo inesperado (también si Workers terminó por una señal del sistema).
  * @throws Rechaza la promesa si no se puede lanzar Workers, una línea no es JSON válido o `onEvent` lanza.
  */
 export function runWorkersBatch(
