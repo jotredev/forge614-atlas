@@ -1,17 +1,44 @@
 #!/usr/bin/env bun
 import { version } from "../../../package.json";
-import { runInit } from "./commands";
+import { runInit, runUninstall, runUpdate } from "./commands";
+import { helpText } from "./help";
 
+/**
+ * Lee el valor que sigue a una opción, por ejemplo `--engine claude-code`.
+ * @param args Argumentos del comando.
+ * @param name Nombre de la opción.
+ * @returns El argumento que sigue a la opción, o `undefined` si la opción no está.
+ */
 function flag(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
   return index === -1 ? undefined : args[index + 1];
 }
 
+/**
+ * Despacha el comando: `--version`/`-v`, `--help`/`-h`, `update` y `uninstall` se atienden sin abrir
+ * Engram; solo `init` lo abre. Cualquier otro comando responde `UNKNOWN_COMMAND` con salida 1.
+ */
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
 
-  if (command === "--version") {
-    console.log(version);
+  // --version, --help, update y uninstall se atienden ANTES de abrir Engram.
+  if (command === "--version" || command === "-v") {
+    console.log(`forge614-atlas ${version}`);
+    return;
+  }
+
+  if (command === "--help" || command === "-h") {
+    console.log(helpText(version));
+    return;
+  }
+
+  if (command === "update") {
+    await runUpdate(rest, version);
+    return;
+  }
+
+  if (command === "uninstall") {
+    await runUninstall(rest);
     return;
   }
 

@@ -15,9 +15,20 @@ At this stage Atlas is a hospital reception desk: it receives a repository, conf
 bun run build
 ./dist/forge614-atlas init --engine claude-code
 ./dist/forge614-atlas init --force
+./dist/forge614-atlas --version
+./dist/forge614-atlas --help
+./dist/forge614-atlas update
+./dist/forge614-atlas uninstall --confirmed
 ```
 
-Standard output is always JSON with `schemaVersion: 1`; no human-facing prose is emitted. `--engine` is optional and validated against Engines. `--force` starts a new session and includes previously reported modules again.
+Standard output of `init`, `update` and `uninstall` is always JSON with `schemaVersion: 1`; no human-facing prose is emitted. `--engine` is optional and validated against Engines. `--force` starts a new session and includes previously reported modules again.
+
+The commands other than `init` never open Engram:
+
+- `--version` (or `-v`) prints the product name and the version from `package.json`, for example `forge614-atlas 1.0.0`. The name is part of the contract: like the other Forge614 products do with their own command, Atlas's `update` validates the installed command by reading exactly `forge614-atlas X.Y.Z`.
+- `--help` (or `-h`) prints a short English help with `init [--engine <id>] [--force]`, `update`, `uninstall [--confirmed]`, `--version` and `--help`, and exits 0.
+- `update` downloads the installer attached to the latest Atlas release (`https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh`) to a private temporary file, runs it with `bash <installer> --force` showing its messages in the terminal, then reads `<FORGE614_HOME>/atlas/bin/forge614-atlas --version` and answers `{ "schemaVersion": 1, "status": "updated", "updated": true|false, "previousVersion": "…", "installedVersion": "…" }`. The temporary file is always deleted. It takes no arguments.
+- `uninstall [--from forge614-engram] [--confirmed]` removes Atlas from the disk and nothing else. It deletes only the folder `<FORGE614_HOME>/atlas/` (after checking it is a real folder, not a link, at exactly that path) and only the block between `# >>> forge614-atlas PATH >>>` and `# <<< forge614-atlas PATH <<<` in `~/.zshrc`, `~/.bash_profile` and `~/.bashrc`; the fish file `~/.config/fish/conf.d/forge614-atlas.fish` is deleted when the block is all it holds, and otherwise only the block is taken out. It never touches Engram, Engines, Shell, Workers, the saved memories or any other file. `--from` only accepts `forge614-engram`, which is how Engram calls it when it uninstalls itself (`uninstall --from forge614-engram --confirmed`, with no terminal, reading only the exit code). With `--confirmed` it asks nothing; without it, in a terminal, it asks to type exactly `REMOVE FORGE614-ATLAS`. The order is: check everything, remove the PATH blocks, print the result and delete the folder last. It is idempotent: with nothing to remove it exits 0 with `removed: false`. On success it prints `{ "schemaVersion": 1, "status": "uninstalled", "removed": true|false, "pathPublications": [<changed files>] }`.
 
 ## `init` flow
 
@@ -37,7 +48,7 @@ Internally, this is the module list Plan 4 (chapter 09) consumes to actually dis
 
 These outcomes still short-circuit before any dispatch happens, unchanged since Plan 3: `already-complete` means the deterministic session has already closed. `engine-ambiguous` lists candidates and leaves an ambiguous choice to Shell. `engine-unavailable` means no headless candidate exists. `engine-invalid` returns the requested identifier and real candidates.
 
-Operational failures are JSON too: `ENGINES_UNREACHABLE` covers an unreachable Engines binary or failed response; `ANALYSIS_FAILED` covers, among other cases, a directory without Git or without commits. This prevents a raw stack trace but does not change `computeChurn` behavior. `INVALID_FORGE614_HOME` is answered before Engram is even opened (exit code 1): the variable is set but empty, relative, or contains a NUL character — the same strict rule Engram applies, so a mistyped value never sends Atlas looking in an unexpected folder. Plan 4 adds two more error codes once dispatch starts (`WORKERS_UNREACHABLE`, `WORKERS_FATAL_ERROR`), and the read-only check adds `READ_ONLY_UNSUPPORTED` and `WORKERS_OUTDATED`; the requirements are verified right after the engine is chosen, before any Engram session is opened — see chapter 09.
+Operational failures are JSON too: `ENGINES_UNREACHABLE` covers an unreachable Engines binary or failed response; `ANALYSIS_FAILED` covers, among other cases, a directory without Git or without commits. This prevents a raw stack trace but does not change `computeChurn` behavior. `update` can fail with `UPDATE_FAILED` (download, installer or invalid installed version). `uninstall` can answer `INVALID_ARGUMENT` (an unknown argument, or `--from` with anything other than `forge614-engram`), `CONFIRMATION_REQUIRED` (no `--confirmed` and no terminal; nothing is deleted), `UNINSTALL_CANCELLED` (exit 130: the typed phrase did not match; nothing is deleted), `UNINSTALL_UNSAFE` (the folder, or the Forge614 folder, is not a real folder; nothing is deleted) and `PATH_REMOVE_FAILED` (a terminal profile cannot be rewritten safely; checked before anything is changed). `INVALID_FORGE614_HOME` is answered before Engram is even opened (exit code 1): the variable is set but empty, relative, or contains a NUL character — the same strict rule Engram applies, so a mistyped value never sends Atlas looking in an unexpected folder. Plan 4 adds two more error codes once dispatch starts (`WORKERS_UNREACHABLE`, `WORKERS_FATAL_ERROR`), and the read-only check adds `READ_ONLY_UNSUPPORTED` and `WORKERS_OUTDATED`; the requirements are verified right after the engine is chosen, before any Engram session is opened — see chapter 09.
 
 ## Resolved limit
 
