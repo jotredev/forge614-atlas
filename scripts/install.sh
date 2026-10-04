@@ -242,6 +242,7 @@ engines_is_compatible() {
 ensure_engines() {
   engines_is_compatible \
     || fail "Forge614 Engines ${engines_min_version} or newer with the read-only lock (supportsReadOnly) is required, and the installed one is missing, older or does not guarantee it. Atlas was not changed. $engines_hint"
+  printf 'Forge614 Engines is compatible: %s\n' "$engines_command"
 }
 
 repo='jotredev/forge614-atlas'
