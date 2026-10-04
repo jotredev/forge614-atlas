@@ -22,7 +22,7 @@ Standard output is always JSON with `schemaVersion: 1`; no human-facing prose is
 ## `init` flow
 
 1. Opens the Engram store and enables sessions.
-2. Runs the real `~/.forge614/engines/bin/forge614-engines` binary (`.exe` on Windows) with `detect` and, for every installed agent, `capabilities --agent <id>`.
+2. Runs the real `<FORGE614_HOME>/engines/bin/forge614-engines` binary (`.exe` on Windows) with `detect` and, for every installed agent, `capabilities --agent <id>`. `<FORGE614_HOME>` is the `FORGE614_HOME` environment variable when it is set, and `~/.forge614` otherwise; the same folder is used to find Workers (`<FORGE614_HOME>/workers/bin/forge614-workers`).
 3. Keeps only installed agents with an executable and `supportsHeadlessExec: true`. An invalid `--engine` is never trusted.
 4. Starts or resumes the Engram session and computes Plan 1 signals. When resuming, it excludes modules with an already-saved report.
 5. Returns the engine, session, and pending modules with `ligero`, `estandar`, or `profundo` tiers.
@@ -37,7 +37,7 @@ Internally, this is the module list Plan 4 (chapter 09) consumes to actually dis
 
 These outcomes still short-circuit before any dispatch happens, unchanged since Plan 3: `already-complete` means the deterministic session has already closed. `engine-ambiguous` lists candidates and leaves an ambiguous choice to Shell. `engine-unavailable` means no headless candidate exists. `engine-invalid` returns the requested identifier and real candidates.
 
-Operational failures are JSON too: `ENGINES_UNREACHABLE` covers an unreachable Engines binary or failed response; `ANALYSIS_FAILED` covers, among other cases, a directory without Git or without commits. This prevents a raw stack trace but does not change `computeChurn` behavior. Plan 4 adds two more error codes once dispatch starts (`WORKERS_UNREACHABLE`, `WORKERS_FATAL_ERROR`) — see chapter 09.
+Operational failures are JSON too: `ENGINES_UNREACHABLE` covers an unreachable Engines binary or failed response; `ANALYSIS_FAILED` covers, among other cases, a directory without Git or without commits. This prevents a raw stack trace but does not change `computeChurn` behavior. `INVALID_FORGE614_HOME` is answered before Engram is even opened (exit code 1): the variable is set but empty, relative, or contains a NUL character — the same strict rule Engram applies, so a mistyped value never sends Atlas looking in an unexpected folder. Plan 4 adds two more error codes once dispatch starts (`WORKERS_UNREACHABLE`, `WORKERS_FATAL_ERROR`) — see chapter 09.
 
 ## Resolved limit
 
