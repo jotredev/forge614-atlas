@@ -1,12 +1,12 @@
 /**
  * Resuelve la carpeta común de Forge614 y señala una configuración inválida de `FORGE614_HOME`.
- * `commands.ts` y `uninstall-command.ts` usan estas piezas antes de localizar los programas instalados.
+ * `commands.ts` las usa en `init` y `update` para ubicar los programas instalados y `uninstall-command.ts` para planear la desinstalación.
  */
 import { isAbsolute, join, resolve } from "node:path";
 
 /** Error de configuración que permite a la interfaz informar por separado una carpeta Forge614 inválida. */
 export class ForgeHomeError extends Error {
-  /** Código estable que Atlas devuelve en el sobre de error de `init`. */
+  /** Código estable que Atlas devuelve en el sobre de error (la respuesta JSON de fallo) de `init`, `update` y `uninstall`. */
   readonly code = "INVALID_FORGE614_HOME";
 
   /**

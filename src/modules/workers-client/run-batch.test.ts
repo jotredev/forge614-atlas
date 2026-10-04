@@ -15,7 +15,7 @@ const workersBinaryPath = resolveWorkersBinaryPath(process.platform, forgeHome);
 const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, forgeHome);
 
 /**
- * Crea un programa temporal que imprime el texto recibido o simula una cuota agotada.
+ * Crea un programa temporal que imprime `FAKE_ANALYSIS:` seguido del texto recibido o, si el texto contiene `TRIGGER_QUOTA`, escribe un aviso de límite de uso agotado y sale con código 1 (simula una cuota agotada).
  * @param dir Carpeta temporal donde se escribe el programa ejecutable.
  * @returns Ruta del programa temporal creado.
  * @throws Error del sistema de archivos si no se puede escribir o marcar ejecutable el programa.

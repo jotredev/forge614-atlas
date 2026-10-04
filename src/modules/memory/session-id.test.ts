@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { deriveSessionId, deriveForcedSessionId } from "./session-id";
 
 /**
- * Función auxiliar para ejecutar comandos git de forma síncrona en el fixture temporal
+ * Función auxiliar para ejecutar comandos git de forma síncrona en la carpeta temporal armada para la prueba
  * (mismo patrón que usa `src/modules/scoring/churn.test.ts`).
  * @param cwd Carpeta del repositorio temporal donde se ejecuta Git.
  * @param args Argumentos del comando Git que prepara la prueba.
@@ -18,7 +18,7 @@ function git(cwd: string, args: string[]): void {
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
 }
 
-/** Comprueba que la identidad del repositorio determine el mismo ID desde distintas rutas del mismo Git. */
+/** Comprueba que `deriveSessionId` sea estable, distinga carpetas, empiece con `atlas:` y dé el mismo ID desde la raíz y desde una subcarpeta de un repositorio Git. */
 describe("deriveSessionId", () => {
   /** Comprueba que dos llamadas con la misma carpeta temporal produzcan el mismo ID. */
   test("is deterministic for the same directory", () => {

@@ -1,4 +1,4 @@
-/** Comprueba que los informes se vinculen a su sesión y que guardar dos veces actualice la misma memoria. */
+/** Comprueba que los informes se vinculen a su sesión y que guardar dos veces el mismo módulo cambie el contenido y suba la versión a 2. */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

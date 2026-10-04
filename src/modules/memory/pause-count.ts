@@ -7,10 +7,10 @@ import { saveProjectMemoryWithSession, type MemoryStore, type Session } from "fo
 const PAUSE_COUNT_TOPIC = "atlas:meta:pause-count";
 
 /**
- * Lee el contador del proyecto; una memoria ausente o cuyo contenido no sea un entero legible cuenta como cero.
+ * Lee el contador del proyecto; si no hay memoria, o su contenido no empieza con un número entero, cuenta como cero (de un texto como `12abc` se toma el 12).
  * @param store Base de memorias abierta para consultar el tema del contador.
- * @param projectId Identificador del proyecto; puede ser nulo según la sesión recibida.
- * @returns El entero guardado, o cero si falta o no se puede interpretar.
+ * @param projectId Identificador del proyecto cuya memoria se consulta (`dispatchModules` pasa `session.projectId`, que nunca es nulo); un `null` consultaría las memorias compartidas, sin proyecto.
+ * @returns El entero con que empieza el contenido guardado, o cero si falta o no empieza con un entero.
  */
 export function readPauseCount(store: MemoryStore, projectId: string | null): number {
   const existing = store.getByTopic(projectId, PAUSE_COUNT_TOPIC);
@@ -25,7 +25,7 @@ export function readPauseCount(store: MemoryStore, projectId: string | null): nu
  * @param directory Carpeta del proyecto al que corresponde la sesión.
  * @param session Sesión abierta que vincula el nuevo valor con la corrida.
  * @returns El total nuevo después del guardado.
- * @throws `VERSION_CONFLICT` si otro guardado cambió la versión consultada, o `SECRET_REJECTED` si Engram rechaza el contenido; la función no los captura.
+ * @throws `VERSION_CONFLICT` si otro guardado cambió la versión consultada; también propaga los demás errores de Engram (por ejemplo `SESSION_CLOSED` si la sesión ya está cerrada); la función no los captura.
  */
 export function recordPause(store: MemoryStore, directory: string, session: Session): number {
   // Una memoria anterior aporta su versión para actualizarla sin sobrescribir una revisión ajena.

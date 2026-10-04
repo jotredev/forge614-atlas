@@ -132,7 +132,7 @@ function resolveImportPath(fromFile: string, specifier: string): string | null {
  *    con la ruta del módulo seguida por el separador del sistema (`/` en POSIX o `\` en Windows).
  *    Esto previene falsos positivos catastróficos si existen carpetas como `auth` y `auth-legacy`.
  * 4. Exclusión de Archivos de Prueba:
- *    Los archivos de prueba (los que terminan en `.test` o `.spec` seguido de ts, tsx, js o jsx) no se leen como emisores, para evitar que los imports de prueba distorsionen la topología arquitectónica de producción.
+ *    Los archivos de prueba (los que terminan en `.test` o `.spec` seguido de ts, tsx, js o jsx) no se leen como archivos que importan, para evitar que los imports de prueba distorsionen las dependencias reales entre módulos de producción.
  * 
  * @param modules - Lista de módulos registrados en el proyecto
  * @returns Mapa `Map<string, number>` con el valor de Fan-In por cada módulo
