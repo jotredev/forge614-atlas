@@ -28,7 +28,8 @@ Dispatch happens through a separate, dedicated node of the Forge614 ecosystem: *
     "totalTimeMs": 184320,
     "pauseCount": 0,
     "analyzedModuleNames": ["src/auth", "src/billing"],
-    "skippedModuleNames": []
+    "skippedModuleNames": [],
+    "rejectedReportModuleNames": []
   }
 }
 ```
@@ -89,7 +90,7 @@ The analysis prompt always asks for a narrative summary — never "the raw conte
 
 Atlas sends `forge614-workers` **one single batch** per `init` run — never one invocation per module — with the full ordered task list over `stdin`. It then reads NDJSON events from `stdout` as they arrive:
 
-- `task_completed` → the module's report is saved to Engram **immediately** (`recordModuleReport`), never accumulated until the end. If the reported output was truncated (`stdoutTruncated: true`, meaning it hit the byte cap), the module is treated as skipped instead of saved, so the next `init`/resume retries it rather than permanently keeping a cut-off analysis.
+- `task_completed` → the module's report is saved to Engram **immediately** (`recordModuleReport`), never accumulated until the end. If the reported output was truncated (`stdoutTruncated: true`, meaning it hit the byte cap), the module is treated as skipped instead of saved, so the next `init`/resume retries it rather than permanently keeping a cut-off analysis. If Engram refuses to save the report because its text looks like a secret (error `SECRET_REJECTED`, a filter Engram applies to every save), that module is also counted as skipped — one line that looks like a key must not bring down a long analysis — and its name is listed in the new `rejectedReportModuleNames` field of the final report (an additive field: `skippedModuleNames` still includes it, and the closing Engram summary says why). The batch keeps going, and the next `init` retries that module. Any other error while saving still stops the run, as before.
 - `task_failed` → the module is recorded as skipped; dispatch continues with the rest. The one exception is a `stderr` that starts with `READ_ONLY_UNSUPPORTED` (the second line of defense above): that ends the run with that error instead.
 - `quota_exhausted` → dispatch stops immediately. The Engram session is deliberately **left open** — that open state *is* the "this run is incomplete" signal for the next `init`, which resumes automatically (same mechanism Plan 2 already built). A running pause counter, itself stored in Engram (`atlas:meta:pause-count`), is incremented so the eventual closing report's `pauseCount` reflects the project's whole lifetime, not just the final run.
 - `fatal_error` → the whole batch never produced anything usable; mapped to `WORKERS_FATAL_ERROR`.

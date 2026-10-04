@@ -10,6 +10,11 @@ export interface FinalReport {
   pauseCount: number;
   analyzedModuleNames: string[];
   skippedModuleNames: string[];
+  /**
+   * Subconjunto de `skippedModuleNames` cuyo reporte Engram rechazó con `SECRET_REJECTED` por parecer
+   * un secreto. Campo aditivo: quien lee el resultado y no lo conoce puede ignorarlo.
+   */
+  rejectedReportModuleNames?: string[];
 }
 
 /**
@@ -38,9 +43,14 @@ export function finalizeRun(store: MemoryStore, session: Session, report: FinalR
       `Tiempo total: ${report.totalTimeMs} ms.`,
       `Pausas/reanudaciones: ${report.pauseCount}.`,
     ].join("\n"),
-    nextSteps: report.skippedModuleNames.length === 0
-      ? "Ninguno; análisis completo."
-      : `Módulos saltados o fallidos: ${report.skippedModuleNames.join(", ")}.`,
+    nextSteps: [
+      report.skippedModuleNames.length === 0
+        ? "Ninguno; análisis completo."
+        : `Módulos saltados o fallidos: ${report.skippedModuleNames.join(", ")}.`,
+      ...(report.rejectedReportModuleNames?.length
+        ? [`Engram rechazó el reporte de estos módulos por parecer un secreto: ${report.rejectedReportModuleNames.join(", ")}.`]
+        : []),
+    ].join(" "),
     files: report.analyzedModuleNames,
   };
 
