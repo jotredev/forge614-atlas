@@ -5,11 +5,23 @@ usage() {
   printf '%s\n' \
     'Install a verified Forge614 Atlas release binary.' \
     'Usage: bash scripts/install.sh [--version TAG] [--bin-dir PATH] [--force]' \
-    'Default destination: $HOME/.forge614/atlas/bin/forge614-atlas' \
-    '--force explicitly replaces an existing installation.'
+    'Default destination: $FORGE614_HOME (default $HOME/.forge614)/atlas/bin/forge614-atlas' \
+    'FORGE614_HOME, when set, must be a non-empty absolute path; every Forge614 product is looked up there.' \
+    '--force explicitly replaces an existing installation.' \
+    'Requires Forge614 Engram 1.8.7 or newer, Forge614 Workers 1.0.0 or newer and Forge614 Engines 1.17.0 or newer' \
+    'with the read-only lock (supportsReadOnly); Engram and Workers are installed when missing or too old.' \
+    'Nothing of Atlas is installed when a requirement cannot be met.'
 }
 
 fail() { printf '%s\n' "$1" >&2; exit 1; }
+
+# Oldest releases Atlas works with. The Engram version is the one Atlas is compiled against.
+engram_min_version='1.8.7'
+workers_min_version='1.0.0'
+engines_min_version='1.17.0'
+engram_hint='Install or update it with: curl -fsSL https://github.com/jotredev/forge614-engram/releases/latest/download/install.sh | bash'
+workers_hint='Install or update it with: curl -fsSL https://github.com/jotredev/forge614-workers/releases/latest/download/install.sh | bash'
+engines_hint='Install or update it with: curl -fsSL https://github.com/jotredev/forge614-engines/releases/latest/download/install.sh | bash'
 
 path_marker_start='# >>> forge614-atlas PATH >>>'
 path_marker_end='# <<< forge614-atlas PATH <<<'
@@ -21,13 +33,12 @@ manual_path_guidance() {
 }
 
 prepare_bin_directory() {
-  local forge_home product_home
-  if [ "$bin_dir" != "$HOME/.forge614/atlas/bin" ]; then
+  local product_home
+  if [ "$bin_dir" != "$forge_home/atlas/bin" ]; then
     mkdir -p -- "$bin_dir"
     [ -d "$bin_dir" ] && [ ! -L "$bin_dir" ] || return 1
     return 0
   fi
-  forge_home="$HOME/.forge614"
   product_home="$forge_home/atlas"
   [ ! -L "$forge_home" ] && { [ ! -e "$forge_home" ] || [ -d "$forge_home" ]; } || return 1
   if [ ! -e "$forge_home" ]; then mkdir -- "$forge_home" || return 1; chmod 700 "$forge_home" || return 1; fi
@@ -132,32 +143,109 @@ is_loopback_test_url() {
   (( 10#$port >= 1 && 10#$port <= 65535 ))
 }
 
-install_engram_dependency() {
-  local engram_command engram_installer installer_url engram_proto
-  engram_command="$HOME/.forge614/engram/bin/forge614-engram"
-  if [ -x "$engram_command" ]; then
-    printf '%s\n' "Forge614 Engram is already available: $engram_command"
+# Prints X.Y.Z when `<binary> --version` prints `<name> X.Y.Z`; fails otherwise (missing, not
+# executable, no --version, other text). stdin is closed so an old binary that waits for input cannot hang.
+installed_version() {
+  local binary="$1" name="$2" output
+  local pattern="^${name}[[:space:]]+([0-9]+\\.[0-9]+\\.[0-9]+)"
+  [ -x "$binary" ] || return 1
+  output="$("$binary" --version < /dev/null 2>/dev/null)" || return 1
+  [[ "$output" =~ $pattern ]] || return 1
+  printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+# Succeeds when X.Y.Z ($1) is at least the minimum X.Y.Z ($2).
+version_at_least() {
+  local found_major found_minor found_patch minimum_major minimum_minor minimum_patch
+  IFS=. read -r found_major found_minor found_patch <<< "$1"
+  IFS=. read -r minimum_major minimum_minor minimum_patch <<< "$2"
+  (( 10#$found_major > 10#$minimum_major \
+    || (10#$found_major == 10#$minimum_major && (10#$found_minor > 10#$minimum_minor \
+    || (10#$found_minor == 10#$minimum_minor && 10#$found_patch >= 10#$minimum_patch))) ))
+}
+
+# Succeeds when `<binary> --version` prints `<name> X.Y.Z` with X.Y.Z at least the minimum ($3).
+tool_is_compatible() {
+  local found
+  found="$(installed_version "$1" "$2")" || return 1
+  version_at_least "$found" "$3"
+}
+
+# Downloads the published installer of another Forge614 product into $2 (a file inside $download_dir).
+# $1 is the product name, $3 the default URL and $4 the name of the test-only override variable.
+download_dependency_installer() {
+  local product="$1" destination_file="$2" installer_url="$3" override_name="$4"
+  local installer_proto='=https' override_url="${!override_name:-}"
+  if [ -n "$override_url" ]; then
+    [ "${FORGE614_ATLAS_INSTALLER_TEST:-}" = '1' ] || fail "The ${product} installer override is reserved for test fixtures."
+    case "$override_url" in file:///*) ;; *) fail "The ${product} test installer must be a local file URL." ;; esac
+    installer_url="$override_url"
+    installer_proto='=https,file'
+  fi
+  curl --fail --location --proto "$installer_proto" --tlsv1.2 --silent --show-error "$installer_url" --output "$destination_file" \
+    || fail "Could not download the Forge614 ${product} installer. Atlas was not changed."
+}
+
+# Makes sure Engram is at least the version Atlas is compiled against. When it is older (or does not
+# answer --version) the published installer updates it with --force, as Engram's own `update` does;
+# when it is missing the installer runs without --force. Runs before anything of Atlas is created.
+ensure_engram() {
+  local engram_installer
+  local installer_arguments=()
+  if tool_is_compatible "$engram_command" forge614-engram "$engram_min_version"; then
+    printf 'Forge614 Engram is compatible: %s\n' "$engram_command"
     return 0
   fi
 
-  installer_url='https://github.com/jotredev/forge614-engram/releases/latest/download/install.sh'
-  engram_proto='=https'
-  if [ -n "${FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL:-}" ]; then
-    [ "${FORGE614_ATLAS_INSTALLER_TEST:-}" = '1' ] || fail 'The Engram installer override is reserved for test fixtures.'
-    installer_url="$FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL"
-    case "$installer_url" in file:///*) ;; *) fail 'The Engram test installer must be a local file URL.' ;; esac
-    engram_proto='=https,file'
+  if [ -e "$engram_command" ] || [ -L "$engram_command" ]; then installer_arguments=(--force); fi
+  printf 'Forge614 Engram %s or newer is required; installing the latest release.\n' "$engram_min_version"
+  engram_installer="$download_dir/forge614-engram-install.sh"
+  download_dependency_installer Engram "$engram_installer" \
+    'https://github.com/jotredev/forge614-engram/releases/latest/download/install.sh' FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL
+  FORGE614_HOME="$forge_home" bash "$engram_installer" ${installer_arguments[@]+"${installer_arguments[@]}"} < /dev/null \
+    || fail "Forge614 Engram could not be installed or updated. Atlas was not changed. $engram_hint"
+  tool_is_compatible "$engram_command" forge614-engram "$engram_min_version" \
+    || fail "Forge614 Engram is still missing or older than ${engram_min_version}. Atlas was not changed. $engram_hint"
+}
+
+# Makes sure Workers is at least the minimum version, installing the latest release when it is missing
+# or older (a Workers without --version counts as older). The installer runs WITHOUT --force: if
+# something that is not a link sits where Workers goes, Workers refuses and Atlas installs nothing.
+ensure_workers() {
+  local workers_installer
+  if tool_is_compatible "$workers_command" forge614-workers "$workers_min_version"; then
+    printf 'Forge614 Workers is compatible: %s\n' "$workers_command"
+    return 0
   fi
 
-  engram_installer="$download_dir/forge614-engram-install.sh"
-  curl --fail --location --proto "$engram_proto" --tlsv1.2 --silent --show-error "$installer_url" --output "$engram_installer" \
-    || fail 'Could not download the Forge614 Engram installer.'
-  bash "$engram_installer" || fail 'Forge614 Engram could not be installed; Atlas was not changed.'
-  [ -x "$engram_command" ] || fail 'Forge614 Engram installation did not provide its required command.'
+  printf 'Forge614 Workers %s or newer is required; installing the latest release.\n' "$workers_min_version"
+  workers_installer="$download_dir/forge614-workers-install.sh"
+  download_dependency_installer Workers "$workers_installer" \
+    'https://github.com/jotredev/forge614-workers/releases/latest/download/install.sh' FORGE614_ATLAS_WORKERS_INSTALLER_TEST_URL
+  FORGE614_HOME="$forge_home" bash "$workers_installer" < /dev/null \
+    || fail "Forge614 Workers could not be installed. Atlas was not changed. $workers_hint"
+  tool_is_compatible "$workers_command" forge614-workers "$workers_min_version" \
+    || fail "Forge614 Workers is still missing or older than ${workers_min_version}. Atlas was not changed. $workers_hint"
+}
+
+# Succeeds only when the installed Engines runs, is at least the minimum version and reports
+# `supportsReadOnly: true` for Claude Code (same check as Workers' installer).
+engines_is_compatible() {
+  local capabilities
+  tool_is_compatible "$engines_command" forge614-engines "$engines_min_version" || return 1
+  capabilities="$("$engines_command" capabilities --agent claude-code < /dev/null 2>/dev/null)" || return 1
+  grep -Eq '"supportsReadOnly"[[:space:]]*:[[:space:]]*true' <<< "$capabilities"
+}
+
+# Final check: Workers' own installer keeps Engines current when it installs, but a Workers that was
+# already fine skips it, so Atlas asks again and never installs on top of an Engines without the lock.
+ensure_engines() {
+  engines_is_compatible \
+    || fail "Forge614 Engines ${engines_min_version} or newer with the read-only lock (supportsReadOnly) is required, and the installed one is missing, older or does not guarantee it. Atlas was not changed. $engines_hint"
 }
 
 repo='jotredev/forge614-atlas'
-bin_dir="${HOME:?HOME must be set}/.forge614/atlas/bin"
+bin_dir=''
 version=''
 force=0
 seen_bin_dir=0
@@ -186,6 +274,21 @@ done
 if [ -n "$version" ] && ! [[ "$version" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
   fail 'Invalid release tag. Use a semantic version tag such as v1.2.3.'
 fi
+
+# Same rule as the Atlas code (src/modules/forge-home): without the variable the Forge614 folder is
+# ~/.forge614; with it, it must be a non-empty absolute path (an empty or relative one is an error).
+if [ "${FORGE614_HOME+set}" = 'set' ]; then
+  case "$FORGE614_HOME" in
+    /*) forge_home="$FORGE614_HOME" ;;
+    *) fail 'INVALID_FORGE614_HOME: FORGE614_HOME must be a non-empty absolute path.' ;;
+  esac
+else
+  forge_home="${HOME:?HOME must be set}/.forge614"
+fi
+engram_command="$forge_home/engram/bin/forge614-engram"
+workers_command="$forge_home/workers/bin/forge614-workers"
+engines_command="$forge_home/engines/bin/forge614-engines"
+if [ "$seen_bin_dir" -eq 0 ]; then bin_dir="$forge_home/atlas/bin"; fi
 
 case "$bin_dir" in /*) ;; *) bin_dir="$PWD/$bin_dir" ;; esac
 destination="$bin_dir/forge614-atlas"
@@ -279,7 +382,9 @@ else
 fi
 [ "$expected_digest" = "$actual_digest" ] || fail "Checksum verification failed for ${artifact}."
 
-install_engram_dependency
+ensure_engram
+ensure_workers
+ensure_engines
 prepare_bin_directory || fail 'Could not safely create the selected Atlas installation directory.'
 [ ! -d "$destination" ] || fail 'The destination is a directory; choose a different --bin-dir.'
 if { [ -e "$destination" ] || [ -L "$destination" ]; } && [ "$force" -ne 1 ]; then

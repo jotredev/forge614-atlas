@@ -1,5 +1,5 @@
-import { afterAll, afterEach, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -9,26 +9,103 @@ const fixtureBytes = "#!/usr/bin/env sh\nprintf 'fixture release binary\\n'\n";
 const testReleaseBaseUrl = "FORGE614_ATLAS_TEST_RELEASE_BASE_URL";
 const testMode = "FORGE614_ATLAS_INSTALLER_TEST";
 const engramInstallerTestUrl = "FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL";
+const workersInstallerTestUrl = "FORGE614_ATLAS_WORKERS_INSTALLER_TEST_URL";
+const forgeHomeVariable = "FORGE614_HOME";
 
-// Task 2's tests predate the Engram dependency Task 3 chains in front of every install. None of
-// them opt into `FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL` themselves, so without a default they
-// would otherwise fall through to installer.sh's real, network-hitting fallback URL and become
-// flaky/non-hermetic. Provide one shared local stub installer and point every fixture run at it,
-// unless a test (the Engram-specific ones below) has already set its own override.
-const defaultEngramInstaller = join(mkdtempSync(join(tmpdir(), "forge614-atlas-default-engram-")), "install.sh");
-writeFileSync(
-  defaultEngramInstaller,
-  [
+/** Cómo debe responder el Engines FALSO: su versión y el campo `supportsReadOnly` (`"absent"` lo omite). */
+interface EnginesSpec {
+  version: string;
+  supportsReadOnly: boolean | "absent";
+}
+
+const goodEngines: EnginesSpec = { version: "1.17.0", supportsReadOnly: true };
+
+/**
+ * Escribe un binario FALSO que responde `--version` con `<name> <version>`; con `version` en `null` no
+ * responde `--version` (sale con error), como un Workers anterior a 1.0.0.
+ */
+function writeFakeVersioned(path: string, name: string, version: string | null) {
+  mkdirSync(dirname(path), { recursive: true });
+  const answer = version === null ? "exit 1" : `printf '${name} ${version}\\n'`;
+  writeFileSync(path, `#!/bin/sh\nif [ "$1" = "--version" ]; then\n  ${answer}\n  exit 0\nfi\nexit 0\n`);
+  chmodSync(path, 0o755);
+}
+
+/** Escribe un Engines FALSO que responde `--version` y `capabilities --agent claude-code`. */
+function writeFakeEngines(path: string, spec: EnginesSpec) {
+  mkdirSync(dirname(path), { recursive: true });
+  const field = spec.supportsReadOnly === "absent" ? "" : `,"supportsReadOnly":${spec.supportsReadOnly}`;
+  writeFileSync(
+    path,
+    [
+      "#!/bin/sh",
+      'case "$1" in',
+      `  --version) printf 'forge614-engines ${spec.version}\\n' ;;`,
+      `  capabilities) printf '{"id":"claude-code"${field}}\\n' ;;`,
+      "  *) exit 2 ;;",
+      "esac",
+      "",
+    ].join("\n"),
+  );
+  chmodSync(path, 0o755);
+}
+
+/** Lo que hace el instalador publicado FALSO de otro producto cuando Atlas lo corre. */
+interface InstallerBehavior {
+  /** Si es `true`, sale con 1 sin instalar nada. */
+  fails?: boolean;
+  /** Versión que imprime el binario que deja instalado (`null`: un binario sin `--version`). Por defecto la mínima. */
+  installs?: string | null;
+  /** Solo para Workers: el Engines que deja instalado, como haría el instalador real de Workers. */
+  engines?: EnginesSpec;
+}
+
+/**
+ * Escribe un instalador publicado FALSO de Engram o de Workers. Anota cada llamada en `logFile` como
+ * `<producto>|<FORGE614_HOME que recibió>|<argumentos>` y deja su binario en `$FORGE614_HOME/<producto>/bin`.
+ */
+function writeFakeInstaller(directory: string, product: "engram" | "workers", behavior: InstallerBehavior, logFile: string) {
+  const payload = join(directory, `${product}-payload`);
+  writeFakeVersioned(payload, `forge614-${product}`, behavior.installs === undefined ? (product === "engram" ? "1.8.7" : "1.0.0") : behavior.installs);
+  const lines = [
     "#!/usr/bin/env bash",
     "set -euo pipefail",
-    "mkdir -p \"$HOME/.forge614/engram/bin\"",
-    "printf '#!/usr/bin/env sh\\nexit 0\\n' > \"$HOME/.forge614/engram/bin/forge614-engram\"",
-    "chmod 700 \"$HOME/.forge614/engram/bin/forge614-engram\"",
-  ].join("\n"),
-);
+    `printf '%s|%s|%s\\n' '${product}' "$FORGE614_HOME" "$*" >> '${logFile}'`,
+  ];
+  if (behavior.fails) {
+    lines.push("exit 1");
+  } else {
+    lines.push(
+      `mkdir -p "$FORGE614_HOME/${product}/bin"`,
+      `cp '${payload}' "$FORGE614_HOME/${product}/bin/forge614-${product}"`,
+      `chmod 755 "$FORGE614_HOME/${product}/bin/forge614-${product}"`,
+    );
+    if (behavior.engines) {
+      const enginesPayload = join(directory, "engines-payload");
+      writeFakeEngines(enginesPayload, behavior.engines);
+      lines.push(
+        'mkdir -p "$FORGE614_HOME/engines/bin"',
+        `cp '${enginesPayload}' "$FORGE614_HOME/engines/bin/forge614-engines"`,
+        'chmod 755 "$FORGE614_HOME/engines/bin/forge614-engines"',
+      );
+    }
+  }
+  const path = join(directory, `${product}-install.sh`);
+  writeFileSync(path, `${lines.join("\n")}\n`);
+  return path;
+}
+
+// Las primeras pruebas de este archivo son anteriores a las dependencias que Atlas instala antes de
+// copiar su binario. Ninguna fija sus propios instaladores de Engram y Workers, así que sin un valor por
+// omisión caerían a las URL reales y dejarían de ser herméticas: todas las corridas apuntan a estos dos
+// instaladores locales (que dejan Engram 1.8.7, Workers 1.0.0 y un Engines 1.17.0 con candado), salvo que
+// la prueba ponga el suyo.
+const defaultsDirectory = mkdtempSync(join(tmpdir(), "forge614-atlas-default-installers-"));
+const defaultEngramInstaller = writeFakeInstaller(defaultsDirectory, "engram", {}, "/dev/null");
+const defaultWorkersInstaller = writeFakeInstaller(defaultsDirectory, "workers", { engines: goodEngines }, "/dev/null");
 
 afterAll(() => {
-  rmSync(dirname(defaultEngramInstaller), { recursive: true, force: true });
+  rmSync(defaultsDirectory, { recursive: true, force: true });
 });
 
 function temporaryDirectory() {
@@ -73,38 +150,47 @@ async function runInstaller(args: string[]) {
   };
 }
 
+/**
+ * Corre `operation` con `HOME`, `SHELL` y las variables de prueba del instalador puestas, y las deja como
+ * estaban al terminar. `FORGE614_HOME` se borra salvo que `extraEnv` la fije (un `undefined` borra la
+ * variable), para que una variable real de la persona que corre las pruebas nunca llegue al instalador.
+ */
 async function withFixtureEnvironment<T>(
   home: string,
   releaseBaseUrl: string,
   operation: () => Promise<T>,
   includeTestSentinel = true,
   shell?: string,
+  extraEnv: Record<string, string | undefined> = {},
 ) {
-  const saved = {
-    home: process.env.HOME,
-    shell: process.env.SHELL,
-    releaseBaseUrl: process.env[testReleaseBaseUrl],
-    testMode: process.env[testMode],
-    engramInstallerTestUrl: process.env[engramInstallerTestUrl],
+  const managed = [
+    "HOME",
+    "SHELL",
+    forgeHomeVariable,
+    testReleaseBaseUrl,
+    testMode,
+    engramInstallerTestUrl,
+    workersInstallerTestUrl,
+  ];
+  const saved = Object.fromEntries(managed.map(name => [name, process.env[name]]));
+  const settings: Record<string, string | undefined> = {
+    HOME: home,
+    SHELL: shell,
+    [forgeHomeVariable]: undefined,
+    [testReleaseBaseUrl]: releaseBaseUrl,
+    [testMode]: includeTestSentinel ? "1" : undefined,
+    [engramInstallerTestUrl]: process.env[engramInstallerTestUrl] ?? `file://${defaultEngramInstaller}`,
+    [workersInstallerTestUrl]: process.env[workersInstallerTestUrl] ?? `file://${defaultWorkersInstaller}`,
+    ...extraEnv,
   };
-  const setDefaultEngramInstaller = process.env[engramInstallerTestUrl] === undefined;
-  process.env.HOME = home;
-  if (shell === undefined) delete process.env.SHELL;
-  else process.env.SHELL = shell;
-  process.env[testReleaseBaseUrl] = releaseBaseUrl;
-  if (includeTestSentinel) process.env[testMode] = "1";
-  else delete process.env[testMode];
-  if (setDefaultEngramInstaller) process.env[engramInstallerTestUrl] = `file://${defaultEngramInstaller}`;
+  for (const [name, value] of Object.entries(settings)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
   try {
     return await operation();
   } finally {
-    for (const [name, value] of Object.entries({
-      HOME: saved.home,
-      SHELL: saved.shell,
-      [testReleaseBaseUrl]: saved.releaseBaseUrl,
-      [testMode]: saved.testMode,
-      [engramInstallerTestUrl]: saved.engramInstallerTestUrl,
-    })) {
+    for (const [name, value] of Object.entries(saved)) {
       if (value === undefined) delete process.env[name];
       else process.env[name] = value;
     }
@@ -338,78 +424,19 @@ test("installs Forge614 Engram as a dependency without configuring an AI client"
   const fixture = join(root, "fixture-binary");
   const destination = join(root, "bin");
   const fakeHome = join(root, "home");
-  const engramInstaller = join(root, "engram-install.sh");
+  const engramInstaller = writeFakeInstaller(root, "engram", {}, join(root, "calls.log"));
   mkdirSync(fakeHome, { recursive: true });
   writeFileSync(fixture, fixtureBytes);
-  writeFileSync(engramInstaller, [
-    "#!/usr/bin/env bash",
-    "set -euo pipefail",
-    "mkdir -p \"$HOME/.forge614/engram/bin\"",
-    "printf '#!/usr/bin/env sh\\nexit 0\\n' > \"$HOME/.forge614/engram/bin/forge614-engram\"",
-    "chmod 700 \"$HOME/.forge614/engram/bin/forge614-engram\"",
-  ].join("\n"));
   const server = fixtureReleaseServer(targetArtifact(), fixture);
-  const previous = process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
-  process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = `file://${engramInstaller}`;
   try {
-    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]));
+    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]), true, undefined, {
+      [engramInstallerTestUrl]: `file://${engramInstaller}`,
+    });
     expect(result.exitCode, result.stderr).toBe(0);
     expect(existsSync(join(fakeHome, ".forge614", "engram", "bin", "forge614-engram"))).toBe(true);
     expect(existsSync(join(fakeHome, ".claude.json"))).toBe(false);
     expect(existsSync(join(fakeHome, ".codex", "config.toml"))).toBe(false);
   } finally {
-    if (previous === undefined) delete process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
-    else process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = previous;
-    server.stop(true);
-  }
-});
-
-test("skips Engram installation when it is already present", async () => {
-  const root = temporaryDirectory();
-  const fixture = join(root, "fixture-binary");
-  const destination = join(root, "bin");
-  const fakeHome = join(root, "home");
-  const engramBin = join(fakeHome, ".forge614", "engram", "bin", "forge614-engram");
-  mkdirSync(resolve(engramBin, ".."), { recursive: true });
-  writeFileSync(engramBin, "#!/usr/bin/env sh\nexit 0\n");
-  chmodSync(engramBin, 0o755);
-  writeFileSync(fixture, fixtureBytes);
-  const server = fixtureReleaseServer(targetArtifact(), fixture);
-  const engramInstaller = join(root, "engram-install-should-not-run.sh");
-  writeFileSync(engramInstaller, "#!/usr/bin/env bash\nexit 1\n");
-  const previous = process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
-  process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = `file://${engramInstaller}`;
-  try {
-    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]));
-    expect(result.exitCode, result.stderr).toBe(0);
-    expect(result.stdout).toContain("Forge614 Engram is already available");
-  } finally {
-    if (previous === undefined) delete process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
-    else process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = previous;
-    server.stop(true);
-  }
-});
-
-test("stops without installing Atlas when the Engram installer fails", async () => {
-  const root = temporaryDirectory();
-  const fixture = join(root, "fixture-binary");
-  const destination = join(root, "bin");
-  const fakeHome = join(root, "home");
-  const engramInstaller = join(root, "engram-install-fails.sh");
-  mkdirSync(fakeHome, { recursive: true });
-  writeFileSync(fixture, fixtureBytes);
-  writeFileSync(engramInstaller, "#!/usr/bin/env bash\nexit 1\n");
-  const server = fixtureReleaseServer(targetArtifact(), fixture);
-  const previous = process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
-  process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = `file://${engramInstaller}`;
-  try {
-    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]));
-    expect(result.exitCode).not.toBe(0);
-    expect(existsSync(join(destination, "forge614-atlas"))).toBe(false);
-    expect(existsSync(join(fakeHome, ".forge614", "atlas"))).toBe(false);
-  } finally {
-    if (previous === undefined) delete process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
-    else process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = previous;
     server.stop(true);
   }
 });
@@ -422,16 +449,198 @@ test("rejects a non-file Engram installer override", async () => {
   mkdirSync(fakeHome);
   writeFileSync(fixture, fixtureBytes);
   const server = fixtureReleaseServer(targetArtifact(), fixture);
-  const previous = process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
-  process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = "https://example.invalid/install.sh";
   try {
-    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]));
+    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]), true, undefined, {
+      [engramInstallerTestUrl]: "https://example.invalid/install.sh",
+    });
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr).toContain("must be a local file URL");
     expect(existsSync(destination)).toBe(false);
   } finally {
-    if (previous === undefined) delete process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL;
-    else process.env.FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL = previous;
     server.stop(true);
   }
+});
+
+test("rejects a non-file Workers installer override", async () => {
+  const root = temporaryDirectory();
+  const fixture = join(root, "fixture-binary");
+  const destination = join(root, "untrusted-bin");
+  const fakeHome = join(root, "empty-home");
+  mkdirSync(fakeHome);
+  writeFileSync(fixture, fixtureBytes);
+  const server = fixtureReleaseServer(targetArtifact(), fixture);
+  try {
+    const result = await withFixtureEnvironment(fakeHome, `${server.url}good`, () => runInstaller(["--bin-dir", destination]), true, undefined, {
+      [workersInstallerTestUrl]: "https://example.invalid/install.sh",
+    });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr).toContain("The Workers test installer must be a local file URL");
+    expect(existsSync(destination)).toBe(false);
+  } finally {
+    server.stop(true);
+  }
+});
+
+/** Qué hay ya instalado antes de correr el instalador: una versión, `null` (sin `--version`) o nada. */
+interface Scenario {
+  engram?: string | null;
+  workers?: string | null;
+  engines?: EnginesSpec;
+  engramInstaller?: InstallerBehavior;
+  workersInstaller?: InstallerBehavior;
+  /** `"custom"` (por defecto): una carpeta distinta de `$HOME/.forge614`; `"unset"`: sin variable; otro texto: ese valor. */
+  forgeHome?: string;
+  args?: string[];
+}
+
+/**
+ * Corre el instalador en un `HOME` y un `FORGE614_HOME` temporales, con Engram, Workers y Engines FALSOS ya
+ * instalados según `scenario` y con instaladores publicados FALSOS. Nunca toca el `HOME` real.
+ * @returns El resultado, las carpetas usadas y las llamadas que recibieron los instaladores falsos.
+ */
+async function runScenario(scenario: Scenario) {
+  const root = temporaryDirectory();
+  const fixture = join(root, "fixture-binary");
+  const home = join(root, "home");
+  const log = join(root, "calls.log");
+  mkdirSync(home, { recursive: true });
+  writeFileSync(fixture, fixtureBytes);
+
+  const forgeHomeSetting = scenario.forgeHome ?? "custom";
+  const forgeHome =
+    forgeHomeSetting === "custom" ? join(root, "forge614-custom") : forgeHomeSetting === "unset" ? join(home, ".forge614") : forgeHomeSetting;
+  if (scenario.engram !== undefined) writeFakeVersioned(join(forgeHome, "engram", "bin", "forge614-engram"), "forge614-engram", scenario.engram);
+  if (scenario.workers !== undefined) writeFakeVersioned(join(forgeHome, "workers", "bin", "forge614-workers"), "forge614-workers", scenario.workers);
+  if (scenario.engines) writeFakeEngines(join(forgeHome, "engines", "bin", "forge614-engines"), scenario.engines);
+
+  const engramInstaller = writeFakeInstaller(root, "engram", scenario.engramInstaller ?? {}, log);
+  const workersInstaller = writeFakeInstaller(root, "workers", scenario.workersInstaller ?? { engines: goodEngines }, log);
+  const server = fixtureReleaseServer(targetArtifact(), fixture);
+  try {
+    const result = await withFixtureEnvironment(home, `${server.url}good`, () => runInstaller(scenario.args ?? []), true, "/bin/zsh", {
+      [engramInstallerTestUrl]: `file://${engramInstaller}`,
+      [workersInstallerTestUrl]: `file://${workersInstaller}`,
+      ...(forgeHomeSetting === "unset" ? {} : { [forgeHomeVariable]: forgeHomeSetting === "custom" ? forgeHome : forgeHomeSetting }),
+    });
+    const calls = existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(line => line !== "") : [];
+    return { result, home, forgeHome, calls, atlasBinary: join(forgeHome, "atlas", "bin", "forge614-atlas") };
+  } finally {
+    server.stop(true);
+  }
+}
+
+describe("dependencies and FORGE614_HOME", () => {
+  test("a clean machine runs the published Engram and Workers installers (no --force) and then installs Atlas", async () => {
+    const run = await runScenario({});
+
+    expect(run.result.exitCode, run.result.stderr).toBe(0);
+    expect(run.calls).toEqual([`engram|${run.forgeHome}|`, `workers|${run.forgeHome}|`]);
+    expect(existsSync(run.atlasBinary)).toBe(true);
+    expect(existsSync(join(run.home, ".forge614"))).toBe(false);
+  });
+
+  test.each([
+    ["the minimum versions", "1.8.7", "1.0.0", "1.17.0"],
+    ["newer versions", "1.9.2", "2.0.0", "1.18.0"],
+  ])("does not reinstall Engram, Workers or Engines when %s are already there", async (_name, engram, workers, engines) => {
+    const run = await runScenario({ engram, workers, engines: { version: engines, supportsReadOnly: true } });
+
+    expect(run.result.exitCode, run.result.stderr).toBe(0);
+    expect(run.calls).toEqual([]);
+    expect(run.result.stdout).toContain("Forge614 Engram is compatible");
+    expect(run.result.stdout).toContain("Forge614 Workers is compatible");
+    expect(existsSync(run.atlasBinary)).toBe(true);
+  });
+
+  test.each([
+    ["is 1.5.0", "1.5.0"],
+    ["is 1.8.6", "1.8.6"],
+    ["does not answer --version", null],
+  ])("updates an Engram that %s with --force, the way Engram's own update does", async (_name, engram) => {
+    const run = await runScenario({ engram, workers: "1.0.0", engines: goodEngines });
+
+    expect(run.result.exitCode, run.result.stderr).toBe(0);
+    expect(run.calls).toEqual([`engram|${run.forgeHome}|--force`]);
+    expect(existsSync(run.atlasBinary)).toBe(true);
+  });
+
+  test.each([
+    ["is 0.1.0", "0.1.0"],
+    ["has no --version", null],
+  ])("installs a Workers that %s, without --force", async (_name, workers) => {
+    const run = await runScenario({ engram: "1.8.7", workers, engines: goodEngines });
+
+    expect(run.result.exitCode, run.result.stderr).toBe(0);
+    expect(run.calls).toEqual([`workers|${run.forgeHome}|`]);
+    expect(existsSync(run.atlasBinary)).toBe(true);
+  });
+
+  test.each([
+    ["the Workers installer fails", { workersInstaller: { fails: true } }, "Forge614 Workers could not be installed"],
+    ["the Workers installer leaves a Workers older than 1.0.0", { workersInstaller: { installs: "0.1.0", engines: goodEngines } }, "Forge614 Workers is still missing or older than 1.0.0"],
+    ["the Engram installer fails", { engramInstaller: { fails: true } }, "Forge614 Engram could not be installed or updated"],
+    ["Engram stays older than 1.8.7", { engram: "1.5.0", engramInstaller: { installs: "1.5.0" } }, "Forge614 Engram is still missing or older than 1.8.7"],
+    ["Engines does not report supportsReadOnly: true", { engram: "1.8.7", workers: "1.0.0", engines: { version: "1.17.0", supportsReadOnly: false } }, "read-only lock"],
+    ["Engines does not report supportsReadOnly at all", { engram: "1.8.7", workers: "1.0.0", engines: { version: "1.17.0", supportsReadOnly: "absent" } }, "read-only lock"],
+    ["Engines is older than 1.17.0", { engram: "1.8.7", workers: "1.0.0", engines: { version: "1.16.0", supportsReadOnly: true } }, "Forge614 Engines 1.17.0 or newer"],
+    ["Engines is missing although Workers is fine", { engram: "1.8.7", workers: "1.0.0" }, "Forge614 Engines 1.17.0 or newer"],
+  ] as [string, Scenario, string][])("creates nothing of Atlas and exits 1 with the reason when %s", async (_name, scenario, reason) => {
+    const run = await runScenario(scenario);
+
+    expect(run.result.exitCode).toBe(1);
+    expect(run.result.stderr).toContain(reason);
+    expect(run.result.stderr).toContain("Atlas was not changed.");
+    expect(existsSync(join(run.forgeHome, "atlas"))).toBe(false);
+    expect(existsSync(run.atlasBinary)).toBe(false);
+    // Tampoco se publicó el PATH en el perfil de la terminal.
+    expect(existsSync(join(run.home, ".zshrc"))).toBe(false);
+    expect(readdirSync(run.home)).toEqual([]);
+  });
+
+  test("an absolute FORGE614_HOME receives everything: the dependencies, the Atlas binary and its permissions", async () => {
+    const run = await runScenario({ forgeHome: "custom" });
+
+    expect(run.result.exitCode, run.result.stderr).toBe(0);
+    expect(run.calls).toEqual([`engram|${run.forgeHome}|`, `workers|${run.forgeHome}|`]);
+    expect(existsSync(join(run.forgeHome, "engram", "bin", "forge614-engram"))).toBe(true);
+    expect(existsSync(join(run.forgeHome, "workers", "bin", "forge614-workers"))).toBe(true);
+    expect(existsSync(join(run.forgeHome, "engines", "bin", "forge614-engines"))).toBe(true);
+    expect(existsSync(run.atlasBinary)).toBe(true);
+    expect(statSync(join(run.forgeHome, "atlas", "bin")).mode & 0o777).toBe(0o700);
+    expect(readFileSync(join(run.home, ".zshrc"), "utf8")).toContain(join(run.forgeHome, "atlas", "bin"));
+    // Nada cae en el $HOME/.forge614 de siempre.
+    expect(existsSync(join(run.home, ".forge614"))).toBe(false);
+  });
+
+  test("without FORGE614_HOME everything falls in $HOME/.forge614", async () => {
+    const run = await runScenario({ forgeHome: "unset" });
+
+    expect(run.result.exitCode, run.result.stderr).toBe(0);
+    expect(run.forgeHome).toBe(join(run.home, ".forge614"));
+    expect(run.calls).toEqual([`engram|${run.forgeHome}|`, `workers|${run.forgeHome}|`]);
+    expect(existsSync(run.atlasBinary)).toBe(true);
+  });
+
+  test.each([
+    ["empty", ""],
+    ["relative", "relative/forge614"],
+  ])("a %s FORGE614_HOME is INVALID_FORGE614_HOME and nothing is created or downloaded", async (_name, value) => {
+    const run = await runScenario({ forgeHome: value });
+
+    expect(run.result.exitCode).toBe(1);
+    expect(run.result.stderr).toContain("INVALID_FORGE614_HOME: FORGE614_HOME must be a non-empty absolute path.");
+    expect(run.calls).toEqual([]);
+    expect(readdirSync(run.home)).toEqual([]);
+    expect(existsSync(join(process.cwd(), "relative"))).toBe(false);
+  });
+
+  test("--help names FORGE614_HOME and the minimum versions, and exits 0", async () => {
+    const run = await runScenario({ args: ["--help"] });
+
+    expect(run.result.exitCode, run.result.stderr).toBe(0);
+    expect(run.result.stdout).toContain("FORGE614_HOME");
+    expect(run.result.stdout).toContain("Engram 1.8.7");
+    expect(run.result.stdout).toContain("Workers 1.0.0");
+    expect(run.calls).toEqual([]);
+  });
 });
