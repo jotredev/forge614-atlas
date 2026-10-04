@@ -1,82 +1,83 @@
-# 🗺️ Forge614 Atlas
+# Forge614 Atlas (`forge614-atlas`)
 
-> **Orquestador de Contextualización Profunda para el Ecosistema Forge614**  
-> *Deep Contextualization Orchestrator for the Forge614 Ecosystem*
+> Analogía en una frase: Atlas es el cartógrafo que recorre un proyecto de código, decide cuánto esfuerzo merece cada zona, manda a ayudantes que solo miran y archiva el mapa en la memoria; no reparte trabajos ni modifica nada del proyecto.
 
-[![CI / Tests](https://img.shields.io/badge/tests-105%20passing-brightgreen)](#)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue)](#)
-[![Bun](https://img.shields.io/badge/Bun-%3E%3D1.3.8-black)](#)
-[![License](https://img.shields.io/badge/license-Private-red)](#)
+English: [README.en.md](README.en.md).
 
----
+## Qué es
+El contextualizador de proyectos de Forge614: puntúa los módulos de un repositorio sin IA (complejidad, dependencias, historial de Git y pruebas), los reparte en tres niveles (Profundo, Estándar y Ligero), manda a Forge614 Workers un lote de tareas para que Claude Code o Codex analicen cada módulo y guarda un reporte por módulo en Forge614 Engram, en cuanto llega. Con esa memoria, cualquier asistente de IA puede conocer el proyecto sin volver a leerlo entero. Si se agota la cuota de la suscripción, deja la corrida abierta y el siguiente `init` la continúa.
 
-## 🇪🇸 Descripción General (Español)
+## Qué no es
+- No es el orquestador de trabajos: contextualiza un proyecto y nada más.
+- No tiene interfaz: la única interfaz visual del ecosistema es Forge614 Shell.
+- No detecta asistentes de IA (eso es de Forge614 Engines) ni los ejecuta por su cuenta (eso es de Forge614 Workers).
+- No registra MCP ni toca la configuración de ningún asistente de IA.
+- No tiene versión para Windows todavía: los binarios oficiales son para macOS y Linux.
 
-**Forge614 Atlas** es el orquestador del ecosistema Forge614 encargado de contextualizar un repositorio de código al 100% —línea por línea, módulo por módulo— empleando las herramientas de inteligencia artificial ya instaladas en la máquina del usuario (Claude Code, OpenAI Codex) en modo no interactivo, y depositando todo ese conocimiento estructurado en **`forge614-engram`** (memoria personal local en SQLite FTS5).
+## Requisitos
+- Bash, `curl` y una utilidad SHA-256 (`shasum` o `sha256sum`).
+- Forge614 Engram 1.8.7 o posterior, Forge614 Workers 1.0.0 o posterior y Forge614 Engines 1.17.0 o posterior con el candado de solo lectura (`supportsReadOnly`). El instalador de Atlas instala o actualiza Engram y Workers cuando faltan o son anteriores (el de Engram necesita Node.js 22.19 o posterior y `tar`) y comprueba Engines al final. Si algo no se cumple, no instala nada de Atlas y explica qué falta.
+- Git en el proyecto que se va a analizar, con al menos un commit.
+- Un asistente de IA que Forge614 Engines pueda correr sin pantalla (Claude Code o Codex), ya autenticado.
 
-### Estado Actual: Planes 1–5 completados (roadmap de Atlas cerrado)
-Además del **motor determinista de puntuación de complejidad** (`src/modules/scoring/`), Atlas ya integra sesiones progresivas de Engram, el núcleo del CLI `forge614-atlas init`, el **despacho real de subagentes** vía `forge614-workers`, y un **instalador público real** (`curl | bash`): `init` analiza cada módulo pendiente de verdad, guarda cada reporte en Engram en cuanto termina, maneja pausas por cuota agotada, y devuelve un reporte final real (`"completed"`/`"paused"`); `scripts/install.sh` descarga, verifica por checksum e instala el binario compilado de Atlas, encadenando `forge614-engram` como única dependencia.
-- **Cero costo de IA en la puntuación:** Evaluación matemática puramente estática sin llamadas a modelos ni consumo de tokens para decidir qué analizar.
-- **Señales estructurales:** Combina complejidad ciclomática de McCabe (AST de TypeScript), centralidad *fan-in* de dependencias relativas, volatilidad histórica (*churn* de Git) y brecha de pruebas unitarias hermanas.
-- **Clasificación por percentiles:** Agrupa los módulos en tres niveles de atención operativa: **Profundo (~15%)**, **Estándar (~35%)** y **Ligero (~50%)**.
-- **Superficie verificada:** 105 pruebas pasando, 0 fallos, typecheck y compilación limpios.
+## Instalación
 
----
-
-## 🇬🇧 Overview (English)
-
-**Forge614 Atlas** is the deep contextualization orchestrator for the Forge614 ecosystem. It is designed to comprehend 100% of a target codebase —traversing every module and file— using third-party AI coding CLIs already authenticated on the user's computer (Claude Code, OpenAI Codex) in headless mode, and saving that structured understanding into **`forge614-engram`** (local personal memory powered by SQLite FTS5).
-
-### Current Status: Plans 1–5 Completed (Atlas roadmap closed)
-In addition to the **deterministic, AI-free complexity scoring engine** (`src/modules/scoring/`), Atlas now integrates progressive Engram sessions, the `forge614-atlas init` CLI core, **real subagent dispatch** via `forge614-workers`, and a **real public installer** (`curl | bash`): `init` actually analyzes each pending module, saves each report to Engram as it lands, handles quota-exhaustion pauses, and returns a real closing report (`"completed"`/`"paused"`); `scripts/install.sh` downloads, checksum-verifies, and installs Atlas's compiled binary, chaining `forge614-engram` as its only dependency.
-- **Zero AI cost in scoring:** Purely static, analytical calculation without network or token overhead to decide what to analyze.
-- **Structural signals:** Evaluates McCabe cyclomatic complexity (TypeScript compiler AST), relative dependency fan-in centrality, historical commit churn (Git log), and sibling unit test coverage gaps.
-- **Percentile tiers:** Classifies modules into **Deep (~15%)**, **Standard (~35%)**, and **Light (~50%)**.
-- **Verified quality:** 105 passing tests, 0 failures, clean typecheck, and clean build.
-
----
-
-## 🚀 Inicio Rápido / Quickstart
-
+macOS / Linux:
 ```bash
-# 1. Instalar dependencias congeladas / Install locked dependencies
-bun install --frozen-lockfile
-
-# 2. Ejecutar la suite de pruebas / Run test suite
-bun test
-
-# 3. Comprobar tipos estáticos / Verify static types
-bun run typecheck
+curl -fsSL https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh | bash
 ```
 
----
+Para instalar una versión concreta: `curl -fsSL https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh | bash -s -- --version v1.1.0`.
 
-## 📚 Documentación / Documentation
+El binario queda en `~/.forge614/atlas/bin/forge614-atlas` y esa carpeta se agrega al PATH de la siguiente terminal (si tu terminal no se reconoce, el instalador imprime la línea exacta para agregarla a mano). Si defines `FORGE614_HOME` (ruta absoluta), el instalador, `update`, `uninstall` y el propio Atlas usan esa carpeta en lugar de `~/.forge614`; una variable vacía o relativa se rechaza con `INVALID_FORGE614_HOME`.
 
-Toda la documentación técnica está disponible en pares bilingües e indexados secuencialmente:
+Para verificar: `forge614-atlas --version` (imprime `forge614-atlas X.Y.Z`).
 
-- 🇪🇸 **[Documentación en Español](docs/es/00-resumen-y-guia-rapida.md)**:
-  - `00.` [Resumen y Guía Rápida](docs/es/00-resumen-y-guia-rapida.md)
-  - `01.` [Alcance y Diseño del Orquestador](docs/es/01-alcance-y-diseno-del-orquestador.md)
-  - `02.` [Arquitectura del Motor de Puntuación](docs/es/02-arquitectura-motor-puntuacion.md)
-  - `03.` [Señales, Métricas y Fórmulas](docs/es/03-senales-metricas-y-formulas.md)
-  - `04.` [Clasificación de Niveles y Percentiles](docs/es/04-clasificacion-niveles-y-percentiles.md)
-  - `05.` [Proceso SDD y Catálogo de Defectos](docs/es/05-proceso-sdd-y-catalogo-defectos.md)
-  - `06.` [Referencia de API en TypeScript](docs/es/06-referencia-api-typescript.md)
-  - `07.` [Estructura y Código Fuente Línea por Línea (índice de 9 subpáginas)](docs/es/07-estructura-codigo-linea-por-linea.md)
-  - `08.` [Núcleo del CLI y plan de corrida JSON](docs/es/08-nucleo-cli-y-plan-de-corrida.md)
-  - `09.` [Despacho Real de Subagentes](docs/es/09-despacho-de-subagentes.md)
-  - `10.` [Instalador Público y Pipeline de Release](docs/es/10-instalador-y-release.md)
+## Órdenes
+| Orden | Qué hace |
+| --- | --- |
+| `forge614-atlas init [--engine <id>] [--force]` | Contextualiza el proyecto de la carpeta actual y responde en JSON (`completed`, `paused`, `already-complete`, `engine-ambiguous`, `engine-unavailable`, `engine-invalid` o un error). `--force` rehace un análisis ya completo. |
+| `forge614-atlas update` | Descarga el instalador de la última versión publicada y lo ejecuta con `--force`; responde con la versión anterior y la nueva. |
+| `forge614-atlas uninstall [--confirmed]` | Quita Atlas (ver abajo). |
+| `forge614-atlas --version`, `-v` | Imprime el nombre del producto y la versión. |
+| `forge614-atlas --help`, `-h` | Imprime la ayuda; también `init --help` y `uninstall --help`, sin ejecutar nada. |
 
-- 🇬🇧 **[English Documentation](docs/en/00-summary-and-quickstart.md)**:
-  - `00.` [Summary & Quickstart](docs/en/00-summary-and-quickstart.md)
-  - `01.` [Scope & Orchestrator Design](docs/en/01-scope-and-orchestrator-design.md)
-  - `02.` [Scoring Engine Architecture](docs/en/02-scoring-engine-architecture.md)
-  - `03.` [Signals, Metrics & Formulas](docs/en/03-signals-metrics-and-formulas.md)
-  - `04.` [Tier Classification & Percentiles](docs/en/04-tier-classification-and-percentiles.md)
-  - `05.` [SDD Process & Defect Catalog](docs/en/05-sdd-process-and-defect-catalog.md)
-  - `06.` [TypeScript API Reference](docs/en/06-typescript-api-reference.md)
-  - `07.` [Project Structure & Source Code Line-by-Line (index of 9 subpages)](docs/en/07-project-structure-documented-source-code.md)
-  - `08.` [CLI Core and JSON Run Plan](docs/en/08-cli-core-and-run-plan.md)
-  - `09.` [Real Subagent Dispatch](docs/en/09-subagent-dispatch.md)
-  - `10.` [Public Installer and Release Pipeline](docs/en/10-installer-and-release.md)
+Los errores usan un sobre JSON único, `{ "schemaVersion": 1, "status": "error", "error": { "code": "...", "message": "..." } }`; la tabla de comandos, respuestas y códigos de salida está en el [capítulo 08](docs/es/08-nucleo-cli-y-plan-de-corrida.md).
+
+## Seguridad: los ayudantes solo leen
+Desde 1.1.0 cada tarea que Atlas manda lleva `readOnly: true`, sin opción de apagarlo. Forge614 Engines pone el candado: Claude Code recibe solo `Read`, `Grep` y `Glob`, sin preguntas de permiso y sin ningún servidor MCP; Codex corre en su sandbox de solo lectura y sin la configuración del usuario. Si Engines o Workers no pueden garantizarlo, Atlas se niega a empezar (`READ_ONLY_UNSUPPORTED`, `WORKERS_OUTDATED`) antes de abrir ninguna sesión de Engram. Solo Atlas guarda en la memoria, nunca los ayudantes. Detalle en el [capítulo 09](docs/es/09-despacho-de-subagentes.md).
+
+Engram guarda además `.forge614/project.json` (la identidad portátil del proyecto) en el repositorio analizado; está pensado para versionarse y Atlas nunca lo lee.
+
+## Desinstalar
+`forge614-atlas uninstall` pide escribir exactamente `REMOVE FORGE614-ATLAS` (con `--confirmed` no pregunta). Quita únicamente la carpeta `~/.forge614/atlas` (o `<FORGE614_HOME>/atlas`) y el bloque de PATH que puso el instalador; nunca toca Engram, Engines, Shell, Workers ni las memorias guardadas. Es el comando que usa Engram cuando se desinstala a sí mismo.
+
+## Documentación
+| # | Español | English |
+| --- | --- | --- |
+| 00 | [Resumen y guía rápida](docs/es/00-resumen-y-guia-rapida.md) | [Summary and quickstart](docs/en/00-summary-and-quickstart.md) |
+| 01 | [Alcance y diseño del orquestador](docs/es/01-alcance-y-diseno-del-orquestador.md) | [Scope and orchestrator design](docs/en/01-scope-and-orchestrator-design.md) |
+| 02 | [Arquitectura del motor de puntuación](docs/es/02-arquitectura-motor-puntuacion.md) | [Scoring engine architecture](docs/en/02-scoring-engine-architecture.md) |
+| 03 | [Señales, métricas y fórmulas](docs/es/03-senales-metricas-y-formulas.md) | [Signals, metrics and formulas](docs/en/03-signals-metrics-and-formulas.md) |
+| 04 | [Clasificación de niveles y percentiles](docs/es/04-clasificacion-niveles-y-percentiles.md) | [Tier classification and percentiles](docs/en/04-tier-classification-and-percentiles.md) |
+| 05 | [Proceso SDD y catálogo de defectos](docs/es/05-proceso-sdd-y-catalogo-defectos.md) | [SDD process and defect catalog](docs/en/05-sdd-process-and-defect-catalog.md) |
+| 06 | [Referencia de API en TypeScript](docs/es/06-referencia-api-typescript.md) | [TypeScript API reference](docs/en/06-typescript-api-reference.md) |
+| 07 | [Estructura y código fuente línea por línea](docs/es/07-estructura-codigo-linea-por-linea.md) | [Project structure and documented source code](docs/en/07-project-structure-documented-source-code.md) |
+| 08 | [Núcleo del CLI y plan de corrida](docs/es/08-nucleo-cli-y-plan-de-corrida.md) | [CLI core and run plan](docs/en/08-cli-core-and-run-plan.md) |
+| 09 | [Despacho real de subagentes](docs/es/09-despacho-de-subagentes.md) | [Real subagent dispatch](docs/en/09-subagent-dispatch.md) |
+| 10 | [Instalador y release](docs/es/10-instalador-y-release.md) | [Installer and release](docs/en/10-installer-and-release.md) |
+
+Además: el contrato del producto ([`CONTRACT.md`](CONTRACT.md) / [`CONTRACT.en.md`](CONTRACT.en.md)), el [estado del proyecto](STATE.md) y el [historial de cambios](CHANGELOG.md).
+
+## Desarrollo
+Requiere Bun 1.3.9 o posterior (la CI usa 1.4.2) y, como carpeta hermana, una copia de Engram 1.8.7 con sus dependencias instaladas (`bun install` dentro de `../forge614-engram`). Las pruebas pasan 192 de 192; las que llaman a Engines y a Workers necesitan ambos instalados en `~/.forge614` o en `FORGE614_HOME`, y `init.test.ts` necesita además un Claude Code real y autenticado.
+
+```bash
+bun install --frozen-lockfile
+bun test
+bun run typecheck
+bun run build
+```
+
+## Licencia
+Todos los derechos reservados. Ver [`LICENSE`](LICENSE). Las vulnerabilidades se reportan según [`SECURITY.md`](SECURITY.md).
