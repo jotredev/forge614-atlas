@@ -1,6 +1,7 @@
 # 10 (EN). Public Installer and Release Pipeline
 
 > **Status:** Plan 5/5 completed and merged into `main` — the last plan in Atlas's roadmap.
+> **Product version:** `package.json`: version `1.1.0`
 > **Sister translation:** [10. Instalador Público y Pipeline de Release](../es/10-instalador-y-release.md)
 
 ## Purpose

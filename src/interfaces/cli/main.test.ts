@@ -30,10 +30,10 @@ test("--version and -v print the product name and the package version, and exit 
   }
 });
 
-test("the printed version is exactly forge614-atlas 1.0.0 while package.json says 1.0.0", async () => {
-  expect(version).toBe("1.0.0");
+test("the printed version is exactly forge614-atlas 1.1.0 while package.json says 1.1.0", async () => {
+  expect(version).toBe("1.1.0");
   const { stdout } = await runMain(["--version"]);
-  expect(stdout.trim()).toBe("forge614-atlas 1.0.0");
+  expect(stdout.trim()).toBe("forge614-atlas 1.1.0");
 });
 
 test("--help and -h exit 0, name every command, the aliases and FORGE614_HOME", async () => {
