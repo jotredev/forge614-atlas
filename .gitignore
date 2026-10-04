@@ -7,5 +7,4 @@ coverage/
 .env
 .env.*
 !.env.example
-.forge614/
 .superpowers/sdd/
