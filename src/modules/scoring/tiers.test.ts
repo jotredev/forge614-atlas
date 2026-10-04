@@ -1,8 +1,21 @@
+/**
+ * Pruebas de `assignTiers`, que reparte los módulos en los niveles de análisis `profundo`, `estandar` y `ligero` según su puntuación.
+ * Comprueban el reparto de 20 módulos (3 / 7 / 10), el caso de un solo módulo y el desempate por nombre cuando hay puntuaciones iguales.
+ */
 import { describe, expect, test } from "bun:test";
 import { assignTiers } from "./tiers";
 import type { ModuleScore } from "./composite-score";
 
+/**
+ * Comprueba `assignTiers` en tres casos: el reparto de 20 módulos, un proyecto de un solo módulo y cuatro módulos empatados.
+ * Importa porque el nivel de cada módulo decide qué modelo lo analiza y en qué orden se despacha.
+ */
 describe("assignTiers", () => {
+  /**
+   * Comprueba que 20 módulos con puntuaciones de 20 a 1 se repartan en 3 profundos, 7 estándar y 10 ligeros, y que los profundos
+   * sean `module-0`, `module-1` y `module-2` (los de mayor puntuación).
+   * Importa porque fija el reparto aproximado 15 / 35 / 50 % y que el nivel siga el orden de la puntuación.
+   */
   test("splits 20 modules into roughly 50/35/15 by descending score", () => {
     // Escenario de monorrepo estándar con 20 módulos:
     // Scores decrecientes desde 20 hasta 1.
@@ -28,6 +41,10 @@ describe("assignTiers", () => {
     expect(byTier.profundo).toEqual(["module-0", "module-1", "module-2"]);
   });
 
+  /**
+   * Comprueba que un proyecto con un solo módulo (`only`) reciba el nivel `profundo` y no se quede sin nivel.
+   * Importa porque el 15 % de 1 módulo redondea a 0, y sin `Math.max(1, …)` ese único módulo caería en un nivel más bajo.
+   */
   test("a project with a single module still gets a tier, never crashes", () => {
     // Caso borde: Proyecto minimalista con 1 solo módulo.
     // round(1 * 0.15) = 0, pero gracias a Math.max(1, ...) se garantiza que reciba 'profundo'
@@ -39,6 +56,11 @@ describe("assignTiers", () => {
     expect(tiered[0]?.tier).toBe("profundo");
   });
 
+  /**
+   * Comprueba que cuatro módulos con la misma puntuación (5) salgan siempre en orden alfabético (`apple`, `kiwi`, `mango`, `zebra`)
+   * con dos órdenes de entrada distintos, y con el mismo nivel en cada uno.
+   * Importa para que el plan no cambie según el orden en que lleguen los módulos.
+   */
   test("ties on score break deterministically by name, regardless of input order", () => {
     // Escenario de empate: Cuatro módulos tienen exactamente la misma puntuación (5).
     // El orden de entrada en el arreglo NO debe alterar el resultado final.

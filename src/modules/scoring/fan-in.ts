@@ -1,3 +1,13 @@
+/**
+ * Calcula el fan-in (cuántos otros módulos dependen de un módulo) de cada módulo del proyecto. Para eso lee con el AST
+ * (árbol de sintaxis abstracta: el código ya leído como árbol) los `import`, los `export ... from` y los `require` relativos
+ * de cada archivo, y sigue cada uno hasta el archivo real en disco para saber a qué módulo pertenece.
+ * Existe para medir qué tan central es un módulo: si muchos otros lo usan, cambiarlo afecta a más partes; es una de las
+ * cuatro señales de la puntuación compuesta.
+ * Lo usa `buildRunPlan` (en `src/modules/cli/build-run-plan.ts`) y `src/index.ts` reexporta `computeFanIn`;
+ * `extractRelativeImportSpecifiers` se exporta, pero solo la llama este mismo archivo.
+ * Piezas: `extractRelativeImportSpecifiers`, `resolveImportPath` (interna) y `computeFanIn`.
+ */
 import ts from "typescript";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
@@ -80,7 +90,10 @@ export function extractRelativeImportSpecifiers(sourceText: string, fileName = "
  * @returns Ruta absoluta del archivo resuelto o `null` si no existe
  */
 function resolveImportPath(fromFile: string, specifier: string): string | null {
+  // Ruta absoluta que resulta de aplicar el especificador relativo a la carpeta del archivo que importa.
   const base = resolve(dirname(fromFile), specifier);
+  // Se prueba en este orden: la ruta tal cual (ya con extensión, o una carpeta), la ruta con cada extensión y la ruta
+  // como carpeta con su `index`.
   const candidates = [
     base,
     `${base}.ts`,
@@ -92,6 +105,7 @@ function resolveImportPath(fromFile: string, specifier: string): string | null {
     join(base, "index.js"),
   ];
 
+  // Gana el primer candidato que exista; si ninguno existe devuelve null y `computeFanIn` ignora ese import.
   return candidates.find(candidate => existsSync(candidate)) ?? null;
 }
 
@@ -123,6 +137,8 @@ function resolveImportPath(fromFile: string, specifier: string): string | null {
  * 
  * @param modules - Lista de módulos registrados en el proyecto
  * @returns Mapa `Map<string, number>` con el valor de Fan-In por cada módulo
+ * @throws Error del sistema de archivos (por ejemplo `ENOENT`) si `readFileSync` no puede leer un archivo del módulo; la
+ * función no lo captura.
  */
 export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
   // 1. Inicializar el mapa de resultados con 0 para todos los módulos conocidos
@@ -135,6 +151,7 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
 
     // 3. Inspeccionar todos los archivos productivos del módulo emisor
     for (const filePath of fromModule.files) {
+      // Los archivos de prueba no cuentan como dependencias de producción (regla 4 de arriba).
       if (isTestFile(filePath)) {
         continue;
       }
@@ -144,6 +161,7 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
       // 4. Extraer todos los especificadores relativos
       for (const specifier of extractRelativeImportSpecifiers(sourceText, filePath)) {
         const resolvedPath = resolveImportPath(filePath, specifier);
+        // Si el import no apunta a ningún archivo existente, no hay dependencia que contar.
         if (!resolvedPath) {
           continue;
         }
@@ -151,6 +169,7 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
         // 5. Determinar a qué módulo pertenece el archivo importado
         const toModule = modules.find(module => {
           const modulePath = module.path;
+          // Pertenece al módulo si es su misma carpeta o está dentro de ella; el separador evita confundir `auth` con `auth-legacy`.
           return resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep);
         });
 

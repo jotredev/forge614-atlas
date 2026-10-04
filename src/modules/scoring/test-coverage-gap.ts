@@ -1,3 +1,11 @@
+/**
+ * Calcula la brecha de pruebas (test coverage gap: qué parte de los archivos fuente de un módulo no tiene un archivo de pruebas
+ * al lado) de cada módulo, como un número de 0 (todos lo tienen) a 1 (ninguno lo tiene).
+ * Solo mira si el archivo de pruebas existe en disco; no mide cuánto código ejecutan esas pruebas.
+ * Existe para que la puntuación compuesta recargue a los módulos sin pruebas.
+ * Lo usa `buildRunPlan` (en `src/modules/cli/build-run-plan.ts`) y `src/index.ts` reexporta `computeTestCoverageGap`.
+ * Piezas: `hasSiblingTest` (interna) y `computeTestCoverageGap`.
+ */
 import { existsSync } from "node:fs";
 import { isTestFile, type ModuleDescriptor } from "./discovery";
 
@@ -18,10 +26,13 @@ import { isTestFile, type ModuleDescriptor } from "./discovery";
  * @returns `true` si existe un archivo de prueba hermano en disco, `false` en caso contrario
  */
 function hasSiblingTest(filePath: string): boolean {
+  // Parte la ruta en la última `.`: `base` es todo lo anterior y `ext` incluye el punto (los archivos que llegan del
+  // descubrimiento siempre tienen extensión: .ts, .tsx, .js o .jsx).
   const dotIndex = filePath.lastIndexOf(".");
   const base = filePath.slice(0, dotIndex);
   const ext = filePath.slice(dotIndex);
 
+  // Basta con que exista alguno de los dos nombres hermanos en disco, tenga o no una entrada en la lista de archivos del módulo.
   return existsSync(`${base}.test${ext}`) || existsSync(`${base}.spec${ext}`);
 }
 
@@ -49,7 +60,7 @@ function hasSiblingTest(filePath: string): boolean {
  * - En su lugar, se utiliza en `composite-score.ts` como un MULTIPLICADOR DE RIESGO:
  *   `score = base * (1 + 0.20 * testGap)`.
  *   Un módulo complejo sin pruebas recibe un castigo del +20% en su puntuación de complejidad,
- *   garantizando que reciba mayor presupuesto de contexto en los agentes de Forge614 Atlas.
+ *   lo que lo acerca a un nivel de análisis más profundo (el reparto en niveles lo hace `assignTiers`).
  * 
  * @param modules - Lista de módulos descubiertos
  * @returns Diccionario `Map<string, number>` con el gap en rango [0.0, 1.0] por cada módulo
