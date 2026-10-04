@@ -1,3 +1,4 @@
+/** Comprueba la estabilidad y distinción de identificadores normales y forzados, incluida una subcarpeta Git. */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -8,19 +9,25 @@ import { deriveSessionId, deriveForcedSessionId } from "./session-id";
 /**
  * Función auxiliar para ejecutar comandos git de forma síncrona en el fixture temporal
  * (mismo patrón que usa `src/modules/scoring/churn.test.ts`).
+ * @param cwd Carpeta del repositorio temporal donde se ejecuta Git.
+ * @param args Argumentos del comando Git que prepara la prueba.
+ * @throws Error con el mensaje `git <argumentos> failed: <salida de error>` si Git no termina bien.
  */
 function git(cwd: string, args: string[]): void {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
 }
 
+/** Comprueba que la identidad del repositorio determine el mismo ID desde distintas rutas del mismo Git. */
 describe("deriveSessionId", () => {
+  /** Comprueba que dos llamadas con la misma carpeta temporal produzcan el mismo ID. */
   test("is deterministic for the same directory", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-sessionid-"));
     expect(deriveSessionId(root)).toBe(deriveSessionId(root));
     rmSync(root, { recursive: true, force: true });
   });
 
+  /** Comprueba que dos carpetas temporales distintas produzcan identificadores distintos. */
   test("differs between two different directories", () => {
     const rootA = mkdtempSync(join(tmpdir(), "atlas-sessionid-a-"));
     const rootB = mkdtempSync(join(tmpdir(), "atlas-sessionid-b-"));
@@ -29,6 +36,7 @@ describe("deriveSessionId", () => {
     rmSync(rootB, { recursive: true, force: true });
   });
 
+  /** Comprueba el prefijo, el límite de longitud y la ausencia de espacios exteriores del ID. */
   test("starts with the atlas: prefix and is a valid Engram sessionId", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-sessionid-prefix-"));
     const id = deriveSessionId(root);
@@ -38,6 +46,7 @@ describe("deriveSessionId", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  /** Comprueba con un Git real que la raíz y `src/auth` del mismo repositorio den el mismo ID. */
   test("resolves to the same id from the repo root and from a subdirectory of a real git repo", () => {
     // Escenario crítico del hallazgo del review: Engram deriva su projectId con
     // `git rev-parse --path-format=absolute --git-common-dir`, que devuelve la
@@ -60,7 +69,9 @@ describe("deriveSessionId", () => {
   });
 });
 
+/** Comprueba que una corrida forzada tenga un ID nuevo que conserve el prefijo estable del proyecto. */
 describe("deriveForcedSessionId", () => {
+  /** Comprueba que el ID forzado difiera del normal y empiece con él. */
   test("differs from the deterministic id but keeps it as a prefix", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-sessionid-forced-"));
     const base = deriveSessionId(root);
