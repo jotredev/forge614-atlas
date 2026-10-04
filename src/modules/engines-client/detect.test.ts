@@ -2,10 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { homedir } from "node:os";
 import { detectAgents } from "./detect";
 import { resolveEnginesBinaryPath } from "./binary-path";
+import { resolveForgeHome } from "../forge-home/forge-home";
 
 // Estos tests requieren forge614-engines instalado en la ruta fija del
 // ecosistema (confirmado presente en esta máquina de desarrollo).
-const binaryPath = resolveEnginesBinaryPath(process.platform, homedir());
+const binaryPath = resolveEnginesBinaryPath(process.platform, resolveForgeHome(process.env, homedir()));
 
 describe("detectAgents", () => {
   test("reports installed agents from the real forge614-engines binary", () => {

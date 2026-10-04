@@ -22,7 +22,7 @@ La salida estándar es siempre JSON con `schemaVersion: 1`; no se imprime texto 
 ## Flujo de `init`
 
 1. Abre el almacén de Engram y habilita sesiones.
-2. Ejecuta el binario real `~/.forge614/engines/bin/forge614-engines` (en Windows usa `.exe`) con `detect` y, para cada agente instalado, `capabilities --agent <id>`.
+2. Ejecuta el binario real `<FORGE614_HOME>/engines/bin/forge614-engines` (en Windows usa `.exe`) con `detect` y, para cada agente instalado, `capabilities --agent <id>`. `<FORGE614_HOME>` es la variable de entorno `FORGE614_HOME` cuando está definida y `~/.forge614` si no; la misma carpeta se usa para encontrar Workers (`<FORGE614_HOME>/workers/bin/forge614-workers`).
 3. Acepta solamente agentes instalados, con ejecutable y `supportsHeadlessExec: true`. Un `--engine` inválido no se acepta por confianza.
 4. Crea o reanuda la sesión de Engram y calcula las señales del Plan 1. Al reanudar, excluye módulos que ya tienen reporte guardado.
 5. Devuelve motor, sesión y módulos pendientes con su nivel `ligero`, `estandar` o `profundo`.
@@ -37,7 +37,7 @@ Internamente, esta es la lista de módulos que el Plan 4 (capítulo 09) consume 
 
 Estos resultados siguen cortando el flujo antes de que empiece cualquier despacho, sin cambios desde el Plan 3: `already-complete` indica que la sesión determinista ya se cerró. `engine-ambiguous` lista los candidatos y deja que Shell resuelva una elección ambigua. `engine-unavailable` indica que no hay candidato headless. `engine-invalid` devuelve el identificador solicitado y los candidatos reales.
 
-Los errores operativos también son JSON: `ENGINES_UNREACHABLE` cubre un binario de Engines inaccesible o una respuesta fallida; `ANALYSIS_FAILED` cubre, entre otros casos, un directorio sin Git o sin commits. Esto evita un stack trace crudo, pero no cambia el comportamiento de `computeChurn`. El Plan 4 agrega dos códigos de error más una vez que empieza el despacho (`WORKERS_UNREACHABLE`, `WORKERS_FATAL_ERROR`) — ver capítulo 09.
+Los errores operativos también son JSON: `ENGINES_UNREACHABLE` cubre un binario de Engines inaccesible o una respuesta fallida; `ANALYSIS_FAILED` cubre, entre otros casos, un directorio sin Git o sin commits. Esto evita un stack trace crudo, pero no cambia el comportamiento de `computeChurn`. `INVALID_FORGE614_HOME` se responde antes de abrir Engram (salida 1): la variable está definida pero vacía, es relativa o contiene un carácter nulo — la misma regla estricta que aplica Engram, para que un valor mal escrito nunca mande a Atlas a buscar en una carpeta inesperada. El Plan 4 agrega dos códigos de error más una vez que empieza el despacho (`WORKERS_UNREACHABLE`, `WORKERS_FATAL_ERROR`) — ver capítulo 09.
 
 ## Límite resuelto
 

@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { homedir } from "node:os";
 import { getCapabilities } from "./capabilities";
 import { resolveEnginesBinaryPath } from "./binary-path";
+import { resolveForgeHome } from "../forge-home/forge-home";
 
-const binaryPath = resolveEnginesBinaryPath(process.platform, homedir());
+const binaryPath = resolveEnginesBinaryPath(process.platform, resolveForgeHome(process.env, homedir()));
 
 describe("getCapabilities", () => {
   test("reports supportsHeadlessExec for claude-code from the real binary", () => {

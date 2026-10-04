@@ -5,11 +5,13 @@ import { join } from "node:path";
 import { runWorkersBatch, type WorkersEvent } from "./run-batch";
 import { resolveWorkersBinaryPath } from "./binary-path";
 import { resolveEnginesBinaryPath } from "../engines-client/binary-path";
+import { resolveForgeHome } from "../forge-home/forge-home";
 
 // Requiere forge614-engines y forge614-workers instalados en sus rutas fijas del
 // ecosistema (confirmado presentes en esta máquina de desarrollo).
-const workersBinaryPath = resolveWorkersBinaryPath(process.platform, homedir());
-const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, homedir());
+const forgeHome = resolveForgeHome(process.env, homedir());
+const workersBinaryPath = resolveWorkersBinaryPath(process.platform, forgeHome);
+const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, forgeHome);
 
 function writeFakeClaudeScript(dir: string): string {
   const scriptPath = join(dir, "fake-claude.sh");

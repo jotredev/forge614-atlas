@@ -7,6 +7,7 @@ import { MemoryWorkspace, WorkspaceConfig, startProjectSession } from "forge614-
 import { runInitCommand } from "./init";
 import { resolveEnginesBinaryPath } from "../engines-client/binary-path";
 import { resolveWorkersBinaryPath } from "../workers-client/binary-path";
+import { resolveForgeHome } from "../forge-home/forge-home";
 import { deriveSessionId } from "../memory/session-id";
 import { recordModuleReport } from "../memory/module-report";
 
@@ -38,8 +39,9 @@ function engramStore(engramRoot: string) {
 // Estos tests requieren forge614-engines instalado en la ruta fija del
 // ecosistema, con Claude Code también instalado y con soporte headless
 // (ambos confirmados presentes en esta máquina de desarrollo).
-const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, homedir());
-const workersBinaryPath = resolveWorkersBinaryPath(process.platform, homedir());
+const forgeHome = resolveForgeHome(process.env, homedir());
+const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, forgeHome);
+const workersBinaryPath = resolveWorkersBinaryPath(process.platform, forgeHome);
 
 describe("runInitCommand", () => {
   // Timeout ampliado en las pruebas que llegan a "completed": invocan un motor real

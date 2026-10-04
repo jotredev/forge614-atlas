@@ -6,12 +6,14 @@ import { MemoryWorkspace, WorkspaceConfig, startProjectSession, type MemoryStore
 import { dispatchModules } from "./dispatch-modules";
 import { resolveWorkersBinaryPath } from "../workers-client/binary-path";
 import { resolveEnginesBinaryPath } from "../engines-client/binary-path";
+import { resolveForgeHome } from "../forge-home/forge-home";
 import { isModuleReportSaved } from "../memory/run-state";
 import { readPauseCount } from "../memory/pause-count";
 import { deriveSessionId } from "../memory/session-id";
 
-const workersBinaryPath = resolveWorkersBinaryPath(process.platform, homedir());
-const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, homedir());
+const forgeHome = resolveForgeHome(process.env, homedir());
+const workersBinaryPath = resolveWorkersBinaryPath(process.platform, forgeHome);
+const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, forgeHome);
 const capabilities = { id: "claude-code", label: "Claude Code", supportsMcp: true, supportsHooks: true, supportsHeadlessExec: true, supportsReasoningLevel: false };
 
 function writeFakeClaudeScript(dir: string, name: string, behavior: string): string {
