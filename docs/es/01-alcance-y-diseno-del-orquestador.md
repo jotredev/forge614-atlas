@@ -63,7 +63,7 @@ flowchart LR
     P1["Plan 1 (Completado)<br/><b>Puntuación de Complejidad</b><br/>AST, Fan-In, Churn, Gap, Tiers"]
     P2["Plan 2 (Siguiente)<br/><b>Detección y Subagentes</b><br/>Selector de motor, runner headless"]
     P3["Plan 3<br/><b>Integración con Engram</b><br/>SDK Engram, sesiones progresivas"]
-    P4["Plan 4<br/><b>Bucle Orquestador</b><br/>Concurrencia max 3, cuotas, resume"]
+    P4["Plan 4<br/><b>Bucle Orquestador</b><br/>Despacho secuencial, cuotas"]
     P5["Plan 5<br/><b>CLI e Instalador</b><br/>Comandos init/resume, reporte final"]
 
     P1 --> P2 --> P3 --> P4 --> P5
@@ -75,8 +75,8 @@ flowchart LR
    Detecta ejecutables en `$PATH`, presenta menú interactivo TUI y ejecuta llamadas *headless* (sin interfaz) a las CLIs autenticadas del usuario.
 3. **Plan 3: Integración de raíz de análisis y almacenamiento en Engram.**
    Adapta el descubrimiento de módulos a estructuras anidadas (`src/{auth,billing}`) e integra el SDK de Engram para registrar entradas progresivas con metadatos de sesión.
-4. **Plan 4: Bucle orquestador, concurrencia y control de cuota.**
-   Maneja la cola de trabajo, limita la concurrencia a exactamente 3 subagentes paralelos y detecta pausas de cuota para permitir reanudación (`resume`).
+4. **Plan 4: Bucle orquestador, despacho secuencial y control de cuota.**
+   Maneja la cola de trabajo (un ayudante a la vez) y detecta la cuota agotada: la sesión abierta de Engram es la marca de pausa y el siguiente `init` la continúa.
 5. **Plan 5: Superficie CLI, reporte final e instalador autónomo.**
    Expone los comandos `forge614-atlas init` y `resume`, calcula estadísticas de corrida (tokens, tiempo, modelos usados) y provee el script de instalación `install.sh`.
 
@@ -101,8 +101,8 @@ La asignación de modelos y razonamiento sigue una matriz estricta según el niv
 
 > Ambos motores reciben el nivel de razonamiento (Engines 1.16.0 o posterior). Engines acepta cinco niveles (`low`, `medium`, `high`, `xhigh`, `max`); Atlas usa solo dos, `low` y `medium`, por la Regla 1. Haiku 4.5 no tiene niveles: Claude Code lo ignora ahí sin error.
 
-### Regla 3: Concurrencia estricta de 3 mandaderos
-Atlas mantiene un máximo inmutable de **3 subagentes concurrentes** en ejecución simultánea. Esta cota no altera el volumen total de tokens consumidos, pero previene saturar abruptamente los límites de tasa (*rate limits*) y ventanas de cuota por hora de las suscripciones de los usuarios.
+### Regla 3: Un mandadero a la vez
+Atlas despacha los ayudantes en secuencia, uno a la vez, a través de `forge614-workers` (decisión del 2026-09-20: cambia velocidad por menor consumo de tokens y de cuota). Nunca corre ayudantes en paralelo.
 
-### Regla 4: Elección de motor fresca en cada corrida
-Atlas **no persiste en archivos de configuración** qué motor de IA se eligió. En cada invocación de `forge614-atlas init` o `resume`, consulta el `$PATH` y despliega el menú interactivo para que el usuario elija conscientemente con qué herramienta trabajar.
+### Regla 4: El motor se resuelve en cada corrida
+Atlas nunca guarda la elección del motor. Cada `init` le pregunta a Forge614 Engines qué motores hay instalados y pueden correr sin pantalla; si hay más de uno y no se dio `--engine`, Atlas responde `engine-ambiguous` y deja la elección a Shell. Atlas no dibuja ningún menú.

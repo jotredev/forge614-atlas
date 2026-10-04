@@ -63,7 +63,7 @@ flowchart LR
     P1["Plan 1 (Completed)<br/><b>Complexity Scoring Engine</b><br/>AST, Fan-In, Churn, Gap, Tiers"]
     P2["Plan 2 (Next)<br/><b>Engine Detection & Runners</b><br/>AI selector, headless dispatcher"]
     P3["Plan 3<br/><b>Engram Storage Integration</b><br/>Engram SDK, progressive sessions"]
-    P4["Plan 4<br/><b>Orchestrator Loop</b><br/>Concurrency max 3, quota handling"]
+    P4["Plan 4<br/><b>Orchestrator Loop</b><br/>Sequential dispatch, quota handling"]
     P5["Plan 5<br/><b>CLI & Self-Contained Installer</b><br/>init/resume commands, run report"]
 
     P1 --> P2 --> P3 --> P4 --> P5
@@ -75,8 +75,8 @@ flowchart LR
    Detects AI binaries in `$PATH`, renders an interactive TUI selector, and manages headless command execution against authenticated user CLIs.
 3. **Plan 3: Root Analysis Adaptation and Engram SDK Integration.**
    Adapts module discovery to handle nested project layouts (`src/{auth,billing}`) and integrates the Engram SDK to write progressive session entries.
-4. **Plan 4: Orchestrator Loop, Concurrency Control, and Quota Handling.**
-   Manages task scheduling, enforces a strict 3-worker concurrency cap, and handles quota exhaustion gracefully (`resume` workflow).
+4. **Plan 4: Orchestrator Loop, Sequential Dispatch, and Quota Handling.**
+   Manages task scheduling (one helper at a time) and handles quota exhaustion gracefully: the open Engram session is the pause marker and the next `init` continues it.
 5. **Plan 5: CLI Surface, Final Run Report, and Standalone Installer.**
    Exposes `forge614-atlas init` and `resume` CLI commands, displays aggregated runtime metrics (tokens, time, models used), and provides `install.sh`.
 
@@ -101,8 +101,8 @@ Model selection is tied directly to the module's assigned complexity tier:
 
 > Both engines receive the reasoning level (Engines 1.16.0 or newer). Engines accepts five levels (`low`, `medium`, `high`, `xhigh`, `max`); Atlas uses only two of them, `low` and `medium`, because of Rule 1. Haiku 4.5 has no levels: Claude Code ignores the level on it without an error.
 
-### Rule 3: Strict 3-Worker Concurrency Limit
-Atlas enforces an immutable concurrency ceiling of **3 simultaneous subagents**. While this does not alter total token consumption, it prevents triggering harsh API rate limits or rapidly burning through hourly subscription quotas on large repositories.
+### Rule 3: One Worker at a Time
+Atlas dispatches the helpers sequentially, one at a time, through `forge614-workers` (decision of 2026-09-20: it trades speed for a lower token and quota consumption). It never runs helpers in parallel.
 
-### Rule 4: Fresh Engine Selection on Every Run
-Atlas **never persists AI engine choices to configuration files**. Each invocation of `forge614-atlas init` or `resume` inspects `$PATH` and presents the interactive selection menu anew, allowing the user to select the appropriate engine for that specific session.
+### Rule 4: The Engine Is Resolved on Every Run
+Atlas never persists the engine choice. Every `init` asks Forge614 Engines which engines are installed and can run headless; if there is more than one and `--engine` was not given, Atlas answers `engine-ambiguous` and leaves the choice to Shell. Atlas draws no menu.

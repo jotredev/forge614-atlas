@@ -32,6 +32,7 @@ Prior to scoring, the system inspects the target repository root:
      "node_modules", ".git", "dist", "build", "coverage", ".next", "out", ".forge614",
    ]);
    ```
+   (`.forge614` is the Forge614 project folder — portable identity `project.json`, written by Engram — not a build output.)
 3. **Deterministic Alphabetical Ordering:** Both discovered modules and internal source file arrays are sorted via `localeCompare(b)`:
    ```typescript
    topLevelDirs.sort((a, b) => a.localeCompare(b));

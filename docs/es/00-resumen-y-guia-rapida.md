@@ -2,10 +2,9 @@
 
 > **Documento Oficial de Referencia Técnica — Ecosistema Forge614**  
 > **Proyecto:** Forge614 Atlas (Orquestador de Contextualización Profunda)  
-> **Componente:** Planes 1–3 — puntuación, sesiones de Engram y núcleo del CLI (`init`)
-> **Rama:** `main` (Plan 3 fusionado en `2b5272c`)
-> **Entorno:** Bun >= 1.3.8 | TypeScript 5.9.3 | `init` sólo planifica; no despacha IA todavía
-> **Verificación:** 67 pruebas pasando (0 fallas) | typecheck y build limpios
+> **Componente:** Planes 1–5 y Atlas 1.1.0 — puntuación, sesiones de Engram, núcleo del CLI `init`, despacho real de subagentes e instalador (este capítulo conserva el detalle del Plan 1)
+> **Entorno:** Bun >= 1.3.9 | TypeScript 5.9.3
+> **Verificación:** 192 pruebas pasando (0 fallas) | typecheck y build limpios
 > **Traducción hermana:** [00 (EN). Executive Summary and Quickstart](../en/00-summary-and-quickstart.md)
 
 ---
@@ -55,7 +54,7 @@ Para compilar, ejecutar y verificar el motor de puntuación de Atlas:
 
 | Requisito | Versión Mínima | Propósito |
 |---|---|---|
-| **Bun** | `>= 1.3.8` | Entorno de ejecución rápido (*runtime*), gestor de paquetes y ejecutor de pruebas (`bun test`). |
+| **Bun** | `>= 1.3.9` | Entorno de ejecución rápido (*runtime*), gestor de paquetes y ejecutor de pruebas (`bun test`). |
 | **Git** | Disponible en `$PATH` | Obligatorio para calcular la volatilidad histórica de archivos (`computeChurn` mediante `git log`). |
 | **TypeScript** | `5.9.3` (fijado) | Proporciona la API del compilador (`typescript`) para analizar el árbol de sintaxis abstracta (*AST*) sin requerir compilación a JavaScript. |
 | **Arquitectura SO** | macOS / Linux / Windows | Totalmente multiplataforma sin enlaces nativos C/C++ en esta etapa. |
@@ -115,7 +114,7 @@ forge614-atlas/
 ├── package.json                    # Manifiesto del proyecto (exporta ./src/index.ts)
 ├── tsconfig.json                   # Configuración estricta de TypeScript en modo ESNext
 ├── bun.lock                        # Archivo de bloqueo reproducible
-├── .gitignore                      # Exclusión de dist, node_modules, .forge614 y temporales
+├── .gitignore                      # Exclusión de dist, node_modules, build, coverage y temporales
 ├── src/
 │   ├── index.ts                    # Superficie pública exportada de la librería
 │   └── modules/

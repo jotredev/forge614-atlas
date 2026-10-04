@@ -32,6 +32,7 @@ Antes de puntuar, el sistema escanea el directorio raíz del proyecto:
      "node_modules", ".git", "dist", "build", "coverage", ".next", "out", ".forge614",
    ]);
    ```
+   (`.forge614` es la carpeta de Forge614 del proyecto — identidad portátil `project.json`, escrita por Engram — no una salida de compilación.)
 3. **Ordenamiento alfabético determinista:** Tanto la lista de módulos como la lista de archivos dentro de cada módulo se ordenan con `localeCompare(b)`:
    ```typescript
    topLevelDirs.sort((a, b) => a.localeCompare(b));

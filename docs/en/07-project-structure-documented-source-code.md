@@ -6,6 +6,8 @@
 > **Scope:** Master navigation index to the 9 modular subpages of line-by-line documented source code  
 > **Sister Translation:** [07. Estructura del Proyecto y Código Fuente Documentado](../es/07-estructura-codigo-linea-por-linea.md)
 
+> This chapter documents the Plan 1 scoring engine (`src/modules/scoring/`) as of Plan 1. The command line (chapters 08–09) and the installer (chapter 10) live in `src/interfaces/cli/`, `src/modules/cli/`, `forge-home/`, `updater/`, `uninstall/`, `engines-client/`, `workers-client/` and `memory/`.
+
 ---
 
 ## 1. Master Directory of Modular Subpages
@@ -17,7 +19,7 @@ To maximize readability, educational clarity, and architectural accessibility, t
 
 | Subpage | Files Covered | Architectural Purpose | Key Algorithm / Standard |
 | :--- | :--- | :--- | :--- |
-| [**07.01 (EN) Environment Configuration and Entry Point**](07-structure/01-configuration-and-entry-point.md) | `package.json`, `tsconfig.json`, `.gitignore`, `src/index.ts` | Execution environment, strict compiler rules, and public barrel exports. | Bun >= 1.3.8, Native ESM, TS 5.9.3 Strict |
+| [**07.01 (EN) Environment Configuration and Entry Point**](07-structure/01-configuration-and-entry-point.md) | `package.json`, `tsconfig.json`, `.gitignore`, `src/index.ts` | Execution environment, strict compiler rules, and public barrel exports. | Bun >= 1.3.9, Native ESM, TS 5.9.3 Strict |
 | [**07.02 (EN) Module Discovery (discovery.ts and test)**](07-structure/02-module-discovery.md) | `discovery.ts`, `discovery.test.ts` | Deterministic filesystem discovery of first-level folders and code files. | $O(1)$ `EXCLUDED_DIRS` filter, `localeCompare` sort |
 | [**07.03 (EN) AST Cyclomatic Complexity (cyclomatic.ts and test)**](07-structure/03-cyclomatic-complexity.md) | `cyclomatic.ts`, `cyclomatic.test.ts` | Control flow branch measurement via TypeScript compiler AST. | McCabe's formula (1976), `default:` omission, `&&`, `\|\|`, `??` |
 | [**07.04 (EN) Dependency Fan-In Centrality (fan-in.ts and test)**](07-structure/04-fan-in-centrality.md) | `fan-in.ts`, `fan-in.test.ts` | In-degree calculation across inter-module dependency graph. | `Set` deduplication (module-to-module edge), `modulePath + sep` boundary |
