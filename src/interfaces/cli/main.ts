@@ -15,20 +15,24 @@ function flag(args: string[], name: string): string | undefined {
 }
 
 /**
- * Despacha el comando: `--version`/`-v`, `--help`/`-h`, `update` y `uninstall` se atienden sin abrir
- * Engram; solo `init` lo abre. Cualquier otro comando responde `UNKNOWN_COMMAND` con salida 1.
+ * Despacha el comando: `--help`/`-h` (en cualquier posición), `--version`/`-v` (primer argumento),
+ * `update` y `uninstall` se atienden sin abrir Engram; solo `init` lo abre. Cualquier otro comando
+ * responde `UNKNOWN_COMMAND` con salida 1.
  */
 async function main(): Promise<void> {
-  const [command, ...rest] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const [command, ...rest] = args;
 
-  // --version, --help, update y uninstall se atienden ANTES de abrir Engram.
-  if (command === "--version" || command === "-v") {
-    console.log(`forge614-atlas ${version}`);
+  // --help y -h se atienden en CUALQUIER posición y antes que todo lo demás: `init --help` es una
+  // petición de ayuda, no una orden de analizar el proyecto, y `uninstall --help` no debe borrar nada.
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(helpText(version));
     return;
   }
 
-  if (command === "--help" || command === "-h") {
-    console.log(helpText(version));
+  // --version, update y uninstall se atienden ANTES de abrir Engram.
+  if (command === "--version" || command === "-v") {
+    console.log(`forge614-atlas ${version}`);
     return;
   }
 

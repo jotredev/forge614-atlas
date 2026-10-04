@@ -14,10 +14,14 @@ export interface UninstallIo {
   ask: (question: string) => Promise<string>;
   /** Imprime la respuesta JSON en la salida estándar. */
   print: (payload: object) => void;
-  /** Avisa algo a la persona por la salida de errores, sin ensuciar el JSON. */
-  warn: (message: string) => void;
 }
 
+/**
+ * Arma el sobre de error de siempre: `{ schemaVersion, status: "error", error: { code, message } }`.
+ * @param code Código del error.
+ * @param message Mensaje para la persona.
+ * @returns El objeto listo para imprimir.
+ */
 function failure(code: string, message: string): object {
   return { schemaVersion: 1, status: "error", error: { code, message } };
 }
@@ -34,8 +38,9 @@ function resolveHome(env: Record<string, string | undefined>): string {
 /**
  * Ejecuta `forge614-atlas uninstall [--from forge614-engram] [--confirmed]`. Retira SOLO la carpeta
  * `<FORGE614_HOME>/atlas` y el bloque de PATH que puso el instalador; nunca toca Engram, Engines, Shell,
- * Workers, las memorias ni otros archivos. Orden: comprobar todo, quitar los bloques de PATH, imprimir el
- * resultado y borrar la carpeta al final (así el resultado sale aunque el binario en ejecución viva ahí).
+ * Workers, las memorias ni otros archivos. Orden: comprobar todo, quitar los bloques de PATH, borrar la
+ * carpeta y solo entonces imprimir `uninstalled` (el binario en ejecución puede borrarse en macOS y Linux).
+ * Si borrar la carpeta falla responde `UNINSTALL_FAILED` y avisa que los bloques de PATH ya se quitaron.
  * Es idempotente: si no hay nada que quitar, termina bien con `removed: false`.
  * @param args Argumentos después de `uninstall`.
  * @param env Variables de entorno (`HOME` y `FORGE614_HOME`).
@@ -96,13 +101,22 @@ export async function runUninstallCommand(args: string[], env: Record<string, st
     throw error;
   }
 
-  io.print({ schemaVersion: 1, status: "uninstalled", removed: plan.hasFolder, pathPublications });
-
+  // La carpeta se borra ANTES de responder: el binario en ejecución puede borrarse en macOS y Linux, y así
+  // nunca se imprime `uninstalled` si el borrado falla (Engram solo mira el código de salida, pero la
+  // persona lee la respuesta).
   try {
     plan.removeFolder();
   } catch (error) {
-    io.warn(`The Forge614 Atlas folder could not be removed: ${error instanceof Error ? error.message : String(error)}`);
+    const reason = error instanceof Error ? error.message : String(error);
+    io.print(
+      failure(
+        "UNINSTALL_FAILED",
+        `The Forge614 Atlas folder could not be removed (${reason}). The PATH blocks were already removed.`,
+      ),
+    );
     return 1;
   }
+
+  io.print({ schemaVersion: 1, status: "uninstalled", removed: plan.hasFolder, pathPublications });
   return 0;
 }

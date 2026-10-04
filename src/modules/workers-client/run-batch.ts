@@ -21,6 +21,11 @@ export interface WorkersTask {
   timeoutMs?: number;
 }
 
+/**
+ * Un evento que Forge614 Workers imprime como una línea de NDJSON mientras corre el lote. `task_failed`
+ * con `reason: "engine_unsupported"` y `stderr` que empieza con `READ_ONLY_UNSUPPORTED` es la negativa a
+ * correr una tarea sin candado de solo lectura; `fatal_error` significa que no corrió nada.
+ */
 export type WorkersEvent =
   | { event: "task_started"; taskId: string; agentId: string; startedAt: string }
   | {
@@ -70,6 +75,15 @@ export type WorkersEvent =
     }
   | { event: "fatal_error"; reason: "invalid_input" | "engines_bin_not_found" | "unexpected_error"; message: string };
 
+/**
+ * Lanza Forge614 Workers, le escribe el lote por la entrada estándar y entrega cada evento NDJSON de su
+ * salida a `onEvent`. Si una línea no es JSON válido o `onEvent` lanza un error, mata a Workers y rechaza.
+ * @param workersBinaryPath Ruta del binario de Workers.
+ * @param enginesBin Ruta del binario de Engines, que Workers usa para armar cada comando.
+ * @param tasks Las tareas del lote.
+ * @param onEvent Función que recibe cada evento, en orden.
+ * @returns El código de salida de Workers (0 completo, 75 pausado por cuota, 2 fallo fatal).
+ */
 export function runWorkersBatch(
   workersBinaryPath: string,
   enginesBin: string,

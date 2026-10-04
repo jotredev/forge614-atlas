@@ -5,7 +5,11 @@ import { PathBlockError, removePathBlocks } from "./path-block";
 /** Códigos de error de la desinstalación. */
 export type UninstallErrorCode = "UNINSTALL_UNSAFE" | "PATH_REMOVE_FAILED";
 
-/** Algo impide desinstalar con seguridad; no se borró ni se reescribió nada que no se haya dicho. */
+/**
+ * Algo impide desinstalar con seguridad; el código dice qué. `UNINSTALL_UNSAFE` y los `PATH_REMOVE_FAILED`
+ * de la comprobación (`planUninstall`) salen antes de cambiar nada; un `PATH_REMOVE_FAILED` al reescribir
+ * un perfil puede llegar con los perfiles anteriores de la lista ya limpios.
+ */
 export class UninstallError extends Error {
   readonly code: UninstallErrorCode;
 

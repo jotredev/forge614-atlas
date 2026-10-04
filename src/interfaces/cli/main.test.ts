@@ -1,11 +1,23 @@
-import { expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { afterEach, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { version } from "../../../package.json";
 
 const entrypoint = resolve(import.meta.dir, "main.ts");
 
-async function runMain(args: string[], env: Record<string, string | undefined> = process.env): Promise<{ exitCode: number; stdout: string }> {
-  const child = Bun.spawn(["bun", entrypoint, ...args], { stdin: "ignore", stdout: "pipe", stderr: "pipe", env });
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+async function runMain(
+  args: string[],
+  env: Record<string, string | undefined> = process.env,
+  cwd?: string,
+): Promise<{ exitCode: number; stdout: string }> {
+  const child = Bun.spawn(["bun", entrypoint, ...args], { stdin: "ignore", stdout: "pipe", stderr: "pipe", env, cwd });
   const [exitCode, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
   return { exitCode, stdout };
 }
@@ -24,20 +36,62 @@ test("the printed version is exactly forge614-atlas 1.0.0 while package.json say
   expect(stdout.trim()).toBe("forge614-atlas 1.0.0");
 });
 
-test("--help and -h exit 0 and name every command", async () => {
+test("--help and -h exit 0, name every command, the aliases and FORGE614_HOME", async () => {
   for (const flag of ["--help", "-h"]) {
     const { exitCode, stdout } = await runMain([flag]);
     expect(exitCode).toBe(0);
     for (const expected of [
       "init [--engine <id>] [--force]",
       "update",
-      "uninstall [--confirmed]",
-      "--version",
-      "--help",
+      "uninstall [--from forge614-engram] [--confirmed]",
+      "--version, -v",
+      "--help, -h",
+      "FORGE614_HOME",
     ]) {
       expect(stdout).toContain(expected);
     }
   }
+});
+
+test("--help and -h in any position print the help and exit 0 without running anything: init creates nothing", async () => {
+  const root = mkdtempSync(join(tmpdir(), "atlas-help-"));
+  tempDirs.push(root);
+  const forgeHome = join(root, "forge614");
+  const project = join(root, "project");
+  mkdirSync(forgeHome);
+  mkdirSync(project);
+  const env = { PATH: process.env.PATH ?? "", HOME: root, FORGE614_HOME: forgeHome };
+
+  for (const args of [
+    ["init", "--help"],
+    ["init", "-h"],
+    ["init", "--engine", "claude-code", "--help"],
+    ["init", "--force", "-h"],
+    ["--bogus", "--help"],
+  ]) {
+    const { exitCode, stdout } = await runMain(args, env, project);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("forge614-atlas uninstall [--from forge614-engram] [--confirmed]");
+  }
+  // init de verdad abre Engram: con la ayuda no debe aparecer ninguna base ni sesión.
+  expect(readdirSync(forgeHome)).toEqual([]);
+  expect(readdirSync(project)).toEqual([]);
+});
+
+test("update --help and uninstall --help print the help, exit 0 and delete nothing", async () => {
+  const root = mkdtempSync(join(tmpdir(), "atlas-help-"));
+  tempDirs.push(root);
+  const forgeHome = join(root, "forge614");
+  mkdirSync(join(forgeHome, "atlas", "bin"), { recursive: true });
+  writeFileSync(join(forgeHome, "atlas", "bin", "forge614-atlas"), "fake binary\n");
+  const env = { PATH: process.env.PATH ?? "", HOME: root, FORGE614_HOME: forgeHome };
+
+  for (const args of [["update", "--help"], ["uninstall", "--help"], ["uninstall", "--confirmed", "-h"]]) {
+    const { exitCode, stdout } = await runMain(args, env);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("forge614-atlas update");
+  }
+  expect(existsSync(join(forgeHome, "atlas", "bin", "forge614-atlas"))).toBe(true);
 });
 
 test("init with an invalid FORGE614_HOME answers INVALID_FORGE614_HOME before opening Engram", async () => {

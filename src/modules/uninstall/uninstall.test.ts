@@ -239,7 +239,7 @@ describe("forge614-atlas uninstall", () => {
     expect(readFileSync(fish, "utf8")).toBe("set -gx EDITOR vim\n");
   });
 
-  test("a terminal profile that cannot be rewritten is PATH_REMOVE_FAILED and nothing is deleted", async () => {
+  test("a terminal profile that is a symbolic link is PATH_REMOVE_FAILED and nothing is deleted", async () => {
     const sandbox = makeSandbox();
     installFakeAtlas(sandbox);
     const real = join(sandbox.home, "real-zshrc");
@@ -252,6 +252,61 @@ describe("forge614-atlas uninstall", () => {
     expect(errorCode(result.stdout)).toBe("PATH_REMOVE_FAILED");
     expect(readFileSync(real, "utf8")).toBe(`export FOO=1\n${pathBlock("/x/bin")}`);
     expect(existsSync(join(sandbox.atlas, "bin", "forge614-atlas"))).toBe(true);
+  });
+
+  // Quitar el permiso de escritura solo frena a quien no es root; con root las dos pruebas siguientes no dicen nada.
+  const asRoot = process.getuid?.() === 0;
+
+  test.skipIf(asRoot)("a terminal profile that cannot be rewritten is PATH_REMOVE_FAILED and the Atlas folder is kept", async () => {
+    const sandbox = makeSandbox();
+    installFakeAtlas(sandbox);
+    const profile = join(sandbox.home, ".zshrc");
+    const original = `export FOO=1\n${pathBlock("/x/bin")}`;
+    writeFileSync(profile, original);
+    // El perfil se lee bien, pero la carpeta personal no deja crear el archivo temporal con el que se reescribe.
+    chmodSync(sandbox.home, 0o555);
+
+    let result: { exitCode: number; stdout: string };
+    try {
+      result = await runUninstall(sandbox, ["--confirmed"]);
+    } finally {
+      chmodSync(sandbox.home, 0o755);
+    }
+
+    expect(result.exitCode).toBe(1);
+    expect(errorCode(result.stdout)).toBe("PATH_REMOVE_FAILED");
+    expect(result.stdout).not.toContain("uninstalled");
+    expect(readFileSync(profile, "utf8")).toBe(original);
+    expect(existsSync(join(sandbox.atlas, "bin", "forge614-atlas"))).toBe(true);
+  });
+
+  test.skipIf(asRoot)("an Atlas folder that cannot be deleted is UNINSTALL_FAILED, exit 1, and never prints uninstalled", async () => {
+    const sandbox = makeSandbox();
+    installFakeAtlas(sandbox);
+    const profile = join(sandbox.home, ".zshrc");
+    writeFileSync(profile, `export FOO=1\n${pathBlock("/x/bin")}`);
+    // Una subcarpeta sin permiso de escritura impide borrar lo que lleva dentro.
+    const locked = join(sandbox.atlas, "locked");
+    mkdirSync(locked);
+    writeFileSync(join(locked, "stuck.txt"), "stuck\n");
+    chmodSync(locked, 0o555);
+
+    let result: { exitCode: number; stdout: string };
+    try {
+      result = await runUninstall(sandbox, ["--confirmed"]);
+    } finally {
+      chmodSync(locked, 0o755);
+    }
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).not.toContain("uninstalled");
+    const payload = JSON.parse(result.stdout) as { schemaVersion: number; status: string; error: { code: string; message: string } };
+    expect(payload.schemaVersion).toBe(1);
+    expect(payload.status).toBe("error");
+    expect(payload.error.code).toBe("UNINSTALL_FAILED");
+    expect(payload.error.message).toContain("PATH blocks were already removed");
+    // Los bloques de PATH ya se quitaron antes de intentar borrar la carpeta.
+    expect(readFileSync(profile, "utf8")).toBe("export FOO=1\n");
   });
 
   test("a profile with an unclosed block is PATH_REMOVE_FAILED: no profile is touched and nothing is deleted", async () => {

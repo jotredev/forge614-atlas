@@ -40,7 +40,7 @@ export function workersOutdatedMessage(found: string | undefined): string {
  * Corre `<workers> --version` (sin stdin y con tope de tiempo) y lee la versión.
  * @param workersBinaryPath Ruta del binario de Workers.
  * @param timeoutMs Tiempo máximo de espera.
- * @returns Los tres números de la versión y su texto, o `undefined` si la respuesta no es exactamente
+ * @returns El número mayor de la versión y su texto `X.Y.Z`, o `undefined` si la respuesta no es exactamente
  * `forge614-workers X.Y.Z`, si el código de salida no es 0 o si venció el tope.
  */
 function readWorkersVersion(workersBinaryPath: string, timeoutMs: number): { major: number; text: string } | undefined {
@@ -56,7 +56,7 @@ function readWorkersVersion(workersBinaryPath: string, timeoutMs: number): { maj
 }
 
 /**
- * Comprueba, ANTES de tocar Engram, que Atlas puede mandar ayudantes de solo lectura: que Engines
+ * Comprueba, ANTES de abrir ninguna sesión de Engram, que Atlas puede mandar ayudantes de solo lectura: que Engines
  * garantice el candado, que el binario de Workers exista y que Workers sea 1.0.0 o posterior (un
  * Workers anterior ignoraría `readOnly` sin avisar y el ayudante correría sin candado).
  * @param input.engineId Agente elegido.
