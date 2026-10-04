@@ -49,7 +49,7 @@ describe("resolveTaskConfig", () => {
     expect(config.reasoningLevel).toBe("medium");
   });
 
-  /** Comprueba que un identificador sin fila no produce una configuración inventada y en su lugar lanza `Error`. */
+  /** Comprueba que un identificador de motor sin fila en la tabla no produce una configuración inventada y hace que la función lance (el expect solo verifica que lanza, no el tipo ni el mensaje). */
   test("throws for an engine id outside the fixed table", () => {
     expect(() => resolveTaskConfig("ligero", "example-agent", { supportsReasoningLevel: false })).toThrow();
   });

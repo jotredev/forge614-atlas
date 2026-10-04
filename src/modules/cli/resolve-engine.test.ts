@@ -8,7 +8,10 @@ import type { AgentDetection } from "../engines-client/detect";
 import type { Capabilities } from "../engines-client/capabilities";
 
 /**
- * Crea una detección mínima de Engines. @param id Identificador del agente. @param installed Si está instalado. @param executable Ruta opcional.
+ * Crea una detección mínima de Engines.
+ * @param id Identificador del agente.
+ * @param installed Si está instalado.
+ * @param executable Ruta del ejecutable; si falta, la detección no la trae.
  * @returns La detección que consume `resolveEngine`.
  */
 function agent(id: string, installed: boolean, executable?: string): AgentDetection {
@@ -16,7 +19,10 @@ function agent(id: string, installed: boolean, executable?: string): AgentDetect
 }
 
 /**
- * Crea las capacidades mínimas de un motor. @param id Identificador del agente. @param supportsHeadlessExec Si puede ejecutarse sin pantalla.
+ * Crea las capacidades mínimas de un motor: todo en `true` salvo `supportsHeadlessExec` (el dato que se pasa) y
+ * `supportsReasoningLevel` (solo `true` para `claude-code` y `codex`).
+ * @param id Identificador del agente.
+ * @param supportsHeadlessExec Si puede ejecutarse sin pantalla.
  * @returns El objeto de capacidades que filtra candidatos.
  */
 function capabilities(id: string, supportsHeadlessExec: boolean): Capabilities {
@@ -94,7 +100,7 @@ describe("resolveEngine", () => {
     }
   });
 
-  /** Comprueba que un agente no instalado queda fuera aunque sus capacidades indiquen ejecución headless. */
+  /** Comprueba que un agente no instalado (y sin ruta ejecutable en el dato) queda fuera aunque sus capacidades indiquen ejecución headless; el caso de abajo aísla la falta de ruta con un agente instalado. */
   test("never proposes an agent that is not installed or lacks an executable path", () => {
     const agents = [agent("claude-code", false)];
     const capsById = new Map([["claude-code", capabilities("claude-code", true)]]);

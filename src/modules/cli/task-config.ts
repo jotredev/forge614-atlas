@@ -1,3 +1,9 @@
+/**
+ * Tabla fija de Atlas que asigna a cada nivel de módulo y motor el modelo (y el nivel de razonamiento) que se manda a Workers.
+ * Existe para que la elección de modelo esté en un solo lugar; la llama `dispatch-modules.ts` y `src/index.ts` la reexporta.
+ * Piezas: `TaskModelConfig`, la tabla `MODEL_TABLE` y `resolveTaskConfig`.
+ */
+
 /** Nivel de profundidad que el plan asigna a un módulo y que indexa la tabla de modelos. */
 type Tier = "ligero" | "estandar" | "profundo";
 /** Identificadores de los motores que tienen una fila explícita en la tabla fija de Atlas. */

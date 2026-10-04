@@ -17,7 +17,9 @@ export type EngineResolution =
  * @param agents Detecciones de Engines; solo pasan los agentes instalados que además exponen una ruta ejecutable.
  * @param capabilitiesById Capacidades obtenidas de Engines por identificador; `supportsHeadlessExec` filtra los candidatos.
  * @param requestedId Identificador recibido con `--engine`; si no coincide con un candidato se devuelve `engine-invalid`.
- * @returns El motor resuelto, la lista de candidatos si hay ambigüedad o invalidez, o `engine-unavailable` si la lista queda vacía.
+ * @returns El motor resuelto; `engine-invalid` (con la lista de candidatos, que puede estar vacía) si se pidió un identificador
+ * que no es candidato; `engine-ambiguous` (con la lista) si no se pidió ninguno y hay dos o más candidatos; o
+ * `engine-unavailable` si no se pidió ninguno y no hay candidatos.
  */
 export function resolveEngine(
   agents: AgentDetection[],
