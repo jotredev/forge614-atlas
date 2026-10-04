@@ -114,7 +114,13 @@ jobs:
         run: bun build ./src/interfaces/cli/main.ts --compile --target=${{ matrix.target }} --outfile dist/${{ matrix.artifact }}
       - name: Smoke-test the native standalone artifact
         shell: bash
-        run: ./dist/${{ matrix.artifact }} --version
+        run: |
+          expected="forge614-atlas $(bun -e 'console.log(require("./package.json").version)')"
+          actual="$(./dist/${{ matrix.artifact }} --version)"
+          if [ "$actual" != "$expected" ]; then
+            echo "Expected '$expected' but the artifact printed '$actual'" >&2
+            exit 1
+          fi
       - name: Preserve the artifact mode for collection
         run: tar -C dist -czf dist/${{ matrix.artifact }}.tar.gz ${{ matrix.artifact }}
       - uses: actions/upload-artifact@v4
