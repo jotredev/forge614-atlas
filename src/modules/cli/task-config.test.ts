@@ -26,6 +26,6 @@ describe("resolveTaskConfig", () => {
   });
 
   test("throws for an engine id outside the fixed table", () => {
-    expect(() => resolveTaskConfig("ligero", "cursor", { supportsReasoningLevel: false })).toThrow();
+    expect(() => resolveTaskConfig("ligero", "example-agent", { supportsReasoningLevel: false })).toThrow();
   });
 });

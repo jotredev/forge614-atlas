@@ -14,10 +14,10 @@ function capabilities(id: string, supportsHeadlessExec: boolean): Capabilities {
 
 describe("resolveEngine", () => {
   test("auto-resolves when exactly one installed agent supports headless exec", () => {
-    const agents = [agent("claude-code", true, "/bin/claude"), agent("cursor", true, "/bin/cursor")];
+    const agents = [agent("claude-code", true, "/bin/claude"), agent("example-agent", true, "/bin/example-agent")];
     const capsById = new Map([
       ["claude-code", capabilities("claude-code", true)],
-      ["cursor", capabilities("cursor", false)],
+      ["example-agent", capabilities("example-agent", false)],
     ]);
 
     const result = resolveEngine(agents, capsById);
@@ -26,8 +26,8 @@ describe("resolveEngine", () => {
   });
 
   test("reports engine-unavailable when no installed agent supports headless exec", () => {
-    const agents = [agent("cursor", true, "/bin/cursor")];
-    const capsById = new Map([["cursor", capabilities("cursor", false)]]);
+    const agents = [agent("example-agent", true, "/bin/example-agent")];
+    const capsById = new Map([["example-agent", capabilities("example-agent", false)]]);
 
     expect(resolveEngine(agents, capsById)).toEqual({ status: "engine-unavailable" });
   });
