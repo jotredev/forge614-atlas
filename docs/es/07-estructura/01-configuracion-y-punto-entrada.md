@@ -8,7 +8,7 @@
 
 ## 1. Justificación Arquitectónica
 
-Forge614 Atlas está diseñado como una librería autónoma y determinista dentro del ecosistema Forge614. Para garantizar paridad estricta entre desarrollo local, pipelines de CI/CD e integraciones con `forge614-engram` y `forge614-shell`, la configuración del entorno restringe el motor a **Bun >= 1.3.8** y compila exclusivamente en modo estricto de **TypeScript 5.9.3**.
+Forge614 Atlas está diseñado como una librería autónoma y determinista dentro del ecosistema Forge614. Para garantizar paridad estricta entre desarrollo local, pipelines de CI/CD e integraciones con `forge614-engram` y `forge614-shell`, la configuración del entorno restringe el motor a **Bun >= 1.3.9** y compila exclusivamente en modo estricto de **TypeScript 5.9.3**.
 
 ### Analogía del Mundo Real
 > Es como el manifiesto de carga y el control aduanero de un barco mercante: antes de que los contenedores (módulos) sean inspeccionados por las grúas de puntuación, el manifiesto (`package.json`) y las reglas de seguridad (`tsconfig.json`) definen exactamente qué estándares de peso, medidas y sellos herméticos deben cumplir sin excepción.
@@ -23,8 +23,8 @@ Forge614 Atlas está diseñado como una librería autónoma y determinista dentr
 {
   // Nombre formal del paquete dentro del monorepositorio Forge614
   "name": "forge614-atlas",
-  // Versión semántica inicial correspondiente al Plan 1 completado
-  "version": "0.1.0",
+  // Versión semántica del producto (una prueba la mantiene igual a CHANGELOG.md y al capítulo 10)
+  "version": "1.1.0",
   // Previene publicación accidental a registros públicos de npm
   "private": true,
   // Establece ECMAScript Modules (ESM) nativo para import/export
@@ -37,19 +37,23 @@ Forge614 Atlas está diseñado como una librería autónoma y determinista dentr
     // Ejecución de la suite completa de pruebas unitarias bajo Bun
     "test": "bun test",
     // Chequeo estricto de tipos sin emitir JavaScript en disco
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    // Compila el binario autónomo (el pipeline de release agrega --target por plataforma)
+    "build": "bun build ./src/interfaces/cli/main.ts --compile --outfile dist/forge614-atlas"
   },
   // Restricción de versión mínima de ejecución del motor Bun
   "engines": {
-    "bun": ">=1.3.8"
+    "bun": ">=1.3.9"
   },
   // Definiciones de tipos para el entorno de ejecución Bun
   "devDependencies": {
     "@types/bun": "latest"
   },
-  // Compilador oficial de TypeScript requerido para el análisis de AST sintáctico
+  // Compilador oficial de TypeScript requerido para el análisis de AST sintáctico, y la copia local de Engram
+  // (una carpeta hermana; su código se compila dentro del binario de Atlas)
   "dependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "forge614-engram": "file:../forge614-engram"
   }
 }
 ```
@@ -100,9 +104,6 @@ coverage/
 .env
 .env.*
 !.env.example
-
-# Base de datos persistente y estado local de Forge614 Engram
-.forge614/
 
 # Artefactos y planes temporales de ejecución SDD
 .superpowers/sdd/

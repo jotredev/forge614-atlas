@@ -38,7 +38,7 @@ const EXCLUDED_DIRS = new Set([
   "coverage",     // Reportes de cobertura de pruebas automatizadas
   ".next",        // Caché de compilación del framework Next.js
   "out",          // Exportaciones estáticas de frontend
-  ".forge614",    // Almacén persistente local de Forge614 Engram
+  ".forge614",    // Carpeta de Forge614 del proyecto (identidad portátil `project.json`, escrita por Engram)
 ]);
 
 /**

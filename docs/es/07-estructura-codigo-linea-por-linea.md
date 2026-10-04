@@ -6,6 +6,8 @@
 > **Alcance:** Índice y navegación hacia las 9 subpáginas modulares de código fuente documentado línea por línea  
 > **Traducción hermana:** [07 (EN). Project Structure and Documented Source Code](../en/07-project-structure-documented-source-code.md)
 
+> Este capítulo documenta el motor de puntuación del Plan 1 (`src/modules/scoring/`) tal como estaba en el Plan 1. La línea de comandos (capítulos 08–09) y el instalador (capítulo 10) viven en `src/interfaces/cli/`, `src/modules/cli/`, `forge-home/`, `updater/`, `uninstall/`, `engines-client/`, `workers-client/` y `memory/`.
+
 ---
 
 ## 1. Directorio Maestro de Subpáginas Modulares
@@ -17,7 +19,7 @@ Para garantizar máxima legibilidad, profundidad pedagógica y accesibilidad arq
 
 | Subpágina | Archivos Cubiertos | Propósito Arquitectónico | Algoritmo / Estándar Clave |
 | :--- | :--- | :--- | :--- |
-| [**07.01 Configuración y Punto de Entrada**](07-estructura/01-configuracion-y-punto-entrada.md) | `package.json`, `tsconfig.json`, `.gitignore`, `src/index.ts` | Configuración del entorno de ejecución, compilación estricta y barril de exportación pública. | Bun >= 1.3.8, ESM Nativo, TS 5.9.3 Strict |
+| [**07.01 Configuración y Punto de Entrada**](07-estructura/01-configuracion-y-punto-entrada.md) | `package.json`, `tsconfig.json`, `.gitignore`, `src/index.ts` | Configuración del entorno de ejecución, compilación estricta y barril de exportación pública. | Bun >= 1.3.9, ESM Nativo, TS 5.9.3 Strict |
 | [**07.02 Descubrimiento de Módulos (Discovery)**](07-estructura/02-descubrimiento-discovery.md) | `discovery.ts`, `discovery.test.ts` | Escaneo determinista en disco de carpetas de primer nivel y archivos de código fuente. | Filtro $O(1)$ `EXCLUDED_DIRS`, `localeCompare` lexicográfico |
 | [**07.03 Complejidad Ciclomática AST (Cyclomatic)**](07-estructura/03-complejidad-ciclomatica.md) | `cyclomatic.ts`, `cyclomatic.test.ts` | Medición de bifurcaciones del flujo de ejecución mediante AST de TypeScript. | Fórmula de McCabe (1976), omisión de `default:`, operadores `&&`, `\|\|`, `??` |
 | [**07.04 Centralidad Fan-In de Dependencias**](07-estructura/04-centralidad-fan-in.md) | `fan-in.ts`, `fan-in.test.ts` | Cálculo del grado de entrada en el grafo de dependencias entre módulos. | Deduplicación por `Set` (arista módulo a módulo), frontera `modulePath + sep` |

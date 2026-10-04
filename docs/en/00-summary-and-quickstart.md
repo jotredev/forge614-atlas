@@ -2,10 +2,9 @@
 
 > **Official Technical Reference Document — Forge614 Ecosystem**  
 > **Project:** Forge614 Atlas (Deep Contextualization Orchestrator)  
-> **Component:** Plans 1–3 — scoring, Engram sessions, and the `init` CLI core
-> **Branch:** `main` (Plan 3 merged in `2b5272c`)
-> **Runtime:** Bun >= 1.3.8 | TypeScript 5.9.3 | `init` plans only; it does not dispatch AI yet
-> **Verification:** 67 passing tests (0 failures) | Clean typecheck and build
+> **Component:** Plans 1–5 and Atlas 1.1.0 — scoring, Engram sessions, the `init` CLI core, real subagent dispatch and the installer (this chapter keeps the Plan 1 detail)
+> **Runtime:** Bun >= 1.3.9 | TypeScript 5.9.3
+> **Verification:** 192 passing tests (0 failures) | Clean typecheck and build
 > **Sister translation:** [00. Resumen Ejecutivo y Guía Rápida](../es/00-resumen-y-guia-rapida.md)
 
 ---
@@ -55,7 +54,7 @@ To compile, execute, and verify the Atlas scoring engine:
 
 | Requirement | Minimum Version | Purpose |
 |---|---|---|
-| **Bun** | `>= 1.3.8` | High-performance runtime, package manager, and test runner (`bun test`). |
+| **Bun** | `>= 1.3.9` | High-performance runtime, package manager, and test runner (`bun test`). |
 | **Git** | Available in `$PATH` | Required to calculate historical file volatility (`computeChurn` via `git log`). |
 | **TypeScript** | `5.9.3` (pinned) | Provides the compiler parser API (`typescript`) to inspect Abstract Syntax Trees (*AST*) without full type-checking passes. |
 | **Operating System** | macOS / Linux / Windows | Cross-platform pure TypeScript logic without native C/C++ build requirements in this phase. |
@@ -115,7 +114,7 @@ forge614-atlas/
 ├── package.json                    # Project manifest (exports ./src/index.ts)
 ├── tsconfig.json                   # Strict TypeScript ESNext configuration
 ├── bun.lock                        # Deterministic lockfile
-├── .gitignore                      # Exclusions for dist, node_modules, .forge614, and temp files
+├── .gitignore                      # Exclusions for dist, node_modules, build, coverage and temp files
 ├── src/
 │   ├── index.ts                    # Public barrel export of scoring library
 │   └── modules/

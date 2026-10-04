@@ -8,7 +8,7 @@
 
 ## 1. Architectural Rationale
 
-Forge614 Atlas is engineered as a standalone, deterministic library within the Forge614 ecosystem. To guarantee strict parity across local workstations, CI/CD runners, and integrations with `forge614-engram` and `forge614-shell`, the runtime is strictly locked to **Bun >= 1.3.8** and strictly compiled under **TypeScript 5.9.3**.
+Forge614 Atlas is engineered as a standalone, deterministic library within the Forge614 ecosystem. To guarantee strict parity across local workstations, CI/CD runners, and integrations with `forge614-engram` and `forge614-shell`, the runtime is strictly locked to **Bun >= 1.3.9** and strictly compiled under **TypeScript 5.9.3**.
 
 ### Real-World Analogy
 > It is like the cargo manifest and customs checkpoint of a merchant vessel: before containers (modules) are inspected by complexity cranes, the manifest (`package.json`) and safety protocols (`tsconfig.json`) dictate exact dimensions, weights, and hermetic seals without exception.
@@ -23,8 +23,8 @@ Forge614 Atlas is engineered as a standalone, deterministic library within the F
 {
   // Formal package identifier within the Forge614 monorepo
   "name": "forge614-atlas",
-  // Initial semantic version corresponding to completed Plan 1
-  "version": "0.1.0",
+  // Semantic version of the product (kept equal to CHANGELOG.md and chapter 10 by a test)
+  "version": "1.1.0",
   // Prevents accidental publishing to public npm registries
   "private": true,
   // Enforces native ECMAScript Modules (ESM) for import/export
@@ -37,19 +37,23 @@ Forge614 Atlas is engineered as a standalone, deterministic library within the F
     // Executes the test suite under native Bun runner
     "test": "bun test",
     // Strict static type checking without emitting files to disk
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    // Compiles the standalone binary (the release pipeline adds --target per platform)
+    "build": "bun build ./src/interfaces/cli/main.ts --compile --outfile dist/forge614-atlas"
   },
   // Minimum required runtime version
   "engines": {
-    "bun": ">=1.3.8"
+    "bun": ">=1.3.9"
   },
   // Type definitions for the Bun runtime environment
   "devDependencies": {
     "@types/bun": "latest"
   },
-  // Official TypeScript compiler pinned for AST syntax parsing
+  // Official TypeScript compiler pinned for AST syntax parsing, and the local copy of Engram
+  // (a sibling folder; its code is compiled into the Atlas binary)
   "dependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "forge614-engram": "file:../forge614-engram"
   }
 }
 ```
@@ -100,9 +104,6 @@ coverage/
 .env
 .env.*
 !.env.example
-
-# Local persistent state for Forge614 Engram
-.forge614/
 
 # Temporary SDD planning artifacts
 .superpowers/sdd/

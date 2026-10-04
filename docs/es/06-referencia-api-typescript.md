@@ -3,7 +3,7 @@
 > **Documento Oficial de Referencia Técnica — Ecosistema Forge614**  
 > **Proyecto:** Forge614 Atlas (Orquestador de Contextualización Profunda)  
 > **Punto de Entrada:** `src/index.ts` (`"exports": "./src/index.ts"` en `package.json`)  
-> **Compatibilidad:** Bun >= 1.3.8 | TypeScript 5.9.3 en modo estricto  
+> **Compatibilidad:** Bun >= 1.3.9 | TypeScript 5.9.3 en modo estricto\
 > **Traducción hermana:** [06 (EN). TypeScript Public API Reference](../en/06-typescript-api-reference.md)
 
 ---

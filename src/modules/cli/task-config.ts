@@ -21,6 +21,14 @@ const MODEL_TABLE: Record<Tier, Record<EngineId, TaskModelConfig>> = {
   },
 };
 
+/**
+ * Da el modelo y el nivel de razonamiento de una tarea según la tabla fija (`MODEL_TABLE`).
+ * @param tier Nivel del módulo (ligero, estándar o profundo).
+ * @param engineId Motor elegido (`claude-code` o `codex`).
+ * @param capabilities Capacidades del motor; solo se mira `supportsReasoningLevel`.
+ * @returns El modelo y, si el motor acepta nivel de razonamiento, el nivel; si no, solo el modelo.
+ * @throws Error si la tabla no tiene una fila para ese motor.
+ */
 export function resolveTaskConfig(
   tier: Tier,
   engineId: string,
@@ -30,6 +38,8 @@ export function resolveTaskConfig(
   if (!row) {
     throw new Error(`No hay configuración de modelo/razonamiento para el motor "${engineId}"`);
   }
+  // Defensa: hoy Engines 1.16.0+ dice true para los dos motores, pero si algún día un motor dijera false
+  // se manda solo el modelo, sin nivel.
   if (!capabilities.supportsReasoningLevel) {
     return { model: row.model };
   }

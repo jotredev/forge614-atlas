@@ -55,7 +55,7 @@ Cada etapa del pipeline reside en un archivo especializado dentro de `src/module
 - **Responsabilidad:** Escanear el directorio raíz del repositorio e identificar carpetas de primer nivel que califiquen como módulos de software.
 - **Criterio de Inclusión:** Una carpeta se considera módulo si contiene al menos un archivo con extensión `.ts`, `.tsx`, `.js` o `.jsx`.
 - **Exclusiones Rigurosas:** Omite de inmediato carpetas de artefactos de compilación y control de versiones:
-  `node_modules`, `.git`, `dist`, `build`, `coverage`, `.next`, `out`, `.forge614` y cualquier directorio que comience con punto (`.`).
+  `node_modules`, `.git`, `dist`, `build`, `coverage`, `.next`, `out`, `.forge614` (la carpeta de Forge614 del proyecto: identidad portátil `project.json`, escrita por Engram) y cualquier directorio que comience con punto (`.`).
 - **Función Auxiliar `isTestFile`:** Detecta archivos de prueba mediante la expresión regular `/\.(test|spec)\.[tj]sx?$/` para excluirlos de métricas de complejidad ciclomática y *fan-in*.
 
 ### 2.2 Complejidad Ciclomática (`cyclomatic.ts`)

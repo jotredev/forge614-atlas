@@ -55,7 +55,7 @@ Each pipeline stage is encapsulated in a dedicated module within `src/modules/sc
 - **Responsibility:** Scans the target repository root to identify top-level directories qualifying as distinct software modules.
 - **Inclusion Criteria:** A directory is classified as a module if it contains at least one source file ending in `.ts`, `.tsx`, `.js`, or `.jsx`.
 - **Strict Exclusions:** Immediately filters out build output artifacts, dependency trees, and VCS internal directories:
-  `node_modules`, `.git`, `dist`, `build`, `coverage`, `.next`, `out`, `.forge614`, and any directory beginning with a dot (`.`).
+  `node_modules`, `.git`, `dist`, `build`, `coverage`, `.next`, `out`, `.forge614` (the Forge614 project folder: portable identity `project.json`, written by Engram), and any directory beginning with a dot (`.`).
 - **`isTestFile` Helper:** Detects test files via `/\.(test|spec)\.[tj]sx?$/` so downstream complexity and fan-in stages can filter them out.
 
 ### 2.2 Cyclomatic Complexity (`cyclomatic.ts`)
