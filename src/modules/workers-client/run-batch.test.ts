@@ -1,3 +1,4 @@
+/** Comprueba eventos de éxito, pausa por cuota y rechazo de salida inválida al ejecutar un lote de Workers. */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync, chmodSync, rmSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
@@ -7,12 +8,18 @@ import { resolveWorkersBinaryPath } from "./binary-path";
 import { resolveEnginesBinaryPath } from "../engines-client/binary-path";
 import { resolveForgeHome } from "../forge-home/forge-home";
 
-// Requiere forge614-engines y forge614-workers instalados en sus rutas fijas del
-// ecosistema (confirmado presentes en esta máquina de desarrollo).
+// Las dos primeras pruebas necesitan Engines y Workers instalados en las rutas fijas del ecosistema.
+// La tercera sustituye solo Workers por un programa temporal que produce una línea inválida.
 const forgeHome = resolveForgeHome(process.env, homedir());
 const workersBinaryPath = resolveWorkersBinaryPath(process.platform, forgeHome);
 const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, forgeHome);
 
+/**
+ * Crea un programa temporal que imprime el texto recibido o simula una cuota agotada.
+ * @param dir Carpeta temporal donde se escribe el programa ejecutable.
+ * @returns Ruta del programa temporal creado.
+ * @throws Error del sistema de archivos si no se puede escribir o marcar ejecutable el programa.
+ */
 function writeFakeClaudeScript(dir: string): string {
   const scriptPath = join(dir, "fake-claude.sh");
   writeFileSync(
@@ -32,7 +39,9 @@ function writeFakeClaudeScript(dir: string): string {
   return scriptPath;
 }
 
+/** Comprueba cómo `runWorkersBatch` entrega eventos y códigos de salida en tres situaciones. */
 describe("runWorkersBatch", () => {
+  /** Comprueba salida 0, los tres eventos en orden y el texto producido para la tarea `auth`. */
   test("streams task_started/task_completed/run_completed for a successful task", async () => {
     const dir = mkdtempSync(join(tmpdir(), "atlas-run-batch-"));
     const fakeClaude = writeFakeClaudeScript(dir);
@@ -53,6 +62,7 @@ describe("runWorkersBatch", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  /** Comprueba salida 75, evento de cuota y ausencia de inicio de la segunda tarea `billing`. */
   test("stops the batch and reports quota_exhausted when the pattern matches", async () => {
     const dir = mkdtempSync(join(tmpdir(), "atlas-run-batch-quota-"));
     const fakeClaude = writeFakeClaudeScript(dir);
@@ -71,6 +81,7 @@ describe("runWorkersBatch", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  /** Comprueba que una línea que no es JSON rechace la promesa mediante `toThrow`. */
   test("rejects the promise instead of throwing when a stdout line is not valid JSON", async () => {
     const dir = mkdtempSync(join(tmpdir(), "atlas-run-batch-badjson-"));
     // Reemplaza el binario real de Workers por uno de mentiras que imprime una línea

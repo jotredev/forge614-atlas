@@ -1,3 +1,4 @@
+/** Comprueba apertura, reanudación y cierre de sesiones, más la detección de informes ya guardados. */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -6,6 +7,11 @@ import { MemoryWorkspace, WorkspaceConfig, saveProjectMemoryWithSession } from "
 import { startOrResumeSession, isModuleReportSaved } from "./run-state";
 import { moduleTopicKey } from "./module-topic";
 
+/**
+ * Crea una base temporal con sesiones habilitadas para cada escenario de estado.
+ * @param root Carpeta temporal donde se crea la base de memoria.
+ * @returns Base abierta que la prueba debe cerrar después de usarla.
+ */
 function freshStore(root: string) {
   const workspace = new MemoryWorkspace(new WorkspaceConfig(root));
   workspace.init();
@@ -14,7 +20,9 @@ function freshStore(root: string) {
   return store;
 }
 
+/** Comprueba los cuatro estados observables al abrir o reabrir sesiones de proyectos. */
 describe("startOrResumeSession", () => {
+  /** Comprueba que un proyecto nuevo quede activo y sin informe guardado para `auth`. */
   test("starts a fresh, active session for a repo never analyzed before", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-runstate-fresh-"));
     const repoDir = mkdtempSync(join(tmpdir(), "atlas-runstate-fresh-repo-"));
@@ -32,6 +40,7 @@ describe("startOrResumeSession", () => {
     rmSync(repoDir, { recursive: true, force: true });
   });
 
+  /** Comprueba que reabrir la sesión conserve el ID y vea el informe de `auth`, pero no el de `billing`. */
   test("resuming the same repo returns the same open session and sees previously saved modules", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-runstate-resume-"));
     const repoDir = mkdtempSync(join(tmpdir(), "atlas-runstate-resume-repo-"));
@@ -57,6 +66,7 @@ describe("startOrResumeSession", () => {
     rmSync(repoDir, { recursive: true, force: true });
   });
 
+  /** Comprueba que dos carpetas de proyecto distintas tengan sesiones activas con ID distintos. */
   test("two different repos never collide on the same sessionId", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-runstate-two-"));
     const repoA = mkdtempSync(join(tmpdir(), "atlas-runstate-two-a-"));
@@ -78,6 +88,7 @@ describe("startOrResumeSession", () => {
     rmSync(repoB, { recursive: true, force: true });
   });
 
+  /** Comprueba que cerrar la sesión haga devolver `already-complete` en la siguiente apertura. */
   test("a repo whose session was already closed reports already-complete", () => {
     const root = mkdtempSync(join(tmpdir(), "atlas-runstate-done-"));
     const repoDir = mkdtempSync(join(tmpdir(), "atlas-runstate-done-repo-"));
