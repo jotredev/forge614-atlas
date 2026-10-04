@@ -37,6 +37,8 @@ Esta propiedad matemática garantiza que Atlas escale de forma óptima tanto en 
 | **Estándar** | **~35%** medio | Servicios de dominio, endpoints CRUD con reglas de negocio, controladores y componentes con estado. | Sonnet 5 | `gpt-5.6-terra` | `medio` |
 | **Ligero** | **~50%** inferior | Declaraciones de tipos (`.d.ts`), configuraciones, constantes, componentes visuales pasivos, estilos. | Haiku 4.5 | `gpt-5.6-luna` | `bajo` |
 
+> Ambos motores reciben el nivel de razonamiento (Engines 1.16.0 o posterior). Engines acepta cinco niveles (`low`, `medium`, `high`, `xhigh`, `max`); Atlas usa solo dos, `low` y `medium`, por la Regla 1. Haiku 4.5 no tiene niveles: Claude Code lo ignora ahí sin error.
+
 ---
 
 ## 3. Algoritmo de Asignación (`tiers.ts`)

@@ -37,6 +37,8 @@ This mathematical design ensures that Atlas scales smoothly whether analyzing a 
 | **Standard (`estandar`)** | **~35%** middle | Domain services, stateful controllers, complex CRUD logic, data persistence adapters. | Sonnet 5 | `gpt-5.6-terra` | `medium` |
 | **Light (`ligero`)** | **~50%** bottom | Type declarations (`.d.ts`), configuration maps, constant barrels, passive UI views, static styles. | Haiku 4.5 | `gpt-5.6-luna` | `low` |
 
+> Both engines receive the reasoning level (Engines 1.16.0 or newer). Engines accepts five levels (`low`, `medium`, `high`, `xhigh`, `max`); Atlas uses only two of them, `low` and `medium`, because of Rule 1. Haiku 4.5 has no levels: Claude Code ignores the level on it without an error.
+
 ---
 
 ## 3. Tier Assignment Algorithm (`tiers.ts`)

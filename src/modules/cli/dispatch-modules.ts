@@ -8,6 +8,7 @@ import { runWorkersBatch, type WorkersTask, type WorkersEvent } from "../workers
 import { recordModuleReport } from "../memory/module-report";
 import { readPauseCount, recordPause } from "../memory/pause-count";
 import { finalizeRun } from "../memory/finalize-run";
+import { READ_ONLY_UNSUPPORTED_PREFIX } from "./requirements";
 
 type Tier = "ligero" | "estandar" | "profundo";
 type ReportTier = "deep" | "standard" | "light";
@@ -20,11 +21,27 @@ const TIER_TO_REPORT_TIER: Record<Tier, ReportTier> = {
 
 const TIER_DISPATCH_ORDER: Tier[] = ["profundo", "estandar", "ligero"];
 
+/** Resultado de mandar el lote de módulos a Workers. */
 export type DispatchResult =
   | { status: "completed"; report: FinalReport }
   | { status: "paused"; analyzedCount: number; pendingCount: number }
-  | { status: "fatal_error"; message: string };
+  | { status: "fatal_error"; message: string }
+  // Segunda defensa: Workers se negó a correr tareas por falta de candado de solo lectura. No es un
+  // módulo omitido: el análisis no se hizo y la sesión se deja abierta.
+  | { status: "read_only_unsupported" };
 
+/**
+ * Manda a Workers un lote con una tarea por módulo y guarda en Engram el reporte de cada una.
+ * Todas las tareas llevan `readOnly: true`, siempre, sin opción de apagarlo.
+ * @param store Memoria de Engram.
+ * @param directory Carpeta del proyecto analizado.
+ * @param session Sesión de Engram de esta corrida.
+ * @param workersBinaryPath Ruta del binario de Workers.
+ * @param enginesBinaryPath Ruta del binario de Engines, que Workers usa para armar cada comando.
+ * @param engine Motor elegido.
+ * @param capabilities Capacidades de ese motor (decide si se manda nivel de razonamiento).
+ * @param modules Módulos pendientes con su nivel.
+ */
 export async function dispatchModules(
   store: MemoryStore,
   directory: string,
@@ -48,6 +65,7 @@ export async function dispatchModules(
       executable: engine.executable,
       prompt: buildAnalysisPrompt(module.name, filesByModule.get(module.name) ?? []),
       readableDir: directory,
+      readOnly: true,
       model: config.model,
       ...(config.reasoningLevel ? { reasoningLevel: config.reasoningLevel } : {}),
     };
@@ -58,6 +76,7 @@ export async function dispatchModules(
   const skippedModuleNames: string[] = [];
   let quotaExhausted = false;
   let fatalErrorMessage: string | undefined;
+  let readOnlyRejected = false;
   let runCompletedEvent: Extract<WorkersEvent, { event: "run_completed" }> | undefined;
 
   const onEvent = (event: WorkersEvent) => {
@@ -69,7 +88,11 @@ export async function dispatchModules(
         analyzedModuleNames.push(event.taskId);
       }
     } else if (event.event === "task_failed") {
-      skippedModuleNames.push(event.taskId);
+      if (typeof event.stderr === "string" && event.stderr.startsWith(READ_ONLY_UNSUPPORTED_PREFIX)) {
+        readOnlyRejected = true;
+      } else {
+        skippedModuleNames.push(event.taskId);
+      }
     } else if (event.event === "quota_exhausted") {
       quotaExhausted = true;
     } else if (event.event === "fatal_error") {
@@ -84,6 +107,11 @@ export async function dispatchModules(
   if (fatalErrorMessage) {
     return { status: "fatal_error", message: fatalErrorMessage };
   }
+
+  if (readOnlyRejected) {
+    return { status: "read_only_unsupported" };
+  }
+
 
   if (quotaExhausted) {
     recordPause(store, directory, session);

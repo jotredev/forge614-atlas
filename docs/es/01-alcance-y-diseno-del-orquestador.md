@@ -99,6 +99,8 @@ La asignación de modelos y razonamiento sigue una matriz estricta según el niv
 | **Estándar (~35% medio)** | Sonnet 5 | `gpt-5.6-terra` | `medio` (*medium*) |
 | **Profundo (~15% superior)** | Opus 5 | `gpt-5.6-sol` | `medio` (*medium*) |
 
+> Ambos motores reciben el nivel de razonamiento (Engines 1.16.0 o posterior). Engines acepta cinco niveles (`low`, `medium`, `high`, `xhigh`, `max`); Atlas usa solo dos, `low` y `medium`, por la Regla 1. Haiku 4.5 no tiene niveles: Claude Code lo ignora ahí sin error.
+
 ### Regla 3: Concurrencia estricta de 3 mandaderos
 Atlas mantiene un máximo inmutable de **3 subagentes concurrentes** en ejecución simultánea. Esta cota no altera el volumen total de tokens consumidos, pero previene saturar abruptamente los límites de tasa (*rate limits*) y ventanas de cuota por hora de las suscripciones de los usuarios.
 
