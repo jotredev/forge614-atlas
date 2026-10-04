@@ -1,14 +1,23 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 
+/** Niveles de razonamiento que Forge614 Workers acepta (Engines valida cuáles admite cada agente). */
+export type WorkersReasoningLevel = "low" | "medium" | "high" | "xhigh" | "max";
+
+/** Una tarea del lote que Atlas le manda a Forge614 Workers. */
 export interface WorkersTask {
   id: string;
   agentId: string;
   executable: string;
   prompt: string;
   readableDir?: string;
+  /**
+   * Si es `true`, Workers pide a Engines el candado de solo lectura y se niega a correr la tarea
+   * (`READ_ONLY_UNSUPPORTED`) si Engines no lo garantiza. Atlas lo manda siempre en `true`.
+   */
+  readOnly?: boolean;
   model?: string;
-  reasoningLevel?: "low" | "medium" | "high";
+  reasoningLevel?: WorkersReasoningLevel;
   timeoutMs?: number;
 }
 

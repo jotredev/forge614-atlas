@@ -44,7 +44,17 @@ Dispatch happens through a separate, dedicated node of the Forge614 ecosystem: *
 }
 ```
 
-Two new error codes join the existing `ENGINES_UNREACHABLE`/`ANALYSIS_FAILED`: `WORKERS_UNREACHABLE` (the `forge614-workers` binary is missing or not executable — checked before dispatch even starts) and `WORKERS_FATAL_ERROR` (the whole batch could not run at all — malformed input or an unreachable `forge614-engines` binary from Workers' own perspective).
+Error codes join the existing `ENGINES_UNREACHABLE`/`ANALYSIS_FAILED`: `WORKERS_UNREACHABLE` (the `forge614-workers` binary is missing or not executable), `WORKERS_FATAL_ERROR` (the whole batch could not run at all — malformed input or an unreachable `forge614-engines` binary from Workers' own perspective), and the two read-only codes described next, `READ_ONLY_UNSUPPORTED` and `WORKERS_OUTDATED`.
+
+**Every helper is read-only, always.** Each task Atlas sends carries `readOnly: true`; there is no option to turn it off. `forge614-workers` then asks `forge614-engines` for the lock and refuses to run the task if Engines cannot guarantee it. In plain words, Engines puts the lock on like this: Claude Code gets only the three reading tools (`Read`, `Grep`, `Glob`), no permission prompts it could never answer, and none of the user's MCP servers, so it cannot write a file or save anything into Engram; Codex runs in its read-only sandbox, asked for explicitly, without the user's own configuration.
+
+**The requirements are checked at the start, before Engram is touched.** Right after the engine is chosen — and before any session is opened or resumed — `init` checks three things, in this order, and stops with a JSON error if one fails:
+
+1. `READ_ONLY_UNSUPPORTED` — `capabilities --agent <id>` does not say `supportsReadOnly: true` (a missing field counts as `false`). Engines 1.17.0 or newer is required; the message ends with `Update it with: forge614-engines update`.
+2. `WORKERS_UNREACHABLE` — the `forge614-workers` binary is missing or not executable.
+3. `WORKERS_OUTDATED` — `forge614-workers --version` (no input, 10-second limit) does not print exactly `forge614-workers X.Y.Z` with X.Y.Z at least 1.0.0, exits with a non-zero code, or does not finish in time. The check matters because a Workers older than 1.0.0 silently ignores `readOnly` and the helper would run without the lock. The message names the version found (`unknown` when it could not be read) and the installer to run.
+
+**A second line of defense.** If, even so, Workers rejects tasks with `task_failed` whose `stderr` starts with `READ_ONLY_UNSUPPORTED` (Workers ran nothing for those tasks), Atlas does not count those modules as skipped: it lets the batch finish and ends with the same `READ_ONLY_UNSUPPORTED` error, leaving the Engram session open. Otherwise the run would look "completed" with zero modules analyzed and no reason.
 
 `tokensConsumed` is deliberately always `0` today: `forge614-workers` never interprets the content of an engine's response (that boundary was chosen on purpose, see the Workers design spec), so Atlas has no real number to report yet.
 
@@ -62,16 +72,16 @@ For each module, Atlas looks up the fixed table (model per tier and engine):
 | Estándar | `claude-sonnet-5` | `gpt-5.6-terra` |
 | Profundo | `claude-opus-5` | `gpt-5.6-sol` |
 
-Before including a reasoning level in a task, Atlas checks `forge614-engines`' `capabilities --agent <id>` for the real `supportsReasoningLevel: boolean` field (added in Engines v1.11.0). Today Claude Code reports `false` and Codex reports `true` — Atlas simply never asks Claude Code for a reasoning level; it never gets the chance to reject it.
+Before including a reasoning level in a task, Atlas checks `forge614-engines`' `capabilities --agent <id>` for the real `supportsReasoningLevel: boolean` field. Since Engines 1.16.0 both Claude Code (through `--effort`) and Codex report `true`, so both engines receive the level: Engines accepts five (`low`, `medium`, `high`, `xhigh`, `max`) and Atlas uses only two of them, `low` and `medium`, because of Rule 1. Haiku 4.5 has no levels: Claude Code ignores the level there without an error, so the `ligero` tier on Claude Code sends `low` with no real effect. The check stays as a defense — if an engine ever reports `false`, Atlas sends the model alone.
 
 ## Reading the real project files: `readableDir`
 
-`forge614-workers` runs every task in an isolated, empty scratch directory — it never runs *from* the real project, so no accidental config/memory bleed happens between modules or between different projects. But the AI still needs to read the actual code. Every task Atlas builds carries `readableDir` pointing at the project's root, which `forge614-engines`' `headless` command turns into `--add-dir <path>` (Claude Code) or `--add-dir <path>` (Codex, kept at its default `read-only` sandbox).
+`forge614-workers` runs every task in an isolated, empty scratch directory — it never runs *from* the real project, so no accidental config/memory bleed happens between modules or between different projects. But the AI still needs to read the actual code. Every task Atlas builds carries `readableDir` pointing at the project's root, which `forge614-engines`' `headless` command turns into `--add-dir <path>` (Claude Code and Codex). `readableDir` only grants access to the folder — it does not stop writing; that is the job of the `readOnly: true` lock every task also carries (see above).
 
 This was verified with real, live tests, not assumed:
 
 - **Claude Code:** confirmed that `--add-dir` grants read access to the real files without ever loading that project's own `CLAUDE.md` — only the user's own global `CLAUDE.md` loads, which is expected (it's the person's identity, not the project's).
-- **Codex:** confirmed the same read access works, and confirmed a real, accepted limitation — Codex *can* read and be influenced by the analyzed project's own `AGENTS.md` if it decides to explore the directory on its own initiative (there is no Codex equivalent to Claude Code's per-tool `--allowedTools` restriction). The risk is low: Codex's sandbox stays `read-only`, so nothing can be written or damaged, only the tone/context of that one analysis could be nudged.
+- **Codex:** confirmed the same read access works, and confirmed a real, accepted limitation — Codex *can* read and be influenced by the analyzed project's own `AGENTS.md` if it decides to explore the directory on its own initiative. The risk is low: with `readOnly: true` Engines asks for Codex's `read-only` sandbox explicitly, so nothing can be written or damaged, only the tone/context of that one analysis could be nudged.
 
 The analysis prompt always asks for a narrative summary — never "the raw content" — because Claude Code can reject a prompt that reads like a data-exfiltration pattern (confirmed live during this plan's own testing).
 
@@ -80,7 +90,7 @@ The analysis prompt always asks for a narrative summary — never "the raw conte
 Atlas sends `forge614-workers` **one single batch** per `init` run — never one invocation per module — with the full ordered task list over `stdin`. It then reads NDJSON events from `stdout` as they arrive:
 
 - `task_completed` → the module's report is saved to Engram **immediately** (`recordModuleReport`), never accumulated until the end. If the reported output was truncated (`stdoutTruncated: true`, meaning it hit the byte cap), the module is treated as skipped instead of saved, so the next `init`/resume retries it rather than permanently keeping a cut-off analysis.
-- `task_failed` → the module is recorded as skipped; dispatch continues with the rest.
+- `task_failed` → the module is recorded as skipped; dispatch continues with the rest. The one exception is a `stderr` that starts with `READ_ONLY_UNSUPPORTED` (the second line of defense above): that ends the run with that error instead.
 - `quota_exhausted` → dispatch stops immediately. The Engram session is deliberately **left open** — that open state *is* the "this run is incomplete" signal for the next `init`, which resumes automatically (same mechanism Plan 2 already built). A running pause counter, itself stored in Engram (`atlas:meta:pause-count`), is incremented so the eventual closing report's `pauseCount` reflects the project's whole lifetime, not just the final run.
 - `fatal_error` → the whole batch never produced anything usable; mapped to `WORKERS_FATAL_ERROR`.
 - `run_completed` → carries the aggregate timing used for `totalTimeMs`.

@@ -99,6 +99,8 @@ Model selection is tied directly to the module's assigned complexity tier:
 | **Standard (~middle 35%)** | Sonnet 5 | `gpt-5.6-terra` | `medium` |
 | **Deep (~top 15%)** | Opus 5 | `gpt-5.6-sol` | `medium` |
 
+> Both engines receive the reasoning level (Engines 1.16.0 or newer). Engines accepts five levels (`low`, `medium`, `high`, `xhigh`, `max`); Atlas uses only two of them, `low` and `medium`, because of Rule 1. Haiku 4.5 has no levels: Claude Code ignores the level on it without an error.
+
 ### Rule 3: Strict 3-Worker Concurrency Limit
 Atlas enforces an immutable concurrency ceiling of **3 simultaneous subagents**. While this does not alter total token consumption, it prevents triggering harsh API rate limits or rapidly burning through hourly subscription quotas on large repositories.
 

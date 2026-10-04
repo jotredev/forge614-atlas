@@ -53,18 +53,18 @@ instalados. Atlas solo consume esos dos contratos.
   - Ligero: Haiku 4.5 / `gpt-5.6-luna` — razonamiento bajo
   - Estándar: Sonnet 5 / `gpt-5.6-terra` — razonamiento medio
   - Profundo: Opus 5 / `gpt-5.6-sol` — razonamiento medio (nunca alto)
-  - **Límite real confirmado en `forge614-engines`:** el flag
-    `--reasoning-level` del comando `headless` solo lo soporta Codex
-    (`-c model_reasoning_effort=<level>`). Con Claude Code, pedirlo
-    lanza `REASONING_LEVEL_UNSUPPORTED` — ese motor solo permite elegir
-    `--model`, el nivel de razonamiento queda en el default del modelo.
-    **Resuelto e implementado en el Plan 4:** `forge614-engines` v1.11.0
-    expone `supportsReasoningLevel: boolean` en `capabilities`/`agents
-    list` (hoy `false` para `claude-code`, `true` para `codex`); Atlas
-    consulta ese campo antes de armar cada tarea (`resolveTaskConfig`,
-    `src/modules/cli/task-config.ts`) y nunca incluye `reasoningLevel` si
-    el motor no lo soporta — se evita desde antes de construir la tarea,
-    Workers nunca necesita rechazarla.
+  - **Nivel de razonamiento en ambos motores:** desde `forge614-engines`
+    v1.16.0, `--reasoning-level` del comando `headless` lo aceptan Claude
+    Code (con `--effort <nivel>`) y Codex (`-c model_reasoning_effort=<nivel>`),
+    con 5 niveles (`low`, `medium`, `high`, `xhigh`, `max`); Atlas usa
+    solo `low` y `medium` por la Regla 1. Haiku 4.5 no tiene niveles:
+    Claude Code lo ignora sin error. `supportsReasoningLevel: boolean`
+    (en `capabilities`/`agents list`, desde v1.11.0) hoy es `true` para
+    `claude-code` y para `codex`; Atlas conserva la consulta como regla
+    de defensa antes de armar cada tarea (`resolveTaskConfig`,
+    `src/modules/cli/task-config.ts`) y no incluye `reasoningLevel` si el
+    motor dijera `false` — se evita desde antes de construir la tarea.
+    La tabla ejecutable de modelos vive en `MODEL_TABLE` de ese archivo.
 - División del trabajo: por carpeta/módulo del propio proyecto, no por
   tamaño fijo.
 - Niveles por percentil dentro del proyecto (no fijos): Ligero ~50%,
@@ -170,16 +170,22 @@ configuración por su cuenta. Shell y Atlas lo consumen. Comandos CLI
 relevantes: `detect`, `agents list` (registro completo de agentes que
 soporta el código, sin importar si están instalados — usado por Workers
 para su test de "registro completo" de adapters), `capabilities --agent
-<id>` (incluye `supportsReasoningLevel: boolean` desde v1.11.0), y
+<id>` (incluye `supportsReasoningLevel: boolean` desde v1.11.0 y
+`supportsReadOnly: boolean` desde v1.17.0), y
 `headless --agent <id> --executable <ruta> --prompt <texto>
 [--timeout-ms] [--model <model-id>] [--reasoning-level
-<low|medium|high>] [--stdin-prompt] [--readable-dir <ruta>]` — los
-últimos dos flags dan acceso de lectura a una carpeta real del proyecto
-sin romper el aislamiento (`--stdin-prompt` evita que el prompt quede
-visible en `ps`; `--readable-dir` confirmado con pruebas reales que no
-carga el `CLAUDE.md`/`AGENTS.md` del proyecto analizado con Claude Code,
-aunque con Codex sí existe una limitación aceptada de bajo riesgo: puede
-leerlo si explora la carpeta por su cuenta, sin poder escribir nada).
+<low|medium|high|xhigh|max>] [--read-only] [--stdin-prompt]
+[--readable-dir <ruta>]` — `--stdin-prompt` y `--readable-dir` dan
+acceso de lectura a una carpeta real del proyecto sin romper el
+aislamiento (`--stdin-prompt` evita que el prompt quede visible en `ps`;
+`--readable-dir` confirmado con pruebas reales que no carga el
+`CLAUDE.md`/`AGENTS.md` del proyecto analizado con Claude Code, aunque
+con Codex sí existe una limitación aceptada de bajo riesgo: puede leerlo
+si explora la carpeta por su cuenta). `--read-only` es el candado de solo
+lectura (Claude Code: solo `Read`, `Grep` y `Glob`, sin MCP; Codex:
+sandbox `read-only`); Atlas lo pide siempre a través de Workers con
+`readOnly: true` en cada tarea y comprueba `supportsReadOnly` antes de
+abrir Engram.
 
 ### Dependencia: forge614-workers
 

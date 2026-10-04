@@ -8,8 +8,9 @@ function agent(id: string, installed: boolean, executable?: string): AgentDetect
 }
 
 function capabilities(id: string, supportsHeadlessExec: boolean): Capabilities {
-  const supportsReasoningLevel = id === "codex";
-  return { id, label: id, supportsMcp: true, supportsHooks: true, supportsHeadlessExec, supportsReasoningLevel };
+  // Engines 1.16.0+ acepta nivel de razonamiento en claude-code y en codex.
+  const supportsReasoningLevel = id === "claude-code" || id === "codex";
+  return { id, label: id, supportsMcp: true, supportsHooks: true, supportsHeadlessExec, supportsReasoningLevel, supportsReadOnly: true };
 }
 
 describe("resolveEngine", () => {

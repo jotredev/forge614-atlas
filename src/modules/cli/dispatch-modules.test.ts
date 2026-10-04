@@ -14,7 +14,7 @@ import { deriveSessionId } from "../memory/session-id";
 const forgeHome = resolveForgeHome(process.env, homedir());
 const workersBinaryPath = resolveWorkersBinaryPath(process.platform, forgeHome);
 const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, forgeHome);
-const capabilities = { id: "claude-code", label: "Claude Code", supportsMcp: true, supportsHooks: true, supportsHeadlessExec: true, supportsReasoningLevel: false };
+const capabilities = { id: "claude-code", label: "Claude Code", supportsMcp: true, supportsHooks: true, supportsHeadlessExec: true, supportsReasoningLevel: false, supportsReadOnly: true };
 
 function writeFakeClaudeScript(dir: string, name: string, behavior: string): string {
   const scriptPath = join(dir, name);
