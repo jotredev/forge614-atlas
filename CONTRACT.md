@@ -48,7 +48,7 @@ El instalador de Atlas asegura Engram, Workers y Engines antes de crear nada de 
 | `INVALID_FORGE614_HOME` | `FORGE614_HOME` está definida pero vacía, es relativa o contiene un carácter nulo; lo responden `init`, `update` y `uninstall` antes de hacer cualquier otra cosa |
 | `ENGINES_UNREACHABLE` | El binario de Engines no responde o su respuesta falló |
 | `ANALYSIS_FAILED` | No se pudo puntuar el proyecto (por ejemplo, sin Git o sin commits) |
-| `READ_ONLY_UNSUPPORTED` | Engines no garantiza ayudantes de solo lectura (anterior a 1.17.0 o `supportsReadOnly` distinto de `true`), o Workers se negó a correr las tareas por la misma razón |
+| `READ_ONLY_UNSUPPORTED` | Engines no declara `supportsReadOnly: true` para el motor elegido (un Engines anterior a 1.17.0 no trae ese campo y cuenta como no declarado), o Workers se negó a correr las tareas por la misma razón |
 | `WORKERS_UNREACHABLE` | El binario de Workers no existe o no es ejecutable |
 | `WORKERS_OUTDATED` | Workers es anterior a 1.0.0 o `--version` no responde `forge614-workers X.Y.Z` |
 | `WORKERS_FATAL_ERROR` | Workers no pudo correr el lote |

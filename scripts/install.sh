@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Instalador de Forge614 Atlas: baja de GitHub el binario de una release publicada, verifica su huella SHA-256
 # (código que identifica el contenido de un archivo), instala o actualiza Engram y Workers cuando faltan o son más
-# viejos, solo comprueba Engines (si no sirve, termina con `fail`; lo dejan bien el instalador de Engram o el de
-# Workers solo si corrieron en esa misma ejecución), copia el binario a la carpeta elegida y, si puede, la agrega al
+# viejos, solo comprueba Engines (si no sirve, termina con `fail`; el instalador de Workers lo instala o actualiza si
+# corre en esa misma ejecución, y el de Engram solo lo instala si falta), copia el binario a la carpeta elegida y, si
+# puede, la agrega al
 # PATH (la lista de carpetas donde la terminal busca programas). Los errores previstos terminan con `fail` (código 1);
 # si una dependencia no se puede cumplir, no se instala nada de Atlas.
 # Uso: bash scripts/install.sh [--version TAG] [--bin-dir PATH] [--force]; `--help` lo detalla.

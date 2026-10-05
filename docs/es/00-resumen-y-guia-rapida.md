@@ -155,3 +155,5 @@ La documentación del proyecto sigue una indexación secuencial estricta de dos 
 | **08** | [Núcleo del CLI y plan de corrida JSON](08-nucleo-cli-y-plan-de-corrida.md) | [CLI Core and JSON Run Plan](../en/08-cli-core-and-run-plan.md) | Contrato de `init`, Engines, Engram, resultados JSON y límites. |
 | **09** | [Despacho Real de Subagentes](09-despacho-de-subagentes.md) | [Real Subagent Dispatch](../en/09-subagent-dispatch.md) | Despacho real vía `forge614-workers`, orden de niveles, `readableDir`, reporte final. |
 | **10** | [Instalador Público y Pipeline de Release](10-instalador-y-release.md) | [Public Installer and Release Pipeline](../en/10-installer-and-release.md) | `curl \| bash`, encadenado de Engram, workflow de release de 4 jobs, riesgo aceptado. |
+| **11** | [Resolución de Errores](11-resolucion-de-errores.md) | [Troubleshooting](../en/11-troubleshooting.md) | Qué ve la persona, por qué pasa y qué hacer con cada código de error y cada estado de `init`. |
+| **12** | [Glosario](12-glosario.md) | [Glossary](../en/12-glossary.md) | Términos propios de Atlas y el capítulo que explica cada uno. |
