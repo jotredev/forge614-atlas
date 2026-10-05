@@ -52,8 +52,8 @@ flowchart TD
 Each pipeline stage is encapsulated in a dedicated module within `src/modules/scoring/`, accompanied by its colocated test suite:
 
 ### 2.1 Module Discovery (`discovery.ts`)
-- **Responsibility:** Scans the target repository root to identify top-level directories qualifying as distinct software modules.
-- **Inclusion Criteria:** A directory is classified as a module if it contains at least one source file ending in `.ts`, `.tsx`, `.js`, or `.jsx`.
+- **Responsibility:** Walks every subfolder of the repository, starting at its root, and identifies which ones qualify as software modules (mixed folders are split; see [chapter 08](08-cli-core-and-run-plan.md), “Resolved limit”).
+- **Inclusion Criteria:** A folder with no subfolders is a module if it contains at least one source file ending in `.ts`, `.tsx`, `.js`, or `.jsx`. A folder that only has subfolders is not a module and the walk goes further down; a folder with loose code files and also subfolders (mixed) gives one module with its loose files plus one per subfolder. The module's name is its path relative to the root (for example `src/auth`), and files that sit directly in the root do not form a module.
 - **Strict Exclusions:** Immediately filters out build output artifacts, dependency trees, and VCS internal directories:
   `node_modules`, `.git`, `dist`, `build`, `coverage`, `.next`, `out`, `.forge614` (the Forge614 project folder: portable identity `project.json`, written by Engram), and any directory beginning with a dot (`.`).
 - **`isTestFile` Helper:** Detects test files via `/\.(test|spec)\.[tj]sx?$/` so downstream complexity and fan-in stages can filter them out.

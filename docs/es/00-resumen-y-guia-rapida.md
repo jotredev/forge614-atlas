@@ -89,12 +89,12 @@ bun test
 
 **Salida esperada:**
 ```text
-bun test v1.3.8
+bun test v1.4.2
 ...
- 26 pass
+ 194 pass
  0 fail
- 46 expect() calls
-Ran 26 tests across 8 files. [~285ms]
+ 589 expect() calls
+Ran 194 tests across 36 files. [~135s]
 ```
 
 ### Paso 4: Validar la integridad de tipos (Typecheck estricto)
