@@ -51,7 +51,7 @@ The amount of analysis a module receives: `profundo` (about the top 15 %, at lea
 
 ## Run plan
 
-The list of pending modules with their tier that `init` builds before dispatching (`{ "modules": [{ "name": "auth", "tier": "profundo" }] }`). When resuming a session it leaves out the modules that already have a report. Explained in [chapter 08](08-cli-core-and-run-plan.md).
+The list of pending modules with their tier that `init` builds before dispatching (`{ "modules": [{ "name": "auth", "tier": "profundo" }] }`; the internal result of `buildRunPlan` also carries `resumed`, which says whether the run continues an earlier one). When resuming a session it leaves out the modules that already have a report. Explained in [chapter 08](08-cli-core-and-run-plan.md).
 
 ## Engine
 
@@ -85,6 +85,18 @@ The record in Engram of an `init` run over a project. While it is open, the next
 
 A session left open because the AI subscription quota ran out (`init` answers `paused`). What was already analyzed stays saved and a pause counter in Engram (`atlas:meta:pause-count`) goes up by one; the next `init` continues where it stopped. Explained in [chapter 09](09-subagent-dispatch.md) and [chapter 11](11-troubleshooting.md).
 
+## Engram
+
+The shared memory of Forge614: it keeps, on the person's computer, Atlas's sessions and module reports. Atlas carries the Engram library inside its binary, which is why `init` opens its database before analyzing. Explained in [chapter 08](08-cli-core-and-run-plan.md) and [chapter 09](09-subagent-dispatch.md).
+
+## Engines
+
+Forge614 Engines: the program that tells Atlas which AI assistants are installed (`detect`) and what each one can do (`capabilities`), and that builds the commands Workers runs. Atlas looks for it at `<FORGE614_HOME>/engines/bin/forge614-engines`. Explained in [chapter 08](08-cli-core-and-run-plan.md).
+
+## Workers
+
+Forge614 Workers: the program that receives Atlas's batch of tasks, runs them one after another with the chosen engine and returns one event per result. Atlas looks for it at `<FORGE614_HOME>/workers/bin/forge614-workers` and requires version 1.0.0 or newer. Explained in [chapter 09](09-subagent-dispatch.md).
+
 ## `FORGE614_HOME`
 
 The environment variable that says where the Forge614 products live; when it is not set, `~/.forge614` is used. Atlas installs into `<FORGE614_HOME>/atlas` and looks for Engines in `<FORGE614_HOME>/engines/bin` and Workers in `<FORGE614_HOME>/workers/bin`; an empty or relative value is the `INVALID_FORGE614_HOME` error. Explained in [chapter 08](08-cli-core-and-run-plan.md) and [chapter 10](10-installer-and-release.md).
@@ -95,7 +107,7 @@ The lines the installer adds to the terminal profile (`~/.zshrc`, `~/.bashrc`, `
 
 ## Error envelope
 
-The fixed shape of every Atlas error answer: `{ "schemaVersion": 1, "status": "error", "error": { "code": "…", "message": "…" } }`. The `code` is stable and is what a program should read. Explained in [chapter 08](08-cli-core-and-run-plan.md) and [chapter 11](11-troubleshooting.md).
+The fixed shape of Atlas's error answers (`UNKNOWN_COMMAND` carries `argv` instead of `message`): `{ "schemaVersion": 1, "status": "error", "error": { "code": "…", "message": "…" } }`. The `code` is stable and is what a program should read. Explained in [chapter 08](08-cli-core-and-run-plan.md) and [chapter 11](11-troubleshooting.md).
 
 ## `schemaVersion`
 

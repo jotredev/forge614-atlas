@@ -51,7 +51,7 @@ La cantidad de análisis que recibe un módulo: `profundo` (cerca del 15 % de ar
 
 ## Plan de corrida
 
-La lista de módulos pendientes con su nivel que arma `init` antes de despachar (`{ "modules": [{ "name": "auth", "tier": "profundo" }] }`). Al retomar una sesión deja fuera los módulos que ya tienen reporte. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md).
+La lista de módulos pendientes con su nivel que arma `init` antes de despachar (`{ "modules": [{ "name": "auth", "tier": "profundo" }] }`; el resultado interno de `buildRunPlan` lleva además `resumed`, que dice si la corrida continúa una anterior). Al retomar una sesión deja fuera los módulos que ya tienen reporte. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md).
 
 ## Motor (engine)
 
@@ -85,6 +85,18 @@ El registro en Engram de una corrida de `init` sobre un proyecto. Mientras está
 
 Una sesión que quedó abierta porque se agotó la cuota de la suscripción de IA (`init` responde `paused`). Lo ya analizado queda guardado y un contador de pausas en Engram (`atlas:meta:pause-count`) suma uno; el siguiente `init` sigue donde se quedó. Se explica en el [capítulo 09](09-despacho-de-subagentes.md) y en el [capítulo 11](11-resolucion-de-errores.md).
 
+## Engram
+
+La memoria compartida de Forge614: guarda en la computadora de la persona las sesiones y los reportes de módulo de Atlas. Atlas lleva la librería de Engram dentro de su binario, por eso `init` abre su base antes de analizar. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y en el [capítulo 09](09-despacho-de-subagentes.md).
+
+## Engines
+
+Forge614 Engines: el programa que le dice a Atlas qué asistentes de IA hay instalados (`detect`) y qué sabe hacer cada uno (`capabilities`), y que arma los comandos que Workers corre. Atlas lo busca en `<FORGE614_HOME>/engines/bin/forge614-engines`. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md).
+
+## Workers
+
+Forge614 Workers: el programa que recibe el lote de tareas de Atlas, las corre una tras otra con el motor elegido y devuelve un evento por cada resultado. Atlas lo busca en `<FORGE614_HOME>/workers/bin/forge614-workers` y exige la versión 1.0.0 o posterior. Se explica en el [capítulo 09](09-despacho-de-subagentes.md).
+
 ## `FORGE614_HOME`
 
 La variable de entorno que dice dónde viven los productos Forge614; si no está definida se usa `~/.forge614`. Atlas se instala en `<FORGE614_HOME>/atlas` y busca Engines en `<FORGE614_HOME>/engines/bin` y Workers en `<FORGE614_HOME>/workers/bin`; un valor vacío o relativo es el error `INVALID_FORGE614_HOME`. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y en el [capítulo 10](10-instalador-y-release.md).
@@ -95,7 +107,7 @@ Las líneas que el instalador agrega al perfil de la terminal (`~/.zshrc`, `~/.b
 
 ## Sobre de error
 
-La forma fija de toda respuesta de error de Atlas: `{ "schemaVersion": 1, "status": "error", "error": { "code": "…", "message": "…" } }`. El `code` es estable y es lo que un programa debe leer. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y en el [capítulo 11](11-resolucion-de-errores.md).
+La forma fija de las respuestas de error de Atlas (`UNKNOWN_COMMAND` lleva `argv` en vez de `message`): `{ "schemaVersion": 1, "status": "error", "error": { "code": "…", "message": "…" } }`. El `code` es estable y es lo que un programa debe leer. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y en el [capítulo 11](11-resolucion-de-errores.md).
 
 ## `schemaVersion`
 
