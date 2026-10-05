@@ -166,7 +166,8 @@ instalados. Atlas solo consume esos dos contratos.
 | 3 | Núcleo del CLI (`init`/`resume`, clasificación de módulos) — el selector de motor ya no lo dibuja Atlas, lo presenta Shell | ✅ Completo, fusionado a main | `docs/superpowers/plans/2026-09-20-atlas-cli-core.md` |
 | 4 | Despacho de subagentes (headless, cuota agotada, reporte final) vía `forge614-workers` | ✅ Completo, fusionado a main | `docs/superpowers/plans/2026-09-21-atlas-subagent-dispatch.md` |
 | 5 | Instalador (`curl \| bash`; el instalador NUNCA registra MCP) | ✅ Completo, fusionado a main (release `v1.0.0` publicado) | `docs/superpowers/plans/2026-09-22-atlas-installer.md` |
-| 6 | Atlas 1.1.0: ayudantes siempre de solo lectura con comprobación al iniciar, reporte rechazado por Engram sin tumbar el lote, `FORGE614_HOME`, `--help`, `update`, `uninstall`, instalador que trae Workers y comprueba Engram y Engines, Engram 1.8.7 dentro y grupo forge614 | ✅ Código, manuales, CI y contrato completos en la rama `work/1.1.0`; falta publicar (push, PR y etiqueta `v1.1.0`) | (actas del orquestador: `A-r1` y `A-r2`) |
+| 6 | Atlas 1.1.0: ayudantes siempre de solo lectura con comprobación al iniciar, reporte rechazado por Engram sin tumbar el lote, `FORGE614_HOME`, `--help`, `update`, `uninstall`, instalador que trae Workers y comprueba Engram y Engines, Engram 1.8.7 dentro y grupo forge614 | ✅ Publicada (etiqueta `v1.1.0`) | (actas del orquestador: `A-r1` y `A-r2`) |
+| 7 | Atlas 1.1.1: código, pruebas y manuales documentados en español (capítulos 11, 12 y 13 nuevos; 06 y 07 al día), corrección de la carpeta mixta en churn y fan-in y mensaje del instalador cuando Forge614 Engines ya es compatible | ✅ Completa en la rama `work/1.1.1`; se publica con la etiqueta `v1.1.1` | (actas del orquestador: `JD-A1` a `JD-A10`) |
 
 ### Dependencia: forge614-engines
 
@@ -304,8 +305,9 @@ guardaron las direcciones del capítulo 10.
 
 En la rama `work/1.1.1` va la versión 1.1.1, aún sin publicar: el código
 y las pruebas documentados en español, los manuales nuevos (capítulos 11,
-resolución de errores; 12, glosario; y 13, archivos de datos) y el
-mensaje del instalador «Forge614 Engines is compatible».
+resolución de errores; 12, glosario; y 13, archivos de datos), los
+capítulos 06 y 07 al día, la corrección de la carpeta mixta en churn y
+fan-in y el mensaje del instalador «Forge614 Engines is compatible».
 
 No queda ningún plan sin empezar en el roadmap original de Atlas.
 Trabajo futuro más allá de este roadmap (si lo hay) requiere una nueva
