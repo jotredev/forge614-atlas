@@ -149,4 +149,54 @@ describe("computeChurn", () => {
 
     rmSync(root, { recursive: true, force: true });
   });
+
+  /**
+   * Comprueba que con una carpeta mixta (`src` con las subcarpetas `src/auth` y `src/billing`) cada archivo cambiado se
+   * cuente en el módulo más específico: `src` = 1, `src/auth` = 2, `src/billing` = 1.
+   * Importa porque `discoverModules` entrega los módulos ordenados por nombre (`src` antes que `src/auth`), y si el archivo
+   * de `src/auth` se contara en `src`, el módulo `src/auth` quedaría siempre en 0.
+   */
+  test("attributes each changed file to the most specific module in a mixed folder", () => {
+    // Escenario: carpeta mixta; el commit 1 crea los tres archivos y el commit 2 cambia solo `src/auth/login.ts`.
+    const root = mkdtempSync(join(tmpdir(), "atlas-churn-mixed-"));
+    git(root, ["init", "-q"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "Test"]);
+
+    const srcPath = join(root, "src");
+    const authPath = join(srcPath, "auth");
+    const billingPath = join(srcPath, "billing");
+    mkdirSync(authPath, { recursive: true });
+    mkdirSync(billingPath, { recursive: true });
+    const srcFile = join(srcPath, "index.ts");
+    const authFile = join(authPath, "login.ts");
+    const billingFile = join(billingPath, "invoice.ts");
+
+    // Commit 1: crear los tres archivos (un cambio para cada módulo)
+    writeFileSync(srcFile, "export const version = 1;");
+    writeFileSync(authFile, "export const login = () => true;");
+    writeFileSync(billingFile, "export const invoice = () => true;");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "add src files"]);
+
+    // Commit 2: cambiar solo src/auth/login.ts (segundo cambio para `src/auth`)
+    writeFileSync(authFile, "export const login = () => false;");
+    git(root, ["add", "."]);
+    git(root, ["commit", "-q", "-m", "flip login"]);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "src", path: srcPath, files: [srcFile] },
+      { name: "src/auth", path: authPath, files: [authFile] },
+      { name: "src/billing", path: billingPath, files: [billingFile] },
+    ];
+
+    const result = computeChurn(root, modules);
+
+    // Churn esperado: src = 1 (solo index.ts), src/auth = 2, src/billing = 1
+    expect(result.get("src")).toBe(1);
+    expect(result.get("src/auth")).toBe(2);
+    expect(result.get("src/billing")).toBe(1);
+
+    rmSync(root, { recursive: true, force: true });
+  });
 });

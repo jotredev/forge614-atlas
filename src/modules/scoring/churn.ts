@@ -35,6 +35,8 @@ import type { ModuleDescriptor } from "./discovery";
  *    la función lanza una excepción descriptiva para que el consumidor decida la estrategia de rescate.
  * 4. Atribución estricta con frontera de ruta (`modulePath + sep`):
  *    Garantiza que una ruta como `auth-legacy/index.ts` no incremente por error el churn de `auth`.
+ *    Entre los módulos que contienen la ruta gana el más específico (el de `path` más larga): una carpeta mixta da un módulo
+ *    padre y uno por subcarpeta, y el archivo de la subcarpeta se cuenta en su módulo, no en el padre.
  * 
  * @param repoRoot - Ruta absoluta del directorio raíz del repositorio Git
  * @param modules - Lista de descriptores de módulos descubiertos
@@ -67,12 +69,20 @@ export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map
     // Reconstruir la ruta absoluta en el sistema de archivos local
     const absolutePath = join(repoRoot, relativeFile);
 
-    // Encontrar el módulo al que pertenece el archivo modificado
-    const matchedModule = modules.find(module => {
+    // Encontrar los módulos cuya carpeta es la ruta del archivo o la contiene
+    const matchingModules = modules.filter(module => {
       const modulePath = module.path;
-      // Coincide si la ruta es la carpeta del módulo o está dentro de ella (prefijo con separador, para no mezclar `auth` con `auth-legacy`); gana el primer módulo de la lista, así que con una carpeta mixta (`src` y `src/auth`) un archivo de `src/auth` se cuenta en `src`.
+      // Coincide si la ruta es la carpeta del módulo o está dentro de ella (prefijo con separador, para no mezclar `auth` con `auth-legacy`).
       return absolutePath === modulePath || absolutePath.startsWith(modulePath + sep);
     });
+
+    // Entre los módulos que coinciden gana el más específico, el de `path` más larga: una carpeta mixta da un módulo padre
+    // (`src`) y uno por subcarpeta (`src/auth`), y el archivo de `src/auth` se cuenta en `src/auth`, no en `src`.
+    const matchedModule = matchingModules.reduce<ModuleDescriptor | undefined>(
+      (mostSpecific, module) =>
+        mostSpecific === undefined || module.path.length > mostSpecific.path.length ? module : mostSpecific,
+      undefined,
+    );
 
     // 6. Si el archivo pertenece a un módulo reconocido, incrementar su contador de churn
     if (matchedModule) {

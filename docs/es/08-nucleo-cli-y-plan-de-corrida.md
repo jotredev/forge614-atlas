@@ -57,7 +57,7 @@ Los errores operativos también son JSON: `ENGINES_UNREACHABLE` cubre un binario
 
 ## Límite resuelto
 
-`discoverModules` antes sólo tomaba carpetas del primer nivel, así que una estructura `src/{auth,billing}` se interpretaba como un único módulo `src`, anulando los percentiles en ese patrón común. Esto se resolvió antes de arrancar el Plan 4: el descubrimiento de módulos ahora es recursivo y adaptable (una carpeta que solo contiene subcarpetas nunca es un módulo por sí misma; una carpeta con archivos sueltos y subcarpetas se divide en un módulo de archivos sueltos más uno por subcarpeta), y los nombres de módulo son rutas relativas (`src/auth`) en vez de solo el nombre de la carpeta.
+`discoverModules` antes sólo tomaba carpetas del primer nivel, así que una estructura `src/{auth,billing}` se interpretaba como un único módulo `src`, anulando los percentiles en ese patrón común. Esto se resolvió antes de arrancar el Plan 4: el descubrimiento de módulos ahora es recursivo y adaptable (una carpeta que solo contiene subcarpetas nunca es un módulo por sí misma; una carpeta con archivos sueltos y subcarpetas se divide en un módulo de archivos sueltos más uno por subcarpeta), y los nombres de módulo son rutas relativas (`src/auth`) en vez de solo el nombre de la carpeta. Al medir churn y fan-in, cada archivo cuenta en el módulo más específico que lo contiene (el de ruta más larga), así que lo de `src/auth` cuenta en `src/auth` y no en `src`.
 
 ## Comandos, respuestas y códigos de salida
 

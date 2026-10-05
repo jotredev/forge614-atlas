@@ -57,7 +57,7 @@ Operational failures are JSON too: `ENGINES_UNREACHABLE` covers an unreachable E
 
 ## Resolved limit
 
-`discoverModules` used to consider only first-level directories, so a `src/{auth,billing}` layout collapsed into one `src` module, defeating percentile tiers for a common pattern. This was fixed before Plan 4 started: module discovery is now adaptively recursive (a folder with only subfolders is never a module itself; a folder with both loose files and subfolders splits into a loose-files module plus one module per subfolder), and module names are relative paths (`src/auth`) instead of bare folder names.
+`discoverModules` used to consider only first-level directories, so a `src/{auth,billing}` layout collapsed into one `src` module, defeating percentile tiers for a common pattern. This was fixed before Plan 4 started: module discovery is now adaptively recursive (a folder with only subfolders is never a module itself; a folder with both loose files and subfolders splits into a loose-files module plus one module per subfolder), and module names are relative paths (`src/auth`) instead of bare folder names. When measuring churn and fan-in, each file counts in the most specific module that contains it (the one with the longest path), so what is in `src/auth` counts in `src/auth`, not in `src`.
 
 ## Commands, answers and exit codes
 

@@ -11,7 +11,7 @@ La unidad que Atlas puntúa y manda a analizar: una carpeta con archivos de cód
 
 ## Carpeta mixta
 
-Una carpeta que tiene archivos de código sueltos y también subcarpetas. Atlas la parte: los archivos sueltos forman un módulo y cada subcarpeta se evalúa aparte; una carpeta que solo tiene subcarpetas nunca es un módulo por sí misma. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) («Límite resuelto»).
+Una carpeta que tiene archivos de código sueltos y también subcarpetas. Atlas la parte: los archivos sueltos forman un módulo y cada subcarpeta se evalúa aparte; una carpeta que solo tiene subcarpetas nunca es un módulo por sí misma. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) («Límite resuelto»). Al medir churn y fan-in, cada archivo cuenta en el módulo más específico que lo contiene (el de ruta más larga), así que lo de `src/auth` cuenta en `src/auth` y no en `src`.
 
 ## Señal
 

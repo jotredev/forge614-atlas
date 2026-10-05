@@ -11,7 +11,7 @@ The unit Atlas scores and sends for analysis: a folder with code files. Its name
 
 ## Mixed folder
 
-A folder that has loose code files and also subfolders. Atlas splits it: the loose files form one module and each subfolder is evaluated separately; a folder that only has subfolders is never a module by itself. Explained in [chapter 08](08-cli-core-and-run-plan.md).
+A folder that has loose code files and also subfolders. Atlas splits it: the loose files form one module and each subfolder is evaluated separately; a folder that only has subfolders is never a module by itself. Explained in [chapter 08](08-cli-core-and-run-plan.md) (“Resolved limit”). When measuring churn and fan-in, each file counts in the most specific module that contains it (the one with the longest path), so what is in `src/auth` counts in `src/auth`, not in `src`.
 
 ## Signal
 
