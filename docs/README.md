@@ -21,6 +21,8 @@ Welcome to the official technical documentation of **Forge614 Atlas**. All docum
 | **08** | [08. Núcleo del CLI y plan de corrida JSON](es/08-nucleo-cli-y-plan-de-corrida.md) | [08 (EN). CLI Core and JSON Run Plan](en/08-cli-core-and-run-plan.md) | Vigente / Verified |
 | **09** | [09. Despacho Real de Subagentes](es/09-despacho-de-subagentes.md) | [09 (EN). Real Subagent Dispatch](en/09-subagent-dispatch.md) | Vigente / Verified |
 | **10** | [10. Instalador Público y Pipeline de Release](es/10-instalador-y-release.md) | [10 (EN). Public Installer and Release Pipeline](en/10-installer-and-release.md) | Vigente / Verified |
+| **11** | [11. Resolución de errores](es/11-resolucion-de-errores.md) | [11 (EN). Troubleshooting](en/11-troubleshooting.md) | Vigente / Verified |
+| **12** | [12. Glosario](es/12-glosario.md) | [12 (EN). Glossary](en/12-glossary.md) | Vigente / Verified |
 
 ---
 

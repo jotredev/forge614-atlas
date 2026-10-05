@@ -298,9 +298,14 @@ lectura (`readOnly: true` en cada tarea, con comprobación al iniciar y
 sin opción de apagarlo), `--help`, `update` y `uninstall`, `--version`
 con el nombre del producto, `FORGE614_HOME` en el código y en el
 instalador, Engram 1.8.7 dentro del binario y el proyecto en el grupo
-forge614. Está listo en la rama `work/1.1.0`; falta publicarlo (push, pull
-request y etiqueta `v1.1.0`) y republicar las páginas de Notion
-(`docs/notion-map.json` cambia entonces).
+forge614. Ya está publicada (etiqueta `v1.1.0`). Las páginas de Notion
+siguen sin republicarse: `docs/notion-map.json` no cambió desde que se
+guardaron las direcciones del capítulo 10.
+
+En la rama `work/1.1.1` va la versión 1.1.1, aún sin publicar: el código
+y las pruebas documentados en español, los manuales nuevos (capítulos 11,
+resolución de errores, y 12, glosario) y el mensaje del instalador
+«Forge614 Engines is compatible».
 
 No queda ningún plan sin empezar en el roadmap original de Atlas.
 Trabajo futuro más allá de este roadmap (si lo hay) requiere una nueva
