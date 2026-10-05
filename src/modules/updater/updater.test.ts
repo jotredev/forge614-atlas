@@ -148,7 +148,7 @@ describe("updateInstalledAtlas", () => {
     expect(launched).toBe(false);
   });
 
-  /** Comprueba que el error al iniciar bash llega al llamador y el temporal se borra. */
+  /** Comprueba que un error simulado al iniciar bash (el lanzador falso devuelve `error`) llega al llamador y el temporal se borra. */
   test("a process that cannot start surfaces its own error and removes the temporary file", async () => {
     const double = fakeDownload();
 
@@ -165,7 +165,7 @@ describe("updateInstalledAtlas", () => {
 
 /** Agrupa las respuestas con éxito, fallo de instalación y argumentos sobrantes. */
 describe("runUpdateCommand", () => {
-  /** Comprueba el resultado con código 0 y los campos `updated`, `previousVersion` e `installedVersion`. */
+  /** Comprueba el resultado con código 0 y los campos `updated`, `previousVersion` e `installedVersion`, y que `update` recibe la versión actual y la carpeta Forge614. */
   test("prints the success answer with updated, previousVersion and installedVersion", async () => {
     const outcome = await runUpdateCommand([], "1.0.0", "/opt/forge614", async (currentVersion, forgeHome) => {
       expect(currentVersion).toBe("1.0.0");

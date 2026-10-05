@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Instalador de Forge614 Atlas: baja de GitHub el binario de una release publicada, verifica su huella SHA-256
 # (código que identifica el contenido de un archivo), instala o actualiza Engram y Workers cuando faltan o son más
-# viejos, comprueba Engines (si falta o no sirve, lo deja instalado el instalador de Workers), copia el binario a la
-# carpeta elegida y, si puede, la agrega al PATH (la lista de carpetas donde la terminal busca programas). Los errores
-# previstos terminan con `fail` (código 1); si una dependencia no se puede cumplir, no se instala nada de Atlas.
+# viejos, solo comprueba Engines (si no sirve, termina con `fail`; lo dejan bien el instalador de Engram o el de
+# Workers solo si corrieron en esa misma ejecución), copia el binario a la carpeta elegida y, si puede, la agrega al
+# PATH (la lista de carpetas donde la terminal busca programas). Los errores previstos terminan con `fail` (código 1);
+# si una dependencia no se puede cumplir, no se instala nada de Atlas.
 # Uso: bash scripts/install.sh [--version TAG] [--bin-dir PATH] [--force]; `--help` lo detalla.
 
 # Termina ante un comando que falle fuera de una condición (`if`, `&&`, `||`), una variable sin definir (-u) o un fallo
@@ -26,7 +27,7 @@ usage() {
 # Imprime el mensaje recibido ($1) en la salida de errores y termina todo el instalador con código 1.
 fail() { printf '%s\n' "$1" >&2; exit 1; }
 
-# Versiones más antiguas con las que funciona Atlas. La de Engram es la contra la que Atlas se compila.
+# Versiones mínimas con las que funciona Atlas. La de Engram es la contra la que Atlas se compila.
 engram_min_version='1.8.7'
 workers_min_version='1.0.0'
 engines_min_version='1.17.0'
@@ -349,7 +350,7 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-# La etiqueta de versión debe ser una versión semántica: X.Y.Z, con una `v` opcional al inicio y un sufijo opcional
+# La etiqueta de versión debe ser una versión semántica: X.Y.Z, con una `v` opcional al inicio y un sufijo opcional que
 # empiece con `-` o `.` (por ejemplo `-rc.1`).
 if [ -n "$version" ] && ! [[ "$version" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
   fail 'Invalid release tag. Use a semantic version tag such as v1.2.3.'

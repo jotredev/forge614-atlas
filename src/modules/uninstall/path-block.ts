@@ -1,6 +1,7 @@
 /**
  * Reconoce y retira del perfil de shell (archivo que prepara la terminal) las líneas que el instalador añade al PATH
- * (lista de carpetas donde la terminal busca programas). `uninstall.ts` usa `removePathBlocks` para conservar el resto del perfil.
+ * (lista de carpetas donde la terminal busca programas), con la misma regla que `scripts/install.sh` al reescribir
+ * ese bloque. `uninstall.ts` usa `removePathBlocks` para conservar el resto del perfil.
  */
 /** Marca de inicio del bloque de PATH que escribe `scripts/install.sh`. */
 export const PATH_BLOCK_START = "# >>> forge614-atlas PATH >>>";
@@ -27,8 +28,8 @@ export interface PathBlockRemoval {
 }
 
 /**
- * Quita del texto de un perfil el bloque que puso el instalador de Atlas y deja intacto lo demás. Reconoce las
- * marcas solo cuando ocupan la línea entera; un inicio abre el bloque y un fin lo cierra. Rechaza un inicio anidado,
+ * Quita del texto de un perfil el bloque que puso el instalador de Atlas y deja intacto lo demás. Reconoce una marca
+ * solo cuando la línea es idéntica a ella (sin espacios ni `\r` de más); un inicio abre el bloque y un fin lo cierra. Rechaza un inicio anidado,
  * un fin sin inicio y un bloque abierto al final para que el desinstalador no reescriba un perfil ambiguo.
  * @param content Texto completo del archivo.
  * @returns El texto sin los bloques y si había alguno.
@@ -54,6 +55,6 @@ export function removePathBlocks(content: string): PathBlockRemoval {
     }
   }
   if (inside) throw new PathBlockError("The Forge614 Atlas PATH block was never closed.");
-  // Sin marcas se devuelve el texto original para no alterar ni sus saltos de línea.
+  // Sin marcas se devuelve el texto recibido tal cual; `found` en `false` avisa que no hay nada que reescribir.
   return { found, content: found ? kept.join("\n") : content };
 }

@@ -1,6 +1,7 @@
 /**
- * Ejercita `uninstall` con carpetas falsas y procesos hijos: comprueba perfiles y datos de Engram y Workers, los errores
- * ante rutas inseguras y la confirmación necesaria antes de borrar Atlas.
+ * Prueba `forge614-atlas uninstall` ejecutándolo en procesos hijos (programas que lanza la prueba) con carpetas
+ * temporales: qué borra y qué conserva (perfiles de shell, Engram y Workers), los errores ante rutas inseguras,
+ * perfiles imposibles de reescribir, argumentos y `FORGE614_HOME` inválidos, y la confirmación antes de borrar Atlas.
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -89,7 +90,7 @@ async function runUninstall(sandbox: Sandbox, args: string[], forgeHome?: string
   return { exitCode, stdout };
 }
 
-/** Corre `uninstall` con terminal y escribe la respuesta después de que aparezca la pregunta.
+/** Corre `uninstall` con terminal y escribe la respuesta cuando aparece la pregunta (espera hasta 5 s; si no aparece, la escribe igual).
  * @param sandbox Carpetas falsas que recibe el proceso.
  * @param answer Texto que se escribe como confirmación.
  * @returns Código de salida y texto mostrado por la terminal.
@@ -122,7 +123,7 @@ function errorCode(stdout: string): string {
   return (JSON.parse(stdout) as { error: { code: string } }).error.code;
 }
 
-/** Agrupa las pruebas del comando: resultados, límites de borrado y confirmación. */
+/** Agrupa las pruebas de `forge614-atlas uninstall`: qué borra y qué conserva, cuándo se niega (rutas inseguras, perfiles que no se pueden reescribir, argumentos o `FORGE614_HOME` inválidos) y cómo se confirma. */
 describe("forge614-atlas uninstall", () => {
   /** Comprueba que borra Atlas y solo su bloque de `.zshrc`, conservando el resto de los perfiles y los datos de Engram y Workers. */
   test("removes the Atlas folder and only the PATH block, leaves every other line and every other product alone", async () => {
@@ -254,7 +255,7 @@ describe("forge614-atlas uninstall", () => {
     expect(existsSync(join(sandbox.atlas, "bin", "forge614-atlas"))).toBe(true);
   });
 
-  /** Comprueba que el archivo propio de fish se borra si su único contenido era el bloque de Atlas. */
+  /** Comprueba que el archivo propio de fish (otra terminal; el instalador le crea su propio archivo) se borra si su único contenido era el bloque de Atlas. */
   test("a fish file that holds only the block is deleted", async () => {
     const sandbox = makeSandbox();
     installFakeAtlas(sandbox);
@@ -300,7 +301,7 @@ describe("forge614-atlas uninstall", () => {
     expect(existsSync(join(sandbox.atlas, "bin", "forge614-atlas"))).toBe(true);
   });
 
-  // Quitar el permiso de escritura solo frena a quien no es root; con root las dos pruebas siguientes no dicen nada.
+  // Quitar el permiso de escritura solo frena a quien no es root; con root las dos pruebas siguientes se saltan (`skipIf`) porque no podrían fallar.
   const asRoot = process.getuid?.() === 0;
 
   /** Comprueba que, sin permiso para crear el temporal del perfil, `PATH_REMOVE_FAILED` conserva perfil y Atlas. */
@@ -413,7 +414,7 @@ describe("forge614-atlas uninstall", () => {
     expect(readFileSync(join(sandbox.home, ".zshrc"), "utf8")).toBe(zshrcBefore);
   });
 
-  /** Comprueba la llamada con `--from forge614-engram` y flujos ignorados: sale 0, borra Atlas y limpia `.zshrc`. */
+  /** Comprueba la llamada exacta de Engram (`--from forge614-engram`, con la entrada, la salida y los errores ignorados): sale 0, borra Atlas y limpia `.zshrc`. */
   test("the exact call Engram makes (stdin, stdout and stderr ignored) succeeds with exit code 0", async () => {
     const sandbox = makeSandbox();
     installFakeAtlas(sandbox);
