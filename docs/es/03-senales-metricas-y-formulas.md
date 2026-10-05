@@ -131,7 +131,7 @@ $$FanIn(M) = |\{ M_{origen} \mid M_{origen} \neq M \land \exists f_{orig} \in M_
 ---
 
 ### 2.4 Volatilidad Histórica Churn (`churn.ts`)
-El **Churn** cuantifica la frecuencia de cambio en el historial de control de versiones. Un módulo con cientos de modificaciones recientes suele albergar lógica de negocio en evolución activa, puntos calientes de regresión (*hotspots*) o características críticas para el negocio.
+El **Churn** cuantifica la frecuencia de cambio en el historial de control de versiones. Un módulo con cientos de modificaciones en su historial suele albergar lógica de negocio en evolución activa, puntos calientes de regresión (*hotspots*) o características críticas para el negocio.
 
 Atlas extrae esta señal invocando la herramienta de Git local:
 

@@ -4,7 +4,7 @@
 
 ## Para qué sirve
 
-Mide qué proporción de los archivos de un módulo no tiene un archivo de pruebas asociado, devolviendo un valor de 0 (todo cubierto) a 1 (nada cubierto). Esta señal se usa para penalizar los módulos complejos que, además, no están probados. En la vida real, es como contar qué porcentaje de los empleados de una fábrica de químicos no lleva equipo de protección; a mayor porcentaje, mayor es el riesgo de accidentes.
+Mide qué proporción de los archivos de un módulo no tiene un archivo de pruebas asociado, devolviendo un valor de 0 (todo cubierto) a 1 (nada cubierto). Solo mira si el archivo de pruebas existe en disco; no mide cuánto código ejecutan esas pruebas. Esta señal se usa para penalizar los módulos complejos que, además, no están probados. En la vida real, es como contar qué porcentaje de los empleados de una fábrica de químicos no lleva equipo de protección; a mayor porcentaje, mayor es el riesgo de accidentes.
 
 ## Archivos
 
@@ -22,7 +22,7 @@ Mide qué proporción de los archivos de un módulo no tiene un archivo de prueb
 
 ## Casos borde y decisiones
 
-- Convención de pruebas hermanas: Atlas asume estrictamente que las pruebas viven al lado del código, en la misma carpeta (`ej. src/auth/jwt.test.ts` para `src/auth/jwt.ts`). Una arquitectura con pruebas en una carpeta separada `tests/` dará un test gap de 1.0 (brecha total) (`src/modules/scoring/test-coverage-gap.ts:35-36`).
+- Convención de pruebas hermanas: Atlas asume estrictamente que las pruebas viven al lado del código, en la misma carpeta (por ejemplo, `src/auth/jwt.test.ts` para `src/auth/jwt.ts`). Una arquitectura con pruebas en una carpeta separada `tests/` dará un test gap de 1.0 (brecha total) (`src/modules/scoring/test-coverage-gap.ts:35-36`).
 - Penalizador, no suma directa: El resultado `[0, 1]` no se suma al puntaje de complejidad, sino que se usa después en `composite-score.ts` como un multiplicador de riesgo de hasta un 20% más si no hay pruebas (`src/modules/scoring/test-coverage-gap.ts:60-61`).
 - Módulos vacíos o de solo tests: Un módulo sin archivos productivos recibe brecha 0 (ningún riesgo de falta de pruebas), evitando la división entre cero (`src/modules/scoring/test-coverage-gap.ts:75-76`).
 

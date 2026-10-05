@@ -2,7 +2,7 @@
 
 [Sister translation: 07 (ES). Estructura del Código: Línea por Línea](../es/07-estructura-codigo-linea-por-linea.md)
 
-This chapter documents the original scoring engine (Plan 1) that evaluates complexity, risk, and prioritizes modules. Below are the individual components.
+This chapter documents the scoring engine's code (`src/modules/scoring`, Plan 1: it discovers the project's modules, measures four signals for each one, combines them into a score and splits the modules into three analysis tiers) and the library's configuration and entry files. Each page explains one file: what it is for, how it works, its edge cases, its tests and where it is used.
 
 ## Files and Modules
 
@@ -16,7 +16,7 @@ This chapter documents the original scoring engine (Plan 1) that evaluates compl
 | [07.06 Test Gap](07-structure/06-test-coverage-gap.md) | `src/modules/scoring/test-coverage-gap.ts` | Determines the proportion of files missing their sibling test file. |
 | [07.07 Composite Score](07-structure/07-composite-scoring.md) | `src/modules/scoring/composite-score.ts` | Normalizes and weights the above metrics into a single score. |
 | [07.08 Tiers](07-structure/08-tier-allocation.md) | `src/modules/scoring/tiers.ts` | Distributes modules into three analysis tiers based on their criticality. |
-| [07.09 Test Scaffold](07-structure/09-test-harness-sanity.md) | `src/modules/scoring/scaffold.test.ts` | Ensures the test environment and runner work correctly. |
+| [07.09 Test Scaffold](07-structure/09-test-harness-sanity.md) | `src/modules/scoring/scaffold.test.ts` | Checks that `bun test` finds and runs a test. |
 
 ## The rest of the code
 
@@ -24,11 +24,11 @@ The other areas of the project are documented in other chapters of this manual:
 
 | Folder (`src/`) | Chapter where it is explained |
 |-----------------|-------------------------------|
-| `interfaces/cli` | [Chapter 06](../en/06-typescript-api-reference.md) |
-| `modules/cli` | [Chapter 08](../en/08-cli-core-and-run-plan.md) |
+| `interfaces/cli` | [Chapter 08](../en/08-cli-core-and-run-plan.md) (“Public command”) and [Chapter 11](../en/11-troubleshooting.md) |
+| `modules/cli` | [Chapter 06](../en/06-typescript-api-reference.md) (§2.10), [Chapter 08](../en/08-cli-core-and-run-plan.md) and [Chapter 09](../en/09-subagent-dispatch.md) |
 | `modules/memory` | [Chapter 06](../en/06-typescript-api-reference.md) |
 | `modules/engines-client` | [Chapter 06](../en/06-typescript-api-reference.md) |
-| `modules/workers-client` | [Chapter 09](../en/09-actual-subagent-dispatch.md) |
-| `modules/uninstall` | [Chapter 11](../en/11-troubleshooting.md) |
-| `modules/updater` | [Chapter 11](../en/11-troubleshooting.md) |
+| `modules/workers-client` | [Chapter 06](../en/06-typescript-api-reference.md) (§2.9) and [Chapter 09](../en/09-subagent-dispatch.md) (“Streaming the batch”) |
+| `modules/uninstall` | [Chapter 08](../en/08-cli-core-and-run-plan.md) (what it removes) and [Chapter 11](../en/11-troubleshooting.md) (its errors) |
+| `modules/updater` | [Chapter 08](../en/08-cli-core-and-run-plan.md) (what `update` does) and [Chapter 11](../en/11-troubleshooting.md) (its errors) |
 | `modules/forge-home` | [Chapter 10](../en/10-installer-and-release.md) |

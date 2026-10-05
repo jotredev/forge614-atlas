@@ -89,5 +89,5 @@ During the development of Plan 1, two operational behaviors were intentionally d
 
 ### Deferred Decision 2: Nested Module Discovery Adaptation
 - **Current Behavior in Plan 1:** `discoverModules(root)` only inspects **top-level** directories. In a standard project layout like `src/{auth, billing, catalog, ui}`, all source code currently collapses into a single module named `"src"`. It was fixed later, in commit `e693511` (“make discoverModules recurse adaptively instead of one level deep”); it is explained in [chapter 08](08-cli-core-and-run-plan.md), “Resolved limit”.
-- **Plan 3 Requirement:** Plan 3 must implement root analysis adaptation (*root analysis adaptation*): if the root directory contains only one dominant code container (e.g. `src/`, `packages/`, or `lib/`), Atlas must automatically descend one level to discover true domain modules.
+- **Plan 3 Requirement (historical):** Plan 3 must implement root analysis adaptation (*root analysis adaptation*): if the root directory contains only one dominant code container (e.g. `src/`, `packages/`, or `lib/`), Atlas must automatically descend one level to discover true domain modules.
 - **Code Reference:** Architectural note in `src/modules/scoring/discovery.ts`.

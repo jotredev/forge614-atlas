@@ -8,14 +8,14 @@ Configures compilation rules, version control ignores, and the main access point
 
 ## Files
 
-- `tsconfig.json`: Compilation rules and strict typing for TypeScript (no index card link).
-- `.gitignore`: List of folders and files that Git ignores (no index card link).
+- `tsconfig.json`: Compilation rules and strict typing for TypeScript (it has no card in another chapter).
+- `.gitignore`: List of folders and files that Git ignores (it has no card in another chapter).
 - `src/index.ts`: Entry point of the library; re-exports public functions grouped in 11 sections ([Card in Chapter 06](../06-typescript-api-reference.md)).
-- For `package.json`, see [Chapter 13](../13-package-metadata.md).
+- For `package.json`, see [Chapter 13](../13-data-files.md#packagejson).
 
 ## How it works
 
-1. `tsconfig.json` defines rules to compile to `ESNext` and use the `Bun` engine.
+1. `tsconfig.json` turns on TypeScript's strict mode (`strict`), sets `ESNext` as the target and module format, and declares the Bun types (`types: ["bun-types"]`); `tsc --noEmit` (`bun run typecheck`) reads it, and it only checks types and generates no files.
 2. `.gitignore` hides local dependencies, build outputs, and secrets, keeping the repository clean.
 3. `src/index.ts` contains no logic; instead, it re-exports elements grouped into these sections:
    - Section 1: Module discovery (`src/index.ts:9`).
@@ -26,13 +26,13 @@ Configures compilation rules, version control ignores, and the main access point
    - Section 6: Composite score (`src/index.ts:25`).
    - Section 7: Tier allocation (`src/index.ts:29`).
    - Section 8: Engram integration (`src/index.ts:33`).
-   - Section 9: Engines client (`src/index.ts:41`).
-   - Section 10: CLI core (`src/index.ts:47`).
-   - Section 11: Workers client (`src/index.ts:55`).
+   - Section 9: Engines client (`src/index.ts:42`).
+   - Section 10: CLI core (`src/index.ts:49`).
+   - Section 11: Workers client (`src/index.ts:57`).
 
 ## Edge cases and decisions
 
-- Unified entry point: By using a single `index.ts` barrel file, external importers do not need to know the internal structure of `src/modules/` or `src/interfaces/` (`src/index.ts:1-7`).
+- Unified entry point: A single `index.ts` (a “barrel”: a file that only gathers and re-exports what others define, `src/index.ts:2-3`) means that whoever imports Atlas as a library does not need to know the internal structure of `src/modules/` or `src/interfaces/`.
 
 ## Tests
 
@@ -42,6 +42,6 @@ Configures compilation rules, version control ignores, and the main access point
 
 ## Where it is used
 
-- `tsconfig.json`: Used by `bun test`, `bun run typecheck`, and the build process.
+- `tsconfig.json`: Used by `bun run typecheck` (`tsc --noEmit`); the binary is produced by `bun build` (`package.json`, `scripts.build`).
 - `.gitignore`: Used by Git to prevent tracking certain paths.
-- `src/index.ts`: Imported externally by the general orchestrator or CLI when using the library.
+- `src/index.ts`: No other file in this repository imports it (the program, `src/interfaces/cli/commands.ts:9-14`, imports the modules directly); it exists for whoever uses Atlas as a library, because `package.json` declares it in `exports` (`package.json:7`).

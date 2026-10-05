@@ -24,7 +24,7 @@ export interface ModuleDescriptor {
   name: string;
   /** Ruta absoluta en el sistema de archivos hacia la carpeta del módulo */
   path: string;
-  /** Lista exhaustiva y ordenada alfabéticamente de archivos fuente TypeScript/JavaScript */
+  /** Archivos de código que están directamente en la carpeta del módulo (sin los de sus subcarpetas: si estas tienen código y no están excluidas, forman otros módulos), pruebas incluidas, en orden alfabético */
   files: string[];
 }
 ```
@@ -637,7 +637,7 @@ Descubre los módulos del proyecto, los puntúa (las cuatro señales, la puntuac
 - **La usa:** `src/modules/cli/init.ts:203` (con `--force`, `skipCompleted: false`) y `:217` (`skipCompleted: true`).
 
 #### `runInitCommand(store: MemoryStore, options: RunInitOptions): Promise<InitOutcome>`
-Ejecuta todo el recorrido de `init`: detecta y elige el motor, comprueba los requisitos previos (que Engines garantice el candado de solo lectura y que el programa de Workers exista y sea de la versión 1.0.0 o posterior; todo antes de abrir ninguna sesión de Engram), abre o retoma la sesión, arma el plan y lo despacha a Workers. Definida en `src/modules/cli/init.ts:164`.
+Ejecuta todo el recorrido de `init`: detecta y elige el motor, comprueba los requisitos previos (que Engines garantice el candado de solo lectura y que el programa de Workers exista, se pueda ejecutar y sea de la versión 1.0.0 o posterior; todo antes de abrir ninguna sesión de Engram), abre o retoma la sesión, arma el plan y lo despacha a Workers. Definida en `src/modules/cli/init.ts:164`.
 
 - **Devuelve:** una promesa con el `InitOutcome` que imprime el CLI (ver el [capítulo 13](13-archivos-de-datos.md)).
 - **Lanza:** los fallos previstos no lanzan: salen como `{ status: "error" }` con su código. Sí dejan pasar los errores de Engram al abrir la sesión (por ejemplo `PROJECT_FILE_INVALID`) y el `ENOENT` de `deriveSessionId`; `src/interfaces/cli/main.ts:73` los convierte en `UNEXPECTED_ERROR`.

@@ -25,8 +25,8 @@ import { isTestFile, type ModuleDescriptor } from "./discovery";
  * Regla de filtrado:
  * - Solo se retornan especificadores que comiencen con punto (`.` o `..`),
  *   lo que identifica dependencias internas del proyecto.
- * - Se omiten dependencias externas (ej. `"typescript"`, `"react"`, `"node:path"`),
- *   ya que no son archivos del proyecto y no pertenecen a ningún módulo.
+ * - Se omiten las dependencias externas (ej. `"typescript"`, `"react"`, `"node:path"`), que no son archivos del proyecto y no
+ *   pertenecen a ningún módulo; tampoco se siguen los imports internos que no empiezan con punto (por ejemplo un alias como `"@/auth"`).
  * 
  * @param sourceText - Código fuente del archivo en texto
  * @param fileName - Nombre del archivo; su extensión decide cómo se lee el código (por ejemplo, `.tsx` admite JSX). Por omisión `module.ts`.

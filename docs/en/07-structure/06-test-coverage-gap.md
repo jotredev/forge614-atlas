@@ -4,7 +4,7 @@
 
 ## What it is for
 
-Measures what proportion of a module's files do not have an associated test file, returning a value from 0 (all covered) to 1 (none covered). This signal is used to penalize complex modules that are also untested. In real life, it is like counting what percentage of employees in a chemical factory do not wear protective gear; the higher the percentage, the higher the risk of accidents.
+Measures what proportion of a module's files do not have an associated test file, returning a value from 0 (all covered) to 1 (none covered). It only looks at whether the test file exists on disk; it does not measure how much code those tests run. This signal is used to penalize complex modules that are also untested. In real life, it is like counting what percentage of employees in a chemical factory do not wear protective gear; the higher the percentage, the higher the risk of accidents.
 
 ## Files
 

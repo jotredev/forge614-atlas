@@ -4,7 +4,7 @@
 
 ## Para qué sirve
 
-Cuenta cuántas veces han sido modificados los archivos de un módulo en el historial de Git. Un módulo que cambia mucho ("alto churn") es una zona inestable propensa a deuda técnica y errores, por lo que requiere más atención y presupuesto. En la vida real, es como revisar el historial de reparaciones de los coches de una flota: el coche que ha entrado al taller más veces en el último año necesita una revisión más profunda.
+Cuenta cuántas veces han sido modificados los archivos de un módulo en todo el historial de Git. Un módulo que cambia mucho ("alto churn") es una zona inestable propensa a deuda técnica (arreglos pendientes que se acumulan) y errores, por lo que sube su puntuación y, con ella, su nivel de análisis. En la vida real, es como revisar el historial completo de reparaciones de los coches de una flota: el coche que ha entrado al taller más veces desde que existe necesita una revisión más profunda.
 
 ## Archivos
 
@@ -24,17 +24,18 @@ Cuenta cuántas veces han sido modificados los archivos de un módulo en el hist
 ## Casos borde y decisiones
 
 - Codificación UTF-8 en Git: Git escapa de forma predeterminada caracteres no ASCII (como la eñe o tildes) en su salida, lo que impediría relacionarlos con las rutas de los archivos; usar `-c core.quotepath=false` fuerza la salida UTF-8 cruda (`src/modules/scoring/churn.ts:48`).
-- Archivos fuera de los módulos detectados: Si la salida de Git incluye archivos que ya no existen, han sido renombrados, o no pertenecen a ningún módulo conocido (ej. archivos en `dist/` o sueltos en la raíz), simplemente se ignoran (`src/modules/scoring/churn.ts:88`).
-- Error del comando: Si el directorio no es un repositorio Git, no está instalado Git, o el repo no tiene ningún commit (HEAD huérfano), el comando fallará y la función lanzará un error que abortará el proceso de cálculo completo (`src/modules/scoring/churn.ts:55`).
+- Archivos fuera de los módulos detectados: Se ignoran las rutas de la salida de Git que no caen dentro de la carpeta de ningún módulo (ej. archivos en `dist/` o sueltos en la raíz) (`src/modules/scoring/churn.ts:88`). En cambio, un archivo que ya no existe, que se renombró, que no es de código o que es de prueba SÍ cuenta si su ruta quedó dentro de la carpeta de un módulo, porque `computeChurn` usa solo la ruta de la carpeta y no `module.files` (`src/modules/scoring/churn.ts:73-77`).
+- Raíz del repositorio: `repoRoot` debe ser la raíz del repositorio de Git; si es una subcarpeta, Git no falla, pero las rutas no coinciden con las carpetas de los módulos y el churn de todos sale en 0 (`src/modules/scoring/churn.ts:70`).
+- Error del comando: Si el directorio no es un repositorio Git, no está instalado Git, o el repo no tiene ningún commit (HEAD huérfano: todavía sin ningún commit), el comando fallará y la función lanzará un error que abortará el proceso de cálculo completo (`src/modules/scoring/churn.ts:55`).
 
 ## Pruebas
 
 | Prueba | Qué comprueba |
 |--------|---------------|
-| `counts changed-file entries per module across commit history` | Verifica el conteo total de apariciones por módulo en el historial simulado de git. |
-| `correctly attributes files to modules with prefix-overlapping names` | Asegura que `auth/index.ts` suma a `auth`, pero no a `auth-legacy`. |
-| `correctly attributes churn for modules with non-ASCII names` | Comprueba que los módulos con nombres que incluyen caracteres especiales o tildes en UTF-8 sumen correctamente. |
-| `attributes each changed file to the most specific module in a mixed folder` | Garantiza que un archivo modificado dentro de una carpeta mixta suma al módulo de su subcarpeta, no al del directorio contenedor. |
+| `counts changed-file entries per module across commit history` | Verifica el conteo en un repositorio de Git real creado en una carpeta temporal: `auth` (un archivo cambiado en 2 commits) cuenta 2 y `billing` (1 commit) cuenta 1. |
+| `correctly attributes files to modules with prefix-overlapping names` | Asegura que `auth/login.ts` suma solo a `auth` y `auth-legacy/old-login.ts` solo a `auth-legacy` (1 cada uno), sin mezclarse. |
+| `correctly attributes churn for modules with non-ASCII names` | Comprueba que el módulo `señales` (con ñ) cuenta su cambio (1); sin `core.quotepath=false` Git escribiría la ruta con códigos octales y no coincidiría con la carpeta. |
+| `attributes each changed file to the most specific module in a mixed folder` | Garantiza que un archivo modificado dentro de una carpeta mixta suma al módulo de su subcarpeta, no al del directorio contenedor: `src` = 1, `src/auth` = 2 y `src/billing` = 1. |
 
 ## Dónde se usa
 

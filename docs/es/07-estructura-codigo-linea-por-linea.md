@@ -2,7 +2,7 @@
 
 [Traducción hermana: 07 (EN). Project Structure: Documented Source Code](../en/07-project-structure-documented-source-code.md)
 
-Este capítulo documenta el motor de puntuación original (Plan 1) evaluando la complejidad, el riesgo y priorizando los módulos. A continuación se presentan los componentes individuales.
+Este capítulo documenta el código del motor de puntuación (`src/modules/scoring`, el Plan 1: descubre los módulos del proyecto, mide cuatro señales de cada uno, las combina en una puntuación y los reparte en tres niveles de análisis) y los archivos de configuración y de entrada de la librería. Cada página explica un archivo: para qué sirve, cómo funciona, sus casos borde, sus pruebas y dónde se usa.
 
 ## Archivos y Módulos
 
@@ -16,7 +16,7 @@ Este capítulo documenta el motor de puntuación original (Plan 1) evaluando la 
 | [07.06 Brecha de Pruebas](07-estructura/06-brecha-cobertura-pruebas.md) | `src/modules/scoring/test-coverage-gap.ts` | Determina la proporción de archivos sin su archivo de prueba asociado. |
 | [07.07 Puntuación Compuesta](07-estructura/07-puntuacion-compuesta.md) | `src/modules/scoring/composite-score.ts` | Normaliza y pondera las métricas anteriores en una calificación única. |
 | [07.08 Tiers (Niveles)](07-estructura/08-asignacion-niveles-tiers.md) | `src/modules/scoring/tiers.ts` | Distribuye los módulos en tres niveles de análisis según su criticidad. |
-| [07.09 Scaffold (Arnés)](07-estructura/09-arnes-pruebas-sanidad.md) | `src/modules/scoring/scaffold.test.ts` | Asegura que el entorno y ejecutor de pruebas funcionan correctamente. |
+| [07.09 Scaffold (Arnés)](07-estructura/09-arnes-pruebas-sanidad.md) | `src/modules/scoring/scaffold.test.ts` | Comprueba que `bun test` encuentra y corre una prueba. |
 
 ## El resto del código
 
@@ -24,11 +24,11 @@ Las demás áreas del proyecto se documentan en otros capítulos de este manual:
 
 | Carpeta (`src/`) | Capítulo donde se explica |
 |------------------|---------------------------|
-| `interfaces/cli` | [Capítulo 06](06-referencia-api-typescript.md) |
-| `modules/cli` | [Capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) |
+| `interfaces/cli` | [Capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) («Comando público») y [Capítulo 11](11-resolucion-de-errores.md) |
+| `modules/cli` | [Capítulo 06](06-referencia-api-typescript.md) (§2.10), [Capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y [Capítulo 09](09-despacho-de-subagentes.md) |
 | `modules/memory` | [Capítulo 06](06-referencia-api-typescript.md) |
 | `modules/engines-client` | [Capítulo 06](06-referencia-api-typescript.md) |
-| `modules/workers-client` | [Capítulo 09](09-despacho-de-subagentes.md) |
-| `modules/uninstall` | [Capítulo 11](11-resolucion-de-errores.md) |
-| `modules/updater` | [Capítulo 11](11-resolucion-de-errores.md) |
+| `modules/workers-client` | [Capítulo 06](06-referencia-api-typescript.md) (§2.9) y [Capítulo 09](09-despacho-de-subagentes.md) («Transmisión del lote en tiempo real») |
+| `modules/uninstall` | [Capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) (qué quita) y [Capítulo 11](11-resolucion-de-errores.md) (sus errores) |
+| `modules/updater` | [Capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) (qué hace `update`) y [Capítulo 11](11-resolucion-de-errores.md) (sus errores) |
 | `modules/forge-home` | [Capítulo 10](10-instalador-y-release.md) |
