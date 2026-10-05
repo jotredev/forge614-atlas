@@ -186,4 +186,43 @@ describe("computeFanIn", () => {
 
     rmSync(root, { recursive: true, force: true });
   });
+
+  /**
+   * Comprueba que con una carpeta mixta (`src` con las subcarpetas `src/auth` y `src/billing`) el import de `src/billing`
+   * hacia `src/auth/login.ts` sume 1 al fan-in de `src/auth` y deje `src` y `src/billing` en 0.
+   * Importa porque `discoverModules` entrega los módulos ordenados por nombre (`src` antes que `src/auth`), y atribuir el
+   * archivo importado a `src` dejaría a `src/auth` siempre en 0.
+   */
+  test("attributes an import to the most specific module in a mixed folder", () => {
+    // Escenario: carpeta mixta; invoice.ts importa login.ts desde ../auth/login.
+    const root = mkdtempSync(join(tmpdir(), "atlas-fanin-mixed-"));
+    const srcPath = join(root, "src");
+    const authPath = join(srcPath, "auth");
+    const billingPath = join(srcPath, "billing");
+    mkdirSync(authPath, { recursive: true });
+    mkdirSync(billingPath, { recursive: true });
+
+    const srcFile = join(srcPath, "index.ts");
+    const authFile = join(authPath, "login.ts");
+    const billingFile = join(billingPath, "invoice.ts");
+
+    writeFileSync(srcFile, "export const version = 1;");
+    writeFileSync(authFile, "export const login = () => true;");
+    writeFileSync(billingFile, `import { login } from "../auth/login";\nexport const invoice = () => login();`);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "src", path: srcPath, files: [srcFile] },
+      { name: "src/auth", path: authPath, files: [authFile] },
+      { name: "src/billing", path: billingPath, files: [billingFile] },
+    ];
+
+    const result = computeFanIn(modules);
+
+    // 'src/auth' recibe 1 consumidor; 'src' y 'src/billing' ninguno
+    expect(result.get("src/auth")).toBe(1);
+    expect(result.get("src")).toBe(0);
+    expect(result.get("src/billing")).toBe(0);
+
+    rmSync(root, { recursive: true, force: true });
+  });
 });

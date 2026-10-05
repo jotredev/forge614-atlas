@@ -131,6 +131,8 @@ function resolveImportPath(fromFile: string, specifier: string): string | null {
  *    Al asociar una ruta resuelta a un módulo, se valida que coincida exactamente o que empiece
  *    con la ruta del módulo seguida por el separador del sistema (`/` en POSIX o `\` en Windows).
  *    Esto previene falsos positivos catastróficos si existen carpetas como `auth` y `auth-legacy`.
+ *    Entre los módulos que contienen la ruta gana el más específico (el de `path` más larga): una carpeta mixta da un módulo
+ *    padre y uno por subcarpeta, y el archivo de la subcarpeta se atribuye a su módulo, no al padre.
  * 4. Exclusión de Archivos de Prueba:
  *    Los archivos de prueba (los que terminan en `.test` o `.spec` seguido de ts, tsx, js o jsx) no se leen como archivos que importan, para evitar que los imports de prueba distorsionen las dependencias reales entre módulos de producción.
  * 
@@ -165,12 +167,20 @@ export function computeFanIn(modules: ModuleDescriptor[]): Map<string, number> {
           continue;
         }
 
-        // 5. Determinar a qué módulo pertenece el archivo importado
-        const toModule = modules.find(module => {
+        // 5. Determinar a qué módulos pertenece el archivo importado (su carpeta es la ruta o la contiene)
+        const matchingModules = modules.filter(module => {
           const modulePath = module.path;
-          // Pertenece al módulo si es su misma carpeta o está dentro de ella (el separador evita confundir `auth` con `auth-legacy`); gana el primer módulo de la lista, así que con una carpeta mixta (`src` y `src/auth`) un archivo de `src/auth` se atribuye a `src`.
+          // Pertenece al módulo si es su misma carpeta o está dentro de ella (el separador evita confundir `auth` con `auth-legacy`).
           return resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep);
         });
+
+        // Entre los módulos que coinciden gana el más específico, el de `path` más larga: una carpeta mixta da un módulo
+        // padre (`src`) y uno por subcarpeta (`src/auth`), y el archivo importado de `src/auth` se atribuye a `src/auth`, no a `src`.
+        const toModule = matchingModules.reduce<ModuleDescriptor | undefined>(
+          (mostSpecific, module) =>
+            mostSpecific === undefined || module.path.length > mostSpecific.path.length ? module : mostSpecific,
+          undefined,
+        );
 
         // 6. Si el destino pertenece a otro módulo diferente, registrar la dependencia dirigida
         if (toModule && toModule.name !== fromModule.name) {

@@ -457,7 +457,7 @@ Suma la complejidad ciclomática de los archivos de cada módulo, dejando fuera 
 ### 2.3 Centralidad y Dependencias
 
 #### `computeFanIn(modules: ModuleDescriptor[]): Map<string, number>`
-Lee los `import`, los `export … from` y los `require` relativos (los que empiezan con `.`) de los archivos productivos de cada módulo, los sigue hasta el archivo real en disco (probando la ruta tal cual, con `.ts`, `.tsx`, `.js`, `.jsx` y como carpeta con `index`) y cuenta, para cada módulo, cuántos otros módulos distintos lo importan. Un módulo cuenta una sola vez aunque tenga muchos imports hacia el mismo destino, y las dependencias de un módulo consigo mismo no cuentan. Un import que no apunta a un archivo existente se ignora. Definida en `src/modules/scoring/fan-in.ts:142`.
+Lee los `import`, los `export … from` y los `require` relativos (los que empiezan con `.`) de los archivos productivos de cada módulo, los sigue hasta el archivo real en disco (probando la ruta tal cual, con `.ts`, `.tsx`, `.js`, `.jsx` y como carpeta con `index`) y cuenta, para cada módulo, cuántos otros módulos distintos lo importan. Un módulo cuenta una sola vez aunque tenga muchos imports hacia el mismo destino, y las dependencias de un módulo consigo mismo no cuentan. Un import que no apunta a un archivo existente se ignora. Si varios módulos contienen el archivo importado (una carpeta mixta da `src` y `src/auth`), el import se atribuye al más específico, el de ruta más larga (`src/auth`). Definida en `src/modules/scoring/fan-in.ts:142`.
 
 - **Devuelve:** un mapa con una entrada por módulo (nombre → cuántos otros módulos lo usan); empieza en 0.
 - **Lanza:** el error del sistema de archivos (por ejemplo `ENOENT`) si no puede leer un archivo del módulo; no lo atrapa.
@@ -468,7 +468,7 @@ Lee los `import`, los `export … from` y los `require` relativos (los que empie
 ### 2.4 Volatilidad Histórica
 
 #### `computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number>`
-Ejecuta `git -c core.quotepath=false log --format= --name-only` en `repoRoot` y suma una unidad al módulo por cada archivo suyo que aparece en cada commit. Cuenta también archivos que ya no existen si su ruta quedó dentro de la carpeta del módulo; con una carpeta mixta (`src` y `src/auth`) un archivo de `src/auth` se cuenta en el primer módulo de la lista que lo contiene. Definida en `src/modules/scoring/churn.ts:44`.
+Ejecuta `git -c core.quotepath=false log --format= --name-only` en `repoRoot` y suma una unidad al módulo por cada archivo suyo que aparece en cada commit. Cuenta también archivos que ya no existen si su ruta quedó dentro de la carpeta del módulo; si varios módulos contienen el archivo (una carpeta mixta da `src` y `src/auth`), se cuenta en el más específico, el de ruta más larga (`src/auth`). Definida en `src/modules/scoring/churn.ts:44`.
 
 > [!CAUTION]
 > Lanza un error si `repoRoot` no es un repositorio de Git o si `git log` falla (por ejemplo, en repositorios sin commits). `runInitCommand` lo convierte en el resultado JSON estructurado `ANALYSIS_FAILED`; `computeChurn` no degrada a cero por sí mismo.

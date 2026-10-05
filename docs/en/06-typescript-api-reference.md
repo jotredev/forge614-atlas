@@ -457,7 +457,7 @@ Adds up the cyclomatic complexity of each module's files, leaving test files out
 ### 2.3 Centrality & Dependencies
 
 #### `computeFanIn(modules: ModuleDescriptor[]): Map<string, number>`
-Reads the relative `import`, `export … from` and `require` (those starting with `.`) of each module's production files, follows them to the real file on disk (trying the path as is, with `.ts`, `.tsx`, `.js`, `.jsx` and as a folder with `index`) and counts, for each module, how many other distinct modules import it. A module counts only once however many imports it has toward the same target, and a module's dependencies on itself do not count. An import that does not point to an existing file is ignored. Defined at `src/modules/scoring/fan-in.ts:142`.
+Reads the relative `import`, `export … from` and `require` (those starting with `.`) of each module's production files, follows them to the real file on disk (trying the path as is, with `.ts`, `.tsx`, `.js`, `.jsx` and as a folder with `index`) and counts, for each module, how many other distinct modules import it. A module counts only once however many imports it has toward the same target, and a module's dependencies on itself do not count. An import that does not point to an existing file is ignored. If several modules contain the imported file (a mixed folder gives `src` and `src/auth`), the import is attributed to the most specific one, the one with the longest path (`src/auth`). Defined at `src/modules/scoring/fan-in.ts:142`.
 
 - **Returns:** a map with one entry per module (name → how many other modules use it); it starts at 0.
 - **Throws:** the file-system error (for example `ENOENT`) if it cannot read one of the module's files; it does not catch it.
@@ -468,7 +468,7 @@ Reads the relative `import`, `export … from` and `require` (those starting wit
 ### 2.4 Historical Volatility
 
 #### `computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number>`
-Runs `git -c core.quotepath=false log --format= --name-only` in `repoRoot` and adds one unit to the module for each of its files that appears in each commit. It also counts files that no longer exist if their path ended up inside the module's folder; with a mixed folder (`src` and `src/auth`) a file of `src/auth` is counted in the first module of the list that contains it. Defined at `src/modules/scoring/churn.ts:44`.
+Runs `git -c core.quotepath=false log --format= --name-only` in `repoRoot` and adds one unit to the module for each of its files that appears in each commit. It also counts files that no longer exist if their path ended up inside the module's folder; if several modules contain the file (a mixed folder gives `src` and `src/auth`), it is counted in the most specific one, the one with the longest path (`src/auth`). Defined at `src/modules/scoring/churn.ts:44`.
 
 > [!CAUTION]
 > Throws if `repoRoot` is not a Git repository or if `git log` fails (e.g. repositories with zero commits). `runInitCommand` turns this into the structured JSON result `ANALYSIS_FAILED`; `computeChurn` itself does not fall back to zero.
