@@ -157,3 +157,4 @@ La documentación del proyecto sigue una indexación secuencial estricta de dos 
 | **10** | [Instalador Público y Pipeline de Release](10-instalador-y-release.md) | [Public Installer and Release Pipeline](../en/10-installer-and-release.md) | `curl \| bash`, encadenado de Engram, workflow de release de 4 jobs, riesgo aceptado. |
 | **11** | [Resolución de Errores](11-resolucion-de-errores.md) | [Troubleshooting](../en/11-troubleshooting.md) | Qué ve la persona, por qué pasa y qué hacer con cada código de error y cada estado de `init`. |
 | **12** | [Glosario](12-glosario.md) | [Glossary](../en/12-glossary.md) | Términos propios de Atlas y el capítulo que explica cada uno. |
+| **13** | [Archivos de datos y automatización](13-archivos-de-datos.md) | [Data files and automation](../en/13-data-files.md) | Archivos de datos, automatización y flujos de CI. |
