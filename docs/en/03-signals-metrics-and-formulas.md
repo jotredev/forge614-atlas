@@ -3,7 +3,7 @@
 > **Official Technical Reference Document — Forge614 Ecosystem**  
 > **Project:** Forge614 Atlas (Deep Contextualization Orchestrator)  
 > **Theoretical Foundations:** Control Flow Graph Theory (McCabe, 1976), Degree Centrality in Software Graphs, and Multiplicative Fragility Modifiers  
-> **Status:** Fully implemented, verified, 26 passing tests  
+> **Status:** Implemented and verified; the full suite (194 tests) passes on the `work/1.1.1` branch\
 > **Sister translation:** [03. Señales, Métricas y Fórmulas Matemáticas](../es/03-senales-metricas-y-formulas.md)
 
 ---
@@ -24,19 +24,23 @@ To eliminate arbitrary heuristics and stochastic LLM interpretations that vary b
 ## 2. Signal Deep-Dive
 
 ### 2.1 Module Discovery & Filtering (`discovery.ts`)
-Prior to scoring, the system inspects the target repository root:
-1. **Inclusion Rule:** Selects top-level folders containing files matching `.ts`, `.tsx`, `.js`, or `.jsx`.
-2. **Strict Exclusions:** Immediately discards dependency folders, build outputs, and VCS internal directories:
+Prior to scoring, the system walks the project's folders, starting at the root and recursively (`discoverModules` and `collectModules`):
+1. **Inclusion Rule:** Evaluates each folder on its own, looking at source files ending in `.ts`, `.tsx`, `.js`, or `.jsx`.
+   - A folder with no subfolders is a module if it has at least one code file.
+   - A folder that only has subfolders is not a module: the walk goes down into each subfolder.
+   - A mixed folder (loose files and also subfolders) gives one module with its loose files plus one per subfolder.
+   - The module's name is its path relative to the root, with `/` (for example `src/auth`), and files that sit directly in the root do not form a module.
+2. **Strict Exclusions:** Immediately discards (at every level) dependency folders, build outputs, and VCS internal directories, and any folder whose name starts with a dot:
    ```typescript
    const EXCLUDED_DIRS = new Set([
      "node_modules", ".git", "dist", "build", "coverage", ".next", "out", ".forge614",
    ]);
    ```
    (`.forge614` is the Forge614 project folder — portable identity `project.json`, written by Engram — not a build output.)
-3. **Deterministic Alphabetical Ordering:** Both discovered modules and internal source file arrays are sorted via `localeCompare(b)`:
+3. **Deterministic Alphabetical Ordering:** Both discovered modules and internal source file arrays are sorted via `localeCompare` (the folders that are walked are too):
    ```typescript
-   topLevelDirs.sort((a, b) => a.localeCompare(b));
-   matches.sort((a, b) => a.localeCompare(b));
+   return modules.sort((a, b) => a.name.localeCompare(b.name));
+   return matches.sort((a, b) => a.localeCompare(b));
    ```
 4. **Test File Detection:**
    ```typescript
@@ -114,9 +118,9 @@ In software network analysis, **Fan-In** measures the number of external compone
    - `base.ts`, `base.tsx`, `base.js`, `base.jsx`
    - `base/index.ts`, `base/index.tsx`, `base/index.js`
 3. **Path Boundary Safety Check:**
-   Ensures target files strictly belong to the module folder via `resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep)`, preventing false positives between sibling folders sharing prefixes (e.g. `auth` vs `author`).
+   Ensures target files strictly belong to the module folder via `resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep)`, preventing false positives between sibling folders sharing prefixes (e.g. `auth` vs `author`). If several modules contain the target file (a mixed folder gives `src` and `src/auth`), the most specific one wins, the one with the longest path (`src/auth`), so the import counts for `src/auth` and not for `src`.
 4. **Distinct Importing Module Count:**
-   For any module $M$, $FanIn(M)$ counts the number of **distinct other modules** importing at least one symbol from $M$. Internal self-imports, test file imports, and multiple duplicate imports from the same consumer module do not inflate this count:
+   For any module $M$, $FanIn(M)$ counts the number of **distinct other modules** importing at least one symbol from $M$. Internal self-imports, imports that come out of test files (those files are not read), and multiple duplicate imports from the same consumer module do not inflate this count:
 
 $$FanIn(M) = |\{ M_{src} \mid M_{src} \neq M \land \exists f_{src} \in M_{src}, f_{dst} \in M : f_{src} \rightarrow f_{dst} \}|$$
 
@@ -135,7 +139,7 @@ git -c core.quotepath=false log --format= --name-only
 1. **Octal Escaping Disabled (`-c core.quotepath=false`):**
    By default, Git escapes non-ASCII characters (e.g., Spanish accents, `ñ`, or UTF-8 letters) into octal strings (e.g. `"dise\303\261o"`). This caused path comparisons to fail silently against disk paths, yielding zero churn. The `-c core.quotepath=false` override enforces clean UTF-8 emission.
 2. **Directory Boundary Matching:**
-   Each modified file from `git log` is attributed using `absolutePath === modulePath || absolutePath.startsWith(modulePath + sep)`.
+   Each modified file from `git log` is attributed using `absolutePath === modulePath || absolutePath.startsWith(modulePath + sep)`. If several modules match (a mixed folder gives `src` and `src/auth`), the file is counted in the most specific one, the one with the longest path (`src/auth`), not in `src`.
 
 ---
 

@@ -52,8 +52,8 @@ flowchart TD
 Cada etapa del pipeline reside en un archivo especializado dentro de `src/modules/scoring/`, acompañado de su suite de pruebas hermana:
 
 ### 2.1 Descubrimiento de Módulos (`discovery.ts`)
-- **Responsabilidad:** Escanear el directorio raíz del repositorio e identificar carpetas de primer nivel que califiquen como módulos de software.
-- **Criterio de Inclusión:** Una carpeta se considera módulo si contiene al menos un archivo con extensión `.ts`, `.tsx`, `.js` o `.jsx`.
+- **Responsabilidad:** Recorrer todas las subcarpetas del repositorio, a partir de su raíz, e identificar cuáles califican como módulos de software (las carpetas mixtas se parten; ver el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md), «Límite resuelto»).
+- **Criterio de Inclusión:** Una carpeta sin subcarpetas es un módulo si contiene al menos un archivo con extensión `.ts`, `.tsx`, `.js` o `.jsx`. Una carpeta que solo tiene subcarpetas no es módulo y se sigue bajando; una carpeta con archivos de código sueltos y también subcarpetas (mixta) da un módulo con sus archivos sueltos más uno por subcarpeta. El nombre del módulo es su ruta relativa a la raíz (por ejemplo `src/auth`), y los archivos sueltos directamente en la raíz no forman módulo.
 - **Exclusiones Rigurosas:** Omite de inmediato carpetas de artefactos de compilación y control de versiones:
   `node_modules`, `.git`, `dist`, `build`, `coverage`, `.next`, `out`, `.forge614` (la carpeta de Forge614 del proyecto: identidad portátil `project.json`, escrita por Engram) y cualquier directorio que comience con punto (`.`).
 - **Función Auxiliar `isTestFile`:** Detecta archivos de prueba mediante la expresión regular `/\.(test|spec)\.[tj]sx?$/` para excluirlos de métricas de complejidad ciclomática y *fan-in*.

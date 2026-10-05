@@ -3,7 +3,7 @@
 > **Documento Oficial de Referencia Técnica — Ecosistema Forge614**  
 > **Proyecto:** Forge614 Atlas (Orquestador de Contextualización Profunda)  
 > **Fundamento Teórico:** Teoría de Grafos de Flujo de Control (McCabe, 1976), Centralidad de Grado en Redes de Software y Modificadores Multiplicativos de Fragilidad  
-> **Estado:** Implementado, validado y con 26 pruebas pasando  
+> **Estado:** Implementado y validado; la suite completa (194 pruebas) pasa en la rama `work/1.1.1`\
 > **Traducción hermana:** [03 (EN). Signals, Metrics, and Formulas](../en/03-signals-metrics-and-formulas.md)
 
 ---
@@ -24,19 +24,23 @@ Para evitar el uso de heurísticas arbitrarias o modelos de lenguaje probabilís
 ## 2. Detalle de Cada Señal
 
 ### 2.1 Descubrimiento y Filtrado de Módulos (`discovery.ts`)
-Antes de puntuar, el sistema escanea el directorio raíz del proyecto:
-1. **Regla de inclusión:** Selecciona carpetas de primer nivel que contengan archivos de código fuente con extensiones admitidas: `.ts`, `.tsx`, `.js`, `.jsx`.
-2. **Exclusiones estrictas:** Descarta de forma inmediata directorios de dependencias, artefactos de compilación y control de versiones:
+Antes de puntuar, el sistema recorre las carpetas del proyecto, a partir de la raíz y de forma recursiva (`discoverModules` y `collectModules`):
+1. **Regla de inclusión:** Evalúa cada carpeta por separado, con archivos de código fuente de extensiones admitidas: `.ts`, `.tsx`, `.js`, `.jsx`.
+   - Una carpeta sin subcarpetas es un módulo si tiene al menos un archivo de código.
+   - Una carpeta que solo tiene subcarpetas no es módulo: se sigue bajando a cada subcarpeta.
+   - Una carpeta mixta (archivos sueltos y también subcarpetas) da un módulo con sus archivos sueltos más uno por subcarpeta.
+   - El nombre del módulo es su ruta relativa a la raíz, con `/` (por ejemplo `src/auth`), y los archivos sueltos directamente en la raíz no forman módulo.
+2. **Exclusiones estrictas:** Descarta de forma inmediata (en todos los niveles) directorios de dependencias, artefactos de compilación y control de versiones, y cualquier carpeta cuyo nombre empiece con punto:
    ```typescript
    const EXCLUDED_DIRS = new Set([
      "node_modules", ".git", "dist", "build", "coverage", ".next", "out", ".forge614",
    ]);
    ```
    (`.forge614` es la carpeta de Forge614 del proyecto — identidad portátil `project.json`, escrita por Engram — no una salida de compilación.)
-3. **Ordenamiento alfabético determinista:** Tanto la lista de módulos como la lista de archivos dentro de cada módulo se ordenan con `localeCompare(b)`:
+3. **Ordenamiento alfabético determinista:** Tanto la lista de módulos como la lista de archivos dentro de cada módulo se ordenan con `localeCompare` (las carpetas que se recorren también):
    ```typescript
-   topLevelDirs.sort((a, b) => a.localeCompare(b));
-   matches.sort((a, b) => a.localeCompare(b));
+   return modules.sort((a, b) => a.name.localeCompare(b.name));
+   return matches.sort((a, b) => a.localeCompare(b));
    ```
 4. **Detección de archivos de prueba:**
    ```typescript
@@ -118,8 +122,9 @@ En la teoría de grafos y arquitectura de software, el **Fan-In** mide el númer
    ```typescript
    resolvedPath === modulePath || resolvedPath.startsWith(modulePath + sep)
    ```
+   Si varios módulos contienen el archivo destino (una carpeta mixta da `src` y `src/auth`), gana el más específico, el de ruta más larga (`src/auth`), así que el import cuenta para `src/auth` y no para `src`.
 4. **Conteo de módulos cliente distintos:**
-   Para un módulo $M$, $FanIn(M)$ cuenta la cantidad de **otros módulos diferentes** que importan al menos un archivo de $M$. No se cuentan las auto-importaciones dentro del mismo módulo, ni los archivos de prueba, ni las importaciones duplicadas desde un mismo módulo consumidor:
+   Para un módulo $M$, $FanIn(M)$ cuenta la cantidad de **otros módulos diferentes** que importan al menos un archivo de $M$. No se cuentan las auto-importaciones dentro del mismo módulo, ni los imports que salen de archivos de prueba (esos archivos no se leen), ni las importaciones duplicadas desde un mismo módulo consumidor:
 
 $$FanIn(M) = |\{ M_{origen} \mid M_{origen} \neq M \land \exists f_{orig} \in M_{origen}, f_{dest} \in M : f_{orig} \rightarrow f_{dest} \}|$$
 
@@ -138,7 +143,7 @@ git -c core.quotepath=false log --format= --name-only
 1. **Desactivación de escape octal (`-c core.quotepath=false`):**
    Por defecto, Git escapa rutas de archivos que contienen caracteres no ASCII (como la letra `ñ`, tildes o caracteres UTF-8) en secuencias octales (ej. `"dise\303\261o"`). Esto provocaba que en rutas en español el comparador de cadenas no coincidiera con la carpeta en disco, resultando en un *churn* erróneo de 0. La opción `-c core.quotepath=false` garantiza nombres de archivo en UTF-8 plano.
 2. **Atribución estricta con frontera de directorio:**
-   Cada línea devuelta por `git log` se coteja contra la ruta absoluta de los módulos verificando `absolutePath === modulePath || absolutePath.startsWith(modulePath + sep)`.
+   Cada línea devuelta por `git log` se coteja contra la ruta absoluta de los módulos verificando `absolutePath === modulePath || absolutePath.startsWith(modulePath + sep)`. Si varios módulos coinciden (una carpeta mixta da `src` y `src/auth`), el archivo se cuenta en el más específico, el de ruta más larga (`src/auth`), no en `src`.
 
 ---
 
