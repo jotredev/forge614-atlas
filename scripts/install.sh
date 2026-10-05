@@ -3,9 +3,8 @@
 # (código que identifica el contenido de un archivo), instala o actualiza Engram y Workers cuando faltan o son más
 # viejos, solo comprueba Engines (si no sirve, termina con `fail`; el instalador de Workers lo instala o actualiza si
 # corre en esa misma ejecución, y el de Engram solo lo instala si falta), copia el binario a la carpeta elegida y, si
-# puede, la agrega al
-# PATH (la lista de carpetas donde la terminal busca programas). Los errores previstos terminan con `fail` (código 1);
-# si una dependencia no se puede cumplir, no se instala nada de Atlas.
+# puede, la agrega al PATH (la lista de carpetas donde la terminal busca programas). Los errores previstos terminan con
+# `fail` (código 1); si una dependencia no se puede cumplir, no se instala nada de Atlas.
 # Uso: bash scripts/install.sh [--version TAG] [--bin-dir PATH] [--force]; `--help` lo detalla.
 
 # Termina ante un comando que falle fuera de una condición (`if`, `&&`, `||`), una variable sin definir (-u) o un fallo
