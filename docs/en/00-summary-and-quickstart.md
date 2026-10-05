@@ -4,7 +4,7 @@
 > **Project:** Forge614 Atlas (Deep Contextualization Orchestrator)  
 > **Component:** Plans 1–5 and Atlas 1.1.0 — scoring, Engram sessions, the `init` CLI core, real subagent dispatch and the installer (this chapter keeps the Plan 1 detail)
 > **Runtime:** Bun >= 1.3.9 | TypeScript 5.9.3
-> **Verification:** 192 passing tests (0 failures) | Clean typecheck and build
+> **Verification:** 194 passing tests (0 failures) | Clean typecheck and build
 > **Sister translation:** [00. Resumen Ejecutivo y Guía Rápida](../es/00-resumen-y-guia-rapida.md)
 
 ---
@@ -66,9 +66,9 @@ To compile, execute, and verify the Atlas scoring engine:
 ### Step 1: Navigate to repository and verify branch
 
 ```bash
-cd /Users/jorgeetrejoo/Desktop/forge614-atlas
+cd <folder where you cloned forge614-atlas>
 git status
-# Confirm you are on: atlas/plan1-complexity-scoring
+git branch --show-current   # must show the branch you work on (today, work/1.1.1)
 ```
 
 ### Step 2: Install locked dependencies
@@ -86,6 +86,8 @@ The test suite validates module discovery, AST metrics, relative import resoluti
 ```bash
 bun test
 ```
+
+To see 0 failures, `bun test` needs Engines 1.17.0, Workers 1.0.0 and an authenticated Claude Code installed (the CI leaves out `src/modules/cli/init.test.ts` for that reason, `.github/workflows/verify.yml`). The output below is from such a machine; times and the number of `expect()` calls may vary.
 
 **Expected output:**
 ```text
@@ -122,7 +124,7 @@ forge614-atlas/
 │           ├── discovery.ts        # Module discovery and folder filtering
 │           ├── discovery.test.ts   # Tests for module discovery and alphabetical stability
 │           ├── cyclomatic.ts       # McCabe cyclomatic complexity via TypeScript AST
-│           ├── cyclomatic.test.ts  # Tests for branching logic (if/switch/loops/operators)
+│           ├── cyclomatic.test.ts  # Tests for base 1, if / else if, for...of, && and case (no default)
 │           ├── fan-in.ts           # Inter-module dependency centrality
 │           ├── fan-in.test.ts      # Tests for distinct module counts & test exclusions
 │           ├── churn.ts            # Historical commit volatility via git log
@@ -130,7 +132,7 @@ forge614-atlas/
 │           ├── test-coverage-gap.ts# Ratio of source files lacking sibling tests
 │           ├── test-coverage-gap.test.ts # Tests for test gap calculations
 │           ├── composite-score.ts  # Min-max normalization, weights & test gap modifier
-│           ├── composite-score.test.ts # Tests for relative rankings and balance guarantees
+│           ├── composite-score.test.ts # Tests of the extremes: everything at 0 scores 0, everything at the maximum with testGap 1 scores 1.2
 │           ├── tiers.ts            # Percentile tier classification (15% / 35% / 50%)
 │           ├── tiers.test.ts       # Tests for tier distribution and deterministic tie-breaking
 │           └── scaffold.test.ts    # Sanity check for test runner pipeline

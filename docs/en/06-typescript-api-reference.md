@@ -24,7 +24,7 @@ export interface ModuleDescriptor {
   name: string;
   /** Absolute filesystem path to the module's folder */
   path: string;
-  /** Exhaustive list, sorted alphabetically, of TypeScript/JavaScript source files */
+  /** Code files that sit directly in the module's folder (not those of its subfolders: if these have code and are not excluded, they form other modules), tests included, in alphabetical order */
   files: string[];
 }
 ```
@@ -637,7 +637,7 @@ Discovers the project's modules, scores them (the four signals, the composite sc
 - **Used by:** `src/modules/cli/init.ts:203` (with `--force`, `skipCompleted: false`) and `:217` (`skipCompleted: true`).
 
 #### `runInitCommand(store: MemoryStore, options: RunInitOptions): Promise<InitOutcome>`
-Runs the whole `init` flow: detects and chooses the engine, checks the prerequisites (that Engines guarantees the read-only lock and that the Workers program exists and is version 1.0.0 or later; all before opening any Engram session), opens or resumes the session, builds the plan and dispatches it to Workers. Defined at `src/modules/cli/init.ts:164`.
+Runs the whole `init` flow: detects and chooses the engine, checks the prerequisites (that Engines guarantees the read-only lock and that the Workers program exists, can be run and is version 1.0.0 or later; all before opening any Engram session), opens or resumes the session, builds the plan and dispatches it to Workers. Defined at `src/modules/cli/init.ts:164`.
 
 - **Returns:** a promise with the `InitOutcome` that the CLI prints (see [chapter 13](13-data-files.md)).
 - **Throws:** expected failures do not throw: they come out as `{ status: "error" }` with their code. Engram errors when opening the session (for example `PROJECT_FILE_INVALID`) and the `ENOENT` of `deriveSessionId` do pass through; `src/interfaces/cli/main.ts:73` turns them into `UNEXPECTED_ERROR`.

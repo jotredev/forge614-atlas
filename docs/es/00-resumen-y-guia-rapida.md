@@ -4,7 +4,7 @@
 > **Proyecto:** Forge614 Atlas (Orquestador de Contextualización Profunda)  
 > **Componente:** Planes 1–5 y Atlas 1.1.0 — puntuación, sesiones de Engram, núcleo del CLI `init`, despacho real de subagentes e instalador (este capítulo conserva el detalle del Plan 1)
 > **Entorno:** Bun >= 1.3.9 | TypeScript 5.9.3
-> **Verificación:** 192 pruebas pasando (0 fallas) | typecheck y build limpios
+> **Verificación:** 194 pruebas pasando (0 fallas) | typecheck y build limpios
 > **Traducción hermana:** [00 (EN). Executive Summary and Quickstart](../en/00-summary-and-quickstart.md)
 
 ---
@@ -66,9 +66,9 @@ Para compilar, ejecutar y verificar el motor de puntuación de Atlas:
 ### Paso 1: Clonar y situarse en la rama de trabajo
 
 ```bash
-cd /Users/jorgeetrejoo/Desktop/forge614-atlas
+cd <carpeta donde clonaste forge614-atlas>
 git status
-# Confirmar que te encuentras en: atlas/plan1-complexity-scoring
+git branch --show-current   # debe mostrar la rama en la que trabajas (hoy, work/1.1.1)
 ```
 
 ### Paso 2: Instalar dependencias congeladas
@@ -86,6 +86,8 @@ El conjunto de pruebas valida el descubrimiento, métricas de AST, resolución d
 ```bash
 bun test
 ```
+
+Para ver 0 fallas, `bun test` necesita que estén instalados Engines 1.17.0 y Workers 1.0.0 y un Claude Code autenticado (la CI deja fuera `src/modules/cli/init.test.ts` por esa razón, `.github/workflows/verify.yml`). La salida de abajo es la de una máquina así; los tiempos y el número de `expect()` pueden variar.
 
 **Salida esperada:**
 ```text
@@ -122,7 +124,7 @@ forge614-atlas/
 │           ├── discovery.ts        # Descubrimiento de módulos y exclusión de carpetas
 │           ├── discovery.test.ts   # Pruebas de descubrimiento y orden alfabético
 │           ├── cyclomatic.ts       # Complejidad ciclomática mediante AST de TypeScript
-│           ├── cyclomatic.test.ts  # Pruebas de detección de ramas (if/switch/loops/operadores)
+│           ├── cyclomatic.test.ts  # Pruebas de base 1, if / else if, for...of, && y case (sin default)
 │           ├── fan-in.ts           # Centralidad de dependencias entre módulos
 │           ├── fan-in.test.ts      # Pruebas de conteo de módulos distintos y exclusión de tests
 │           ├── churn.ts            # Frecuencia de cambio histórico vía git log
@@ -130,7 +132,7 @@ forge614-atlas/
 │           ├── test-coverage-gap.ts# Proporción de archivos fuente sin prueba hermana
 │           ├── test-coverage-gap.test.ts # Pruebas de cálculo de brecha de pruebas
 │           ├── composite-score.ts  # Normalización min-max, pesos y modificador de cobertura
-│           ├── composite-score.test.ts # Pruebas de ordenación relativa y pruebas de balance
+│           ├── composite-score.test.ts # Pruebas de los extremos: todo en 0 puntúa 0, todo al máximo con testGap 1 puntúa 1,2
 │           ├── tiers.ts            # Clasificación en niveles por percentiles (15% / 35% / 50%)
 │           ├── tiers.test.ts       # Pruebas de asignación y desempate alfabético
 │           └── scaffold.test.ts    # Prueba de sanidad del arnés de pruebas

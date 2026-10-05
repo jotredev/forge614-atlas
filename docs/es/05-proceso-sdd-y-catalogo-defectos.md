@@ -89,5 +89,5 @@ Durante el desarrollo del Plan 1, se identificaron dos comportamientos que no de
 
 ### Decisión Diferida 2: Descubrimiento de módulos en arquitecturas anidadas
 - **Estado en Plan 1:** `discoverModules(root)` inspecciona únicamente las carpetas de **primer nivel** a partir de la raíz dada. En un repositorio típico con estructura `src/{auth, billing, catalog, ui}`, hoy colapsa todo el código en un único módulo llamado `"src"`. Se corrigió después, en el commit `e693511` («make discoverModules recurse adaptively instead of one level deep»); se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md), «Límite resuelto».
-- **Mandato para el Plan 3:** El Plan 3 debe implementar la adaptación de raíz de análisis (*root analysis adaptation*): si la raíz solo contiene una carpeta principal de código (como `src/`, `packages/` o `lib/`), el orquestador debe descender automáticamente un nivel para puntuar los submódulos reales de negocio.
+- **Mandato para el Plan 3 (histórico):** El Plan 3 debe implementar la adaptación de raíz de análisis (*root analysis adaptation*): si la raíz solo contiene una carpeta principal de código (como `src/`, `packages/` o `lib/`), el orquestador debe descender automáticamente un nivel para puntuar los submódulos reales de negocio.
 - **Documentación en código:** Comentario de diseño en `src/modules/scoring/discovery.ts`.
