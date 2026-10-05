@@ -1,4 +1,9 @@
 #!/usr/bin/env bun
+/**
+ * Punto de entrada de la línea de comandos de Atlas: despacha `init`, `update`, `uninstall`, `--help` y `--version`.
+ * La ayuda y la versión salen como texto; las demás respuestas, incluidos el comando desconocido y un error imprevisto,
+ * salen en JSON (texto con campos).
+ */
 import { version } from "../../../package.json";
 import { runInit, runUninstall, runUpdate } from "./commands";
 import { helpText } from "./help";
@@ -7,7 +12,7 @@ import { helpText } from "./help";
  * Lee el valor que sigue a una opción, por ejemplo `--engine claude-code`.
  * @param args Argumentos del comando.
  * @param name Nombre de la opción.
- * @returns El argumento que sigue a la opción, o `undefined` si la opción no está.
+ * @returns El argumento que sigue a la opción, o `undefined` si la opción no está o es el último argumento (no comprueba que el valor no sea otra opción).
  */
 function flag(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
@@ -46,6 +51,7 @@ async function main(): Promise<void> {
     return;
   }
 
+  // `init` es el único comando que abre Engram; `--engine <id>` elige el motor y `--force` rehace un análisis ya completo.
   if (command === "init") {
     const engine = flag(rest, "--engine");
     const force = rest.includes("--force");
@@ -53,6 +59,7 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Si el comando no existe se responde con error estructurado y código de salida 1.
   console.log(
     JSON.stringify(
       { schemaVersion: 1, status: "error", error: { code: "UNKNOWN_COMMAND", argv: process.argv.slice(2) } },
@@ -64,10 +71,8 @@ async function main(): Promise<void> {
 }
 
 main().catch(error => {
-  // main() ahora es async (Task 8 del Plan 4: runInitCommand pasó a async por el streaming
-  // de eventos de Workers) — sin este .catch(), un error inesperado se volvería un
-  // unhandled promise rejection en vez de una salida estructurada, y Node podría
-  // imprimir su propio texto (no JSON) a stderr antes de salir con código 1.
+  // Un error imprevisto de main() se responde con `UNEXPECTED_ERROR` en JSON y salida 1; sin este .catch Node
+  // imprimiría su propio texto (no JSON) en stderr.
   console.log(
     JSON.stringify(
       {

@@ -1,10 +1,9 @@
 /**
- * Forge614 Atlas — Motor Determinista de Puntuación de Complejidad (Plan 1/5)
- * 
- * Barril principal de exportación pública de la librería. Expone las primitivas
- * deterministas para descubrimiento de módulos, análisis de Árbol de Sintaxis Abstracta (AST),
- * grafos de dependencias (Fan-In), historial de versiones Git (Churn), brecha de pruebas unitarias,
- * normalización Min-Max, cálculo de puntaje compuesto y clasificación en niveles de contexto (Tiers).
+ * Forge614 Atlas: punto de entrada público de la librería (`package.json` lo declara en `exports`); solo reexporta, no
+ * define lógica. Reúne en 11 secciones la puntuación de módulos (descubrimiento, complejidad ciclomática, fan-in
+ * —cuántos módulos dependen de uno—, churn —cuánto cambia en Git—, brecha de pruebas, normalización Min-Max —llevar cada
+ * señal a 0–1—, puntaje compuesto y niveles o tiers —el nivel de contexto que recibe cada módulo—), la integración con
+ * Engram, el cliente de Engines, el núcleo del CLI y el cliente de Workers.
  */
 
 // 1. Módulo de Descubrimiento e Inspección del Sistema de Archivos
@@ -55,7 +54,7 @@ export type { RunPlanModule, RunPlanResult } from "./modules/cli/build-run-plan"
 export { runInitCommand } from "./modules/cli/init";
 export type { RunInitOptions, InitOutcome } from "./modules/cli/init";
 
-// 11. Módulo Cliente de Workers (Despacho de Subagentes)
+// 11. Cliente de Workers y despacho de subagentes (incluye piezas de `modules/cli` y el contador de pausas de `modules/memory`)
 export { resolveWorkersBinaryPath } from "./modules/workers-client/binary-path";
 export { runWorkersBatch } from "./modules/workers-client/run-batch";
 export type { WorkersTask, WorkersEvent } from "./modules/workers-client/run-batch";

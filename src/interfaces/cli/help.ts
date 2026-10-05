@@ -1,4 +1,8 @@
 /**
+ * Texto de ayuda de la línea de comandos de Atlas: comandos, opciones y la variable `FORGE614_HOME`. Lo imprime
+ * `main.ts` con `--help` o `-h`.
+ */
+/**
  * Arma el texto de la ayuda corta del CLI.
  * @param version Versión de Atlas, tomada de `package.json`.
  * @returns La ayuda lista para imprimir.
