@@ -2,7 +2,7 @@
 
 > **Official Technical Reference Document — Forge614 Ecosystem**  
 > **Project:** Forge614 Atlas (Deep Contextualization Orchestrator)  
-> **Component:** Plans 1–5 and Atlas 1.1.0 — scoring, Engram sessions, the `init` CLI core, real subagent dispatch and the installer (this chapter keeps the Plan 1 detail)
+> **Component:** Plans 1–5 and Atlas 1.1.1 — scoring, Engram sessions, the `init` CLI core, real subagent dispatch and the installer (this chapter keeps the Plan 1 detail)
 > **Runtime:** Bun >= 1.3.9 | TypeScript 5.9.3
 > **Verification:** 194 passing tests (0 failures) | Clean typecheck and build
 > **Sister translation:** [00. Resumen Ejecutivo y Guía Rápida](../es/00-resumen-y-guia-rapida.md)

@@ -2,7 +2,7 @@
 
 > **Documento Oficial de Referencia Técnica — Ecosistema Forge614**  
 > **Proyecto:** Forge614 Atlas (Orquestador de Contextualización Profunda)  
-> **Componente:** Planes 1–5 y Atlas 1.1.0 — puntuación, sesiones de Engram, núcleo del CLI `init`, despacho real de subagentes e instalador (este capítulo conserva el detalle del Plan 1)
+> **Componente:** Planes 1–5 y Atlas 1.1.1 — puntuación, sesiones de Engram, núcleo del CLI `init`, despacho real de subagentes e instalador (este capítulo conserva el detalle del Plan 1)
 > **Entorno:** Bun >= 1.3.9 | TypeScript 5.9.3
 > **Verificación:** 194 pruebas pasando (0 fallas) | typecheck y build limpios
 > **Traducción hermana:** [00 (EN). Executive Summary and Quickstart](../en/00-summary-and-quickstart.md)

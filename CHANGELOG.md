@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1
+
+Atlas reparte bien lo que pasa en las subcarpetas de una carpeta mixta, su instalador dice cuando Forge614 Engines ya es compatible, y el código, las pruebas y los manuales quedan documentados por completo en español.
+
+- **Corrección:** con una carpeta que tiene archivos sueltos y subcarpetas (por ejemplo `src/index.ts` y `src/auth/`), el churn y el fan-in de lo que está en `src/auth` se sumaban al módulo `src` y `src/auth` quedaba siempre en 0; ahora cada archivo cuenta en el módulo más específico que lo contiene (el de ruta más larga).
+- **Instalador:** cuando Forge614 Engines ya es compatible, `install.sh` lo dice (`Forge614 Engines is compatible: <ruta del binario>`) en lugar de no imprimir nada.
+- **Manuales:** capítulos nuevos 11 (resolución de errores), 12 (glosario) y 13 (archivos de datos); el capítulo 06 cubre toda la API que exporta `src/index.ts`; el capítulo 07 explica cada parte del motor de puntuación con su archivo y línea en lugar de copiar código; los capítulos 00, 02, 03 y 08 describen el descubrimiento de módulos como es hoy.
+- **Código y pruebas documentados:** todo `src/`, `scripts/` y `test/` lleva comentarios en español: cada función con lo que hace, devuelve y lanza, y cada prueba con lo que comprueba.
+
 ## 1.1.0
 
 Atlas ahora envía solo ayudantes de solo lectura, responde `--help`, `update` y `uninstall`, encuentra cada producto de Forge614 mediante `FORGE614_HOME`, y su instalador trae Workers y comprueba Engram y Engines antes de crear nada.
