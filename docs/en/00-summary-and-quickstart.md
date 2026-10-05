@@ -140,7 +140,7 @@ forge614-atlas/
 
 ## 6. Technical Documentation Index
 
-All documentation adheres to strict two-digit sequential numbering across both local files and Notion pages:
+All documentation adheres to strict two-digit sequential numbering in the local files (and in Notion, where only chapters 08, 09 and 10 are published):
 
 | Index | Spanish Title | English Title | Core Topic |
 |:---:|---|---|---|
@@ -150,7 +150,7 @@ All documentation adheres to strict two-digit sequential numbering across both l
 | **03** | [Señales, Métricas y Fórmulas](../es/03-senales-metricas-y-formulas.md) | [Signals, Metrics & Formulas](03-signals-metrics-and-formulas.md) | Mathematical and AST details of all 5 signals, normalization, and weights. |
 | **04** | [Clasificación de Niveles y Percentiles](../es/04-clasificacion-niveles-y-percentiles.md) | [Tier Classification & Percentiles](04-tier-classification-and-percentiles.md) | Deep/Standard/Light distribution, adaptive percentiles, and tie-breaking. |
 | **05** | [Proceso SDD y Catálogo de Defectos](../es/05-proceso-sdd-y-catalogo-defectos.md) | [SDD Process & Defect Catalog](05-sdd-process-and-defect-catalog.md) | 8-task subagent workflow, 17 commits, 5 corrected defects, and deferred items. |
-| **06** | [Referencia de API Pública en TypeScript](../es/06-referencia-api-typescript.md) | [TypeScript API Reference](06-typescript-api-reference.md) | Type signatures, module interfaces, and production-ready usage examples. |
+| **06** | [Referencia de API Pública en TypeScript](../es/06-referencia-api-typescript.md) | [TypeScript API Reference](06-typescript-api-reference.md) | Catalog of the 18 types and 30 functions that `src/index.ts` exports (signatures, what they return, when they throw and who uses them) and an example that scores a project. |
 | **07** | [Estructura del Proyecto y Código Fuente](../es/07-estructura-codigo-linea-por-linea.md) | [Project Structure & Source Code](07-project-structure-documented-source-code.md) | Master index to 9 modular subpages with complete code and line-by-line analysis of all 19 files. |
 | **08** | [Núcleo del CLI y plan de corrida JSON](../es/08-nucleo-cli-y-plan-de-corrida.md) | [CLI Core and JSON Run Plan](08-cli-core-and-run-plan.md) | `init` contract, Engines, Engram, JSON outcomes, and limits. |
 | **09** | [Despacho Real de Subagentes](../es/09-despacho-de-subagentes.md) | [Real Subagent Dispatch](09-subagent-dispatch.md) | Real dispatch via `forge614-workers`, tier order, `readableDir`, final report. |

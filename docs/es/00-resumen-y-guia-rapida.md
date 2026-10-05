@@ -140,7 +140,7 @@ forge614-atlas/
 
 ## 6. Índice de Documentación Técnica
 
-La documentación del proyecto sigue una indexación secuencial estricta de dos dígitos tanto en el repositorio como en Notion:
+La documentación del proyecto sigue una indexación secuencial estricta de dos dígitos en el repositorio (y en Notion, donde solo están publicados los capítulos 08, 09 y 10):
 
 | Índice | Título en Español | English Translation | Contenido Principal |
 |:---:|---|---|---|
@@ -150,7 +150,7 @@ La documentación del proyecto sigue una indexación secuencial estricta de dos 
 | **03** | [Señales, Métricas y Fórmulas](03-senales-metricas-y-formulas.md) | [Signals, Metrics & Formulas](../en/03-signals-metrics-and-formulas.md) | Explicación matemática y de código de las 5 señales, AST de TypeScript y normalización. |
 | **04** | [Clasificación de Niveles y Percentiles](04-clasificacion-niveles-y-percentiles.md) | [Tier Classification & Percentiles](../en/04-tier-classification-and-percentiles.md) | Asignación de niveles Profundo/Estándar/Ligero, percentiles adaptativos y desempate determinista. |
 | **05** | [Proceso SDD y Catálogo de Defectos](05-proceso-sdd-y-catalogo-defectos.md) | [SDD Process & Defect Catalog](../en/05-sdd-process-and-defect-catalog.md) | Historial de 8 tareas con subagentes, 17 commits, los 5 defectos corregidos y 2 decisiones diferidas. |
-| **06** | [Referencia de API Pública en TypeScript](06-referencia-api-typescript.md) | [TypeScript API Reference](../en/06-typescript-api-reference.md) | Firmas de tipos, interfaces de entrada/salida y código de integración de ejemplo. |
+| **06** | [Referencia de API Pública en TypeScript](06-referencia-api-typescript.md) | [TypeScript API Reference](../en/06-typescript-api-reference.md) | Catálogo de los 18 tipos y las 30 funciones que exporta `src/index.ts` (firmas, qué devuelven, cuándo lanzan y quién las usa) y un ejemplo de puntuación de un proyecto. |
 | **07** | [Estructura del Proyecto y Código Fuente](07-estructura-codigo-linea-por-linea.md) | [Project Structure & Source Code](../en/07-project-structure-documented-source-code.md) | Índice maestro hacia 9 subpáginas modulares con código completo y análisis línea por línea de los 19 archivos. |
 | **08** | [Núcleo del CLI y plan de corrida JSON](08-nucleo-cli-y-plan-de-corrida.md) | [CLI Core and JSON Run Plan](../en/08-cli-core-and-run-plan.md) | Contrato de `init`, Engines, Engram, resultados JSON y límites. |
 | **09** | [Despacho Real de Subagentes](09-despacho-de-subagentes.md) | [Real Subagent Dispatch](../en/09-subagent-dispatch.md) | Despacho real vía `forge614-workers`, orden de niveles, `readableDir`, reporte final. |
