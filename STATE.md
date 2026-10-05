@@ -304,8 +304,8 @@ guardaron las direcciones del capítulo 10.
 
 En la rama `work/1.1.1` va la versión 1.1.1, aún sin publicar: el código
 y las pruebas documentados en español, los manuales nuevos (capítulos 11,
-resolución de errores, y 12, glosario) y el mensaje del instalador
-«Forge614 Engines is compatible».
+resolución de errores; 12, glosario; y 13, archivos de datos) y el
+mensaje del instalador «Forge614 Engines is compatible».
 
 No queda ningún plan sin empezar en el roadmap original de Atlas.
 Trabajo futuro más allá de este roadmap (si lo hay) requiere una nueva

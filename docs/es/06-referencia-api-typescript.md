@@ -10,7 +10,7 @@
 
 ## 1. Declaración de Tipos e Interfaces
 
-`src/index.ts` exporta 18 tipos. Cada uno se muestra con su definición tal como está en el código (con sus comentarios) y el archivo y la línea donde está definido. `MemoryStore`, `Session` y `SessionSaveResult`, que aparecen en las firmas, son tipos de Engram (`forge614-engram`), no de Atlas.
+`src/index.ts` exporta 18 tipos. Cada uno se muestra con su definición tal como está en el código (con sus comentarios, que en el código están en español) y el archivo y la línea donde está definido. `MemoryStore`, `Session` y `SessionSaveResult`, que aparecen en las firmas, son tipos de Engram (`forge614-engram`), no de Atlas.
 
 ### `ModuleDescriptor`
 Un módulo descubierto en disco con sus archivos de código. Definido en `src/modules/scoring/discovery.ts:33`.
@@ -423,7 +423,7 @@ const modules = discoverModules("/ruta/a/mi-proyecto");
 console.log(`Módulos descubiertos: ${modules.length}`);
 ```
 
-- **Devuelve:** la lista de `ModuleDescriptor` ordenada alfabéticamente por nombre. En cada uno, `files` son las rutas absolutas de los `*.ts`, `*.tsx`, `*.js` y `*.jsx` que están directamente en su carpeta (los archivos de prueba incluidos), ordenadas.
+- **Devuelve:** la lista de `ModuleDescriptor` ordenada alfabéticamente por nombre. En cada uno, `files` son las rutas de los `*.ts`, `*.tsx`, `*.js` y `*.jsx` que están directamente en su carpeta (los archivos de prueba incluidos), ordenadas; son absolutas si `root` lo es.
 - **Lanza:** el error del sistema de archivos (por ejemplo `ENOENT`) si `root` no existe o no se puede leer; no lo atrapa.
 - **La usan:** `src/modules/cli/build-run-plan.ts:54` y `src/modules/cli/module-files.ts:16`.
 
@@ -432,14 +432,14 @@ Dice si una ruta es un archivo de prueba. Definida en `src/modules/scoring/disco
 
 - **Devuelve:** `true` si el nombre termina en `.test` o `.spec` seguido de `ts`, `tsx`, `js` o `jsx` (`/\.(test|spec)\.[tj]sx?$/`). Solo mira el texto de la ruta: no comprueba que el archivo exista.
 - **Lanza:** nunca.
-- **La usan:** `src/modules/scoring/cyclomatic.ts:120`, `src/modules/scoring/fan-in.ts:154` y `src/modules/scoring/test-coverage-gap.ts:72`, para dejar los archivos de prueba fuera de sus cuentas.
+- **La usan:** `src/modules/scoring/cyclomatic.ts:120`, `src/modules/scoring/fan-in.ts:156` y `src/modules/scoring/test-coverage-gap.ts:72`, para dejar los archivos de prueba fuera de sus cuentas.
 
 ---
 
 ### 2.2 Métricas de Complejidad
 
 #### `fileCyclomaticComplexity(sourceText: string, fileName = "module.ts"): number`
-Lee un texto de TypeScript con el analizador del compilador (su AST) y calcula la complejidad ciclomática de McCabe de todo el archivo: parte de 1 y suma uno por cada `if`, expresión `? :`, bucle (`while`, `do`, `for`, `for…in`, `for…of`), `catch`, `case` (no `default`), `&&`, `||` y `??`. Es una sola cuenta para el archivo entero, no una por función. `fileName` solo decide cómo se lee el texto (por ejemplo, `.tsx` admite JSX). Definida en `src/modules/scoring/cyclomatic.ts:43`.
+Lee un texto de TypeScript con el analizador del compilador (su AST, el árbol de sintaxis abstracta: el código ya leído como árbol) y calcula la complejidad ciclomática de McCabe de todo el archivo (cuántos caminos distintos tiene el código): parte de 1 y suma uno por cada `if`, expresión `? :`, bucle (`while`, `do`, `for`, `for…in`, `for…of`), `catch`, `case` (no `default`), `&&`, `||` y `??`. Es una sola cuenta para el archivo entero, no una por función. `fileName` solo decide cómo se lee el texto (por ejemplo, `.tsx` admite JSX). Definida en `src/modules/scoring/cyclomatic.ts:43`.
 
 - **Devuelve:** un entero de 1 o más.
 - **Lanza:** nada propio: recibe el texto, no lee archivos.
@@ -457,7 +457,7 @@ Suma la complejidad ciclomática de los archivos de cada módulo, dejando fuera 
 ### 2.3 Centralidad y Dependencias
 
 #### `computeFanIn(modules: ModuleDescriptor[]): Map<string, number>`
-Lee los `import`, los `export … from` y los `require` relativos (los que empiezan con `.`) de los archivos productivos de cada módulo, los sigue hasta el archivo real en disco (probando la ruta tal cual, con `.ts`, `.tsx`, `.js`, `.jsx` y como carpeta con `index`) y cuenta, para cada módulo, cuántos otros módulos distintos lo importan. Un módulo cuenta una sola vez aunque tenga muchos imports hacia el mismo destino, y las dependencias de un módulo consigo mismo no cuentan. Un import que no apunta a un archivo existente se ignora. Si varios módulos contienen el archivo importado (una carpeta mixta da `src` y `src/auth`), el import se atribuye al más específico, el de ruta más larga (`src/auth`). Definida en `src/modules/scoring/fan-in.ts:142`.
+Lee los `import`, los `export … from` y los `require` relativos (los que empiezan con `.`) de los archivos productivos de cada módulo, los sigue hasta el archivo real en disco (probando, en este orden, la ruta tal cual —si es una carpeta, la carpeta misma cuenta—, la ruta con `.ts`, `.tsx`, `.js` y `.jsx`, y `index.ts`, `index.tsx` e `index.js` dentro de ella) y cuenta, para cada módulo, cuántos otros módulos distintos lo importan. Un módulo cuenta una sola vez aunque tenga muchos imports hacia el mismo destino, y las dependencias de un módulo consigo mismo no cuentan. Un import que no apunta a un archivo o carpeta existente se ignora (también uno escrito con `.js` cuando el archivo es `.ts`). Si varios módulos contienen el archivo importado (una carpeta mixta da `src` y `src/auth`), el import se atribuye al más específico, el de ruta más larga (`src/auth`). Definida en `src/modules/scoring/fan-in.ts:144`.
 
 - **Devuelve:** un mapa con una entrada por módulo (nombre → cuántos otros módulos lo usan); empieza en 0.
 - **Lanza:** el error del sistema de archivos (por ejemplo `ENOENT`) si no puede leer un archivo del módulo; no lo atrapa.
@@ -468,10 +468,10 @@ Lee los `import`, los `export … from` y los `require` relativos (los que empie
 ### 2.4 Volatilidad Histórica
 
 #### `computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number>`
-Ejecuta `git -c core.quotepath=false log --format= --name-only` en `repoRoot` y suma una unidad al módulo por cada archivo suyo que aparece en cada commit. Cuenta también archivos que ya no existen si su ruta quedó dentro de la carpeta del módulo; si varios módulos contienen el archivo (una carpeta mixta da `src` y `src/auth`), se cuenta en el más específico, el de ruta más larga (`src/auth`). Definida en `src/modules/scoring/churn.ts:44`.
+Ejecuta `git -c core.quotepath=false log --format= --name-only` en `repoRoot` y suma una unidad al módulo por cada archivo suyo que aparece en cada commit. Cuenta también archivos que ya no existen si su ruta quedó dentro de la carpeta del módulo; si varios módulos contienen el archivo (una carpeta mixta da `src` y `src/auth`), se cuenta en el más específico, el de ruta más larga (`src/auth`). Definida en `src/modules/scoring/churn.ts:46`.
 
 > [!CAUTION]
-> Lanza un error si `repoRoot` no es un repositorio de Git o si `git log` falla (por ejemplo, en repositorios sin commits). `runInitCommand` lo convierte en el resultado JSON estructurado `ANALYSIS_FAILED`; `computeChurn` no degrada a cero por sí mismo.
+> Lanza un error si `git log` falla en `repoRoot` (por ejemplo, si no es un repositorio de Git o si el repositorio no tiene commits). `repoRoot` debe ser la raíz del repositorio: `git log --name-only` imprime las rutas desde la raíz del repositorio, así que desde una subcarpeta no falla, pero las rutas no coinciden con las carpetas de los módulos y el churn queda en 0. `runInitCommand` convierte el error en el resultado JSON estructurado `ANALYSIS_FAILED`; `computeChurn` no degrada a cero por sí mismo.
 
 - **Devuelve:** un mapa con una entrada por módulo (nombre → total de cambios de archivos); empieza en 0.
 - **Lanza:** `Error` con el mensaje `git log failed in <repoRoot>: <salida de error de git>` si git termina con código distinto de 0 (sin repositorio o sin commits) o no se puede ejecutar.
@@ -500,7 +500,7 @@ Lleva la ciclomática, el fan-in y el churn de cada módulo a la escala de 0 a 1
 - **La usa:** `src/modules/cli/build-run-plan.ts:76`.
 
 #### `assignTiers(scores: ModuleScore[]): TieredModule[]`
-Ordena los módulos de mayor a menor puntuación (con empate, por nombre) y reparte los niveles: `profundo` los primeros `max(1, redondeo(total × 0,15))`, `estandar` los siguientes `redondeo(total × 0,35)` y `ligero` el resto. Con 10 módulos son 2, 4 y 4; con 3, uno de cada nivel. No cambia la lista que recibe. Definida en `src/modules/scoring/tiers.ts:53`.
+Ordena los módulos de mayor a menor puntuación (con empate, por nombre) y reparte los niveles: `profundo` los primeros `max(1, redondeo(total × 0.15))`, `estandar` los siguientes `redondeo(total × 0.35)` y `ligero` el resto. Con 10 módulos son 2, 4 y 4; con 3, uno de cada nivel. No cambia la lista que recibe. Definida en `src/modules/scoring/tiers.ts:53`.
 
 - **Devuelve:** una copia ordenada, cada módulo con su `tier`; con una lista vacía, una lista vacía.
 - **Lanza:** nunca.
@@ -513,16 +513,16 @@ Ordena los módulos de mayor a menor puntuación (con empate, por nombre) y repa
 Estas funciones usan un `MemoryStore` y una `Session` de Engram; `MemoryStore` y `Session` son tipos de Engram, no de Atlas.
 
 #### `moduleTopicKey(moduleName: string): string`
-Arma la clave de tema bajo la que se guarda el reporte de un módulo. Definida en `src/modules/memory/module-topic.ts:10`.
+Arma la clave de tema (el identificador estable de un informe dentro de un proyecto) bajo la que se guarda el reporte de un módulo. Definida en `src/modules/memory/module-topic.ts:10`.
 
 - **Devuelve:** `atlas:module:<nombre>`, con el nombre sin modificar (incluida su ruta relativa si es un módulo anidado).
 - **Lanza:** nunca.
 - **La usan:** `src/modules/memory/module-report.ts:28` y `src/modules/memory/run-state.ts:43`.
 
 #### `deriveSessionId(directory: string): string`
-Calcula el identificador estable de la sesión de un repositorio. Parte de su carpeta común de Git (`git rev-parse --git-common-dir`, resuelta a su ruta real) o, si Git no la da, de la ruta real de `directory`; así el mismo repositorio da el mismo identificador desde la raíz, desde una subcarpeta o desde otro `worktree` (otra carpeta de trabajo del mismo repositorio). Definida en `src/modules/memory/session-id.ts:53`.
+Calcula el identificador estable de la sesión de un repositorio. Parte de su carpeta común de Git (`git rev-parse --path-format=absolute --git-common-dir`, resuelta a su ruta real) o, si Git no la da, de la ruta real de `directory`; así el mismo repositorio da el mismo identificador desde la raíz, desde una subcarpeta o desde otro `worktree` (otra carpeta de trabajo del mismo repositorio). Definida en `src/modules/memory/session-id.ts:53`.
 
-- **Devuelve:** `atlas:` y los primeros 16 caracteres hexadecimales del SHA-256 de esa ruta.
+- **Devuelve:** `atlas:` y los primeros 16 caracteres hexadecimales del SHA-256 (un resumen estable) de esa ruta.
 - **Lanza:** el error del sistema de archivos (por ejemplo `ENOENT`, la ruta no existe) si no puede resolver la ruta real.
 - **La usan:** `src/modules/memory/run-state.ts:23` y `src/modules/memory/session-id.ts:67`.
 
@@ -537,7 +537,7 @@ Calcula el identificador de la corrida forzada (`--force`): el estable seguido d
 Abre la sesión de Atlas del repositorio con su identificador estable o retoma la que ya está abierta; es también donde Engram escribe `.forge614/project.json` (ver el [capítulo 13](13-archivos-de-datos.md)). Definida en `src/modules/memory/run-state.ts:22`.
 
 - **Devuelve:** `{ status: "active", session }`, o `{ status: "already-complete" }` si Engram responde `SESSION_CONFLICT` (en la práctica, el identificador ya pertenece a una sesión cerrada).
-- **Lanza:** los demás errores de Engram sin cambiarlos (por ejemplo `MIGRATION_REQUIRED` si la base no admite sesiones, o `PROJECT_FILE_INVALID`) y el `ENOENT` de `deriveSessionId`.
+- **Lanza:** los demás errores de Engram sin cambiarlos (por ejemplo `MIGRATION_REQUIRED`, si la base no admite sesiones, o `PROJECT_FILE_INVALID`, si el archivo `.forge614/project.json` existente no es válido) y el `ENOENT` de `deriveSessionId`.
 - **La usa:** `src/modules/cli/init.ts:210`.
 
 #### `isModuleReportSaved(store: MemoryStore, projectId: string, moduleName: string): boolean`
@@ -551,14 +551,14 @@ Consulta si ya existe un reporte guardado de ese módulo bajo su clave de tema. 
 Guarda el texto del reporte de un módulo como una memoria de tipo `fact`, con la clave de tema del módulo y el título `Atlas: <módulo>`, ligada a la sesión. Si ya había una memoria con esa clave, pasa su versión actual para actualizarla en lugar de chocar (así una re-corrida con `--force` no falla). Definida en `src/modules/memory/module-report.ts:21`.
 
 - **Devuelve:** el resultado del guardado de Engram, con la memoria creada o actualizada.
-- **Lanza:** `SECRET_REJECTED` si Engram detecta algo que parece un secreto; `VERSION_CONFLICT` si otra escritura cambió la versión entre la lectura y el guardado.
+- **Lanza:** `SECRET_REJECTED` si Engram detecta algo que parece un secreto; `VERSION_CONFLICT` (la versión esperada de la memoria ya no es la vigente) si otra escritura cambió la versión entre la lectura y el guardado.
 - **La usa:** `src/modules/cli/dispatch-modules.ts:118`.
 
 #### `finalizeRun(store: MemoryStore, session: Session, report: FinalReport): void`
 Guarda el resumen final de una corrida terminada en Engram y cierra la sesión. Solo debe llamarse cuando la corrida terminó del todo: una corrida pausada deja la sesión abierta a propósito y nunca la llama, porque una sesión cerrada no se puede reabrir con el mismo identificador. Definida en `src/modules/memory/finalize-run.ts:52`.
 
 - **Devuelve:** nada (`void`).
-- **Lanza:** `SUMMARY_TOPIC_CONFLICT` si el tema reservado del resumen está ocupado; `SESSION_NOT_FOUND` o `SESSION_KIND` si Engram no puede cerrar la sesión indicada.
+- **Lanza:** `SUMMARY_TOPIC_CONFLICT` si el tema reservado del resumen ya pertenece a otro recuerdo; `SESSION_NOT_FOUND` si la sesión no existe para ese proyecto o `SESSION_KIND` si es una sesión manual (no se cierra así).
 - **La usa:** `src/modules/cli/dispatch-modules.ts:198`.
 
 #### `readPauseCount(store: MemoryStore, projectId: string | null): number`
@@ -572,7 +572,7 @@ Lee el contador de pausas por cuota del proyecto (la memoria con la clave `atlas
 Suma una pausa al contador y lo guarda ligado a la sesión. Definida en `src/modules/memory/pause-count.ts:30`.
 
 - **Devuelve:** el total nuevo después del guardado.
-- **Lanza:** `VERSION_CONFLICT` si otro guardado cambió la versión leída; propaga los demás errores de Engram (por ejemplo `SESSION_CLOSED` si la sesión ya está cerrada).
+- **Lanza:** `VERSION_CONFLICT` si otro guardado cambió la versión leída; propaga los demás errores de Engram (por ejemplo `SESSION_CLOSED`, la sesión ya está cerrada).
 - **La usa:** `src/modules/cli/dispatch-modules.ts:161`.
 
 ---
@@ -612,7 +612,7 @@ Arma la ruta del programa de Workers. Definida en `src/modules/workers-client/bi
 - **La usa:** `src/interfaces/cli/commands.ts:58`.
 
 #### `runWorkersBatch(workersBinaryPath: string, enginesBin: string, tasks: WorkersTask[], onEvent: (event: WorkersEvent) => void): Promise<number>`
-Lanza Workers, le escribe el lote (`{ enginesBin, tasks }`) por la entrada estándar y entrega cada evento que imprime (una línea de NDJSON por evento) a `onEvent`, en orden. Workers corre las tareas una tras otra, en el orden recibido. Si una línea no es JSON válido o `onEvent` lanza un error, mata a Workers y rechaza. Definida en `src/modules/workers-client/run-batch.ts:101`.
+Lanza Workers, le escribe el lote (`{ enginesBin, tasks }`) por la entrada estándar y entrega cada evento que imprime (una línea de NDJSON, es decir, un objeto JSON por línea) a `onEvent`, en orden. Workers corre las tareas una tras otra, en el orden recibido. Si una línea no es JSON válido o `onEvent` lanza un error, mata a Workers y rechaza. Definida en `src/modules/workers-client/run-batch.ts:101`.
 
 - **Devuelve:** una promesa con el código de salida de Workers: `0` si el lote terminó sin pausa por cuota (aunque alguna tarea haya fallado), `75` si se pausó por cuota, `2` por entrada inválida o Engines ausente y `1` por un fallo inesperado (también `1` si Workers terminó por una señal del sistema).
 - **Lanza:** rechaza la promesa si no se puede lanzar Workers, si una línea no es JSON válido (`runWorkersBatch: failed to parse NDJSON line from forge614-workers: …`) o si `onEvent` lanza (`runWorkersBatch: onEvent handler threw while processing a "<evento>" event`, con el error original en `cause`).
@@ -637,7 +637,7 @@ Descubre los módulos del proyecto, los puntúa (las cuatro señales, la puntuac
 - **La usa:** `src/modules/cli/init.ts:203` (con `--force`, `skipCompleted: false`) y `:217` (`skipCompleted: true`).
 
 #### `runInitCommand(store: MemoryStore, options: RunInitOptions): Promise<InitOutcome>`
-Ejecuta todo el recorrido de `init`: detecta y elige el motor, comprueba los requisitos de solo lectura (antes de abrir ninguna sesión de Engram), abre o retoma la sesión, arma el plan y lo despacha a Workers. Definida en `src/modules/cli/init.ts:164`.
+Ejecuta todo el recorrido de `init`: detecta y elige el motor, comprueba los requisitos previos (que Engines garantice el candado de solo lectura y que el programa de Workers exista y sea de la versión 1.0.0 o posterior; todo antes de abrir ninguna sesión de Engram), abre o retoma la sesión, arma el plan y lo despacha a Workers. Definida en `src/modules/cli/init.ts:164`.
 
 - **Devuelve:** una promesa con el `InitOutcome` que imprime el CLI (ver el [capítulo 13](13-archivos-de-datos.md)).
 - **Lanza:** los fallos previstos no lanzan: salen como `{ status: "error" }` con su código. Sí dejan pasar los errores de Engram al abrir la sesión (por ejemplo `PROJECT_FILE_INVALID`) y el `ENOENT` de `deriveSessionId`; `src/interfaces/cli/main.ts:73` los convierte en `UNEXPECTED_ERROR`.
@@ -651,7 +651,7 @@ Vuelve a descubrir los módulos de `directory` y devuelve los archivos de los qu
 - **La usa:** `src/modules/cli/dispatch-modules.ts:81`.
 
 #### `resolveTaskConfig(tier: Tier, engineId: string, capabilities: { supportsReasoningLevel: boolean }): TaskModelConfig`
-Da el modelo y el nivel de razonamiento de una tarea según una tabla fija de Atlas (`MODEL_TABLE`). Definida en `src/modules/cli/task-config.ts:43`.
+Da el modelo y el nivel de razonamiento de una tarea según una tabla fija de Atlas (`MODEL_TABLE`, en `task-config.ts:20-33`; los nombres de la tabla son los valores literales del código y cambian cuando se cambia el código). Definida en `src/modules/cli/task-config.ts:43`.
 
 | Nivel | `claude-code` | `codex` |
 |---|---|---|
@@ -674,14 +674,14 @@ Arma el texto con que se le pide a un ayudante analizar un módulo: una explicac
 Manda a Workers un lote con una tarea por módulo (siempre con `readOnly: true`, ordenadas por nivel: primero `profundo`, luego `estandar` y al final `ligero`) y guarda en Engram el reporte de cada una. Un módulo cuya respuesta llega cortada, que falla o cuyo reporte Engram rechaza por parecer un secreto (`SECRET_REJECTED`) se omite. Si se agota la cuota anota una pausa y deja la sesión abierta; si el lote termina, arma el reporte final y cierra la sesión. Definida en `src/modules/cli/dispatch-modules.ts:67`.
 
 - **Devuelve:** una promesa con `completed` (y el `report`), `paused` (con `analyzedCount` y `pendingCount`), `fatal_error` (con el mensaje de Workers, `<motivo>: <detalle>`) o `read_only_unsupported` (Workers se negó a correr tareas sin el candado; la sesión no se cierra). La prioridad es: error fatal, falta del candado, cuota agotada.
-- **Lanza:** ningún código propio: rechaza con el `Error` de `resolveTaskConfig` si el motor no está en su tabla; con el de `runWorkersBatch` si Workers no se puede lanzar, imprime una línea que no es JSON o si guardar un reporte falla con un error de Engram que no sea `SECRET_REJECTED` (llega envuelto, con el original en `cause`); y con el error de Engram, sin envolver, si fallan `recordPause`, `readPauseCount` o `finalizeRun`. `runInitCommand` lo convierte en `WORKERS_FATAL_ERROR`.
+- **Lanza:** ningún código propio: rechaza con el error del sistema de archivos de `resolveModuleFiles` (por ejemplo `ENOENT`) si `directory` no se puede leer; con el `Error` de `resolveTaskConfig` si el motor no está en su tabla; con el de `runWorkersBatch` si Workers no se puede lanzar, imprime una línea que no es JSON o si guardar un reporte falla con un error de Engram que no sea `SECRET_REJECTED` (llega envuelto, con el original en `cause`); y con el error de Engram, sin envolver, si fallan `recordPause`, `readPauseCount` o `finalizeRun`. `runInitCommand` lo convierte en `WORKERS_FATAL_ERROR`.
 - **La usa:** `src/modules/cli/init.ts:109`.
 
 ---
 
-## 3. Ejemplo de Integración de Extremo a Extremo (Listo para Producción)
+## 3. Ejemplo de Integración de Extremo a Extremo
 
-El siguiente script muestra cómo consumir la librería completa para puntuar un proyecto:
+El siguiente script usa solo la parte de puntuación de la librería (no usa Engram, Engines ni Workers): descubre los módulos de un proyecto, calcula sus cuatro señales y asigna un nivel a cada uno. `repoPath` debe ser la raíz de un repositorio de Git con al menos un commit (si no, `computeChurn` lanza un error). La función no se ejecuta sola: hay que llamarla, por ejemplo `analyzeRepository("/ruta/a/mi-proyecto");`.
 
 ```typescript
 import {

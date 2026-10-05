@@ -423,7 +423,7 @@ const modules = discoverModules("/path/to/my-project");
 console.log(`Discovered modules: ${modules.length}`);
 ```
 
-- **Returns:** the list of `ModuleDescriptor` sorted alphabetically by name. In each one, `files` are the absolute paths of the `*.ts`, `*.tsx`, `*.js` and `*.jsx` that sit directly in its folder (test files included), sorted.
+- **Returns:** the list of `ModuleDescriptor` sorted alphabetically by name. In each one, `files` are the paths of the `*.ts`, `*.tsx`, `*.js` and `*.jsx` that sit directly in its folder (test files included), sorted; they are absolute if `root` is.
 - **Throws:** the file-system error (for example `ENOENT`) if `root` does not exist or cannot be read; it does not catch it.
 - **Used by:** `src/modules/cli/build-run-plan.ts:54` and `src/modules/cli/module-files.ts:16`.
 
@@ -432,14 +432,14 @@ Tells whether a path is a test file. Defined at `src/modules/scoring/discovery.t
 
 - **Returns:** `true` if the name ends in `.test` or `.spec` followed by `ts`, `tsx`, `js` or `jsx` (`/\.(test|spec)\.[tj]sx?$/`). It only looks at the path text: it does not check that the file exists.
 - **Throws:** never.
-- **Used by:** `src/modules/scoring/cyclomatic.ts:120`, `src/modules/scoring/fan-in.ts:154` and `src/modules/scoring/test-coverage-gap.ts:72`, to leave test files out of their counts.
+- **Used by:** `src/modules/scoring/cyclomatic.ts:120`, `src/modules/scoring/fan-in.ts:156` and `src/modules/scoring/test-coverage-gap.ts:72`, to leave test files out of their counts.
 
 ---
 
 ### 2.2 Complexity Metrics
 
 #### `fileCyclomaticComplexity(sourceText: string, fileName = "module.ts"): number`
-Reads a TypeScript text with the compiler's parser (its AST) and computes the McCabe cyclomatic complexity of the whole file: it starts at 1 and adds one for each `if`, `? :` expression, loop (`while`, `do`, `for`, `for…in`, `for…of`), `catch`, `case` (not `default`), `&&`, `||` and `??`. It is a single count for the entire file, not one per function. `fileName` only decides how the text is read (for example, `.tsx` allows JSX). Defined at `src/modules/scoring/cyclomatic.ts:43`.
+Reads a TypeScript text with the compiler's parser (its AST, the abstract syntax tree: the code already read as a tree) and computes the McCabe cyclomatic complexity of the whole file (how many distinct paths the code has): it starts at 1 and adds one for each `if`, `? :` expression, loop (`while`, `do`, `for`, `for…in`, `for…of`), `catch`, `case` (not `default`), `&&`, `||` and `??`. It is a single count for the entire file, not one per function. `fileName` only decides how the text is read (for example, `.tsx` allows JSX). Defined at `src/modules/scoring/cyclomatic.ts:43`.
 
 - **Returns:** an integer of 1 or more.
 - **Throws:** nothing of its own: it receives the text, it does not read files.
@@ -457,7 +457,7 @@ Adds up the cyclomatic complexity of each module's files, leaving test files out
 ### 2.3 Centrality & Dependencies
 
 #### `computeFanIn(modules: ModuleDescriptor[]): Map<string, number>`
-Reads the relative `import`, `export … from` and `require` (those starting with `.`) of each module's production files, follows them to the real file on disk (trying the path as is, with `.ts`, `.tsx`, `.js`, `.jsx` and as a folder with `index`) and counts, for each module, how many other distinct modules import it. A module counts only once however many imports it has toward the same target, and a module's dependencies on itself do not count. An import that does not point to an existing file is ignored. If several modules contain the imported file (a mixed folder gives `src` and `src/auth`), the import is attributed to the most specific one, the one with the longest path (`src/auth`). Defined at `src/modules/scoring/fan-in.ts:142`.
+Reads the relative `import`, `export … from` and `require` (those starting with `.`) of each module's production files, follows them to the real file on disk (trying, in this order, the path as is —if it is a folder, the folder itself counts—, the path with `.ts`, `.tsx`, `.js` and `.jsx`, and `index.ts`, `index.tsx` and `index.js` inside it) and counts, for each module, how many other distinct modules import it. A module counts only once however many imports it has toward the same target, and a module's dependencies on itself do not count. An import that does not point to an existing file or folder is ignored (also one written with `.js` when the file is `.ts`). If several modules contain the imported file (a mixed folder gives `src` and `src/auth`), the import is attributed to the most specific one, the one with the longest path (`src/auth`). Defined at `src/modules/scoring/fan-in.ts:144`.
 
 - **Returns:** a map with one entry per module (name → how many other modules use it); it starts at 0.
 - **Throws:** the file-system error (for example `ENOENT`) if it cannot read one of the module's files; it does not catch it.
@@ -468,10 +468,10 @@ Reads the relative `import`, `export … from` and `require` (those starting wit
 ### 2.4 Historical Volatility
 
 #### `computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map<string, number>`
-Runs `git -c core.quotepath=false log --format= --name-only` in `repoRoot` and adds one unit to the module for each of its files that appears in each commit. It also counts files that no longer exist if their path ended up inside the module's folder; if several modules contain the file (a mixed folder gives `src` and `src/auth`), it is counted in the most specific one, the one with the longest path (`src/auth`). Defined at `src/modules/scoring/churn.ts:44`.
+Runs `git -c core.quotepath=false log --format= --name-only` in `repoRoot` and adds one unit to the module for each of its files that appears in each commit. It also counts files that no longer exist if their path ended up inside the module's folder; if several modules contain the file (a mixed folder gives `src` and `src/auth`), it is counted in the most specific one, the one with the longest path (`src/auth`). Defined at `src/modules/scoring/churn.ts:46`.
 
 > [!CAUTION]
-> Throws if `repoRoot` is not a Git repository or if `git log` fails (e.g. repositories with zero commits). `runInitCommand` turns this into the structured JSON result `ANALYSIS_FAILED`; `computeChurn` itself does not fall back to zero.
+> Throws if `git log` fails in `repoRoot` (for example, if it is not a Git repository or the repository has no commits). `repoRoot` must be the repository root: `git log --name-only` prints paths from the repository root, so from a subfolder it does not fail, but the paths do not match the modules' folders and the churn stays at 0. `runInitCommand` turns the error into the structured JSON result `ANALYSIS_FAILED`; `computeChurn` itself does not fall back to zero.
 
 - **Returns:** a map with one entry per module (name → total file changes); it starts at 0.
 - **Throws:** `Error` with the message `git log failed in <repoRoot>: <git's error output>` if git ends with a non-zero code (no repository or no commits) or cannot be run.
@@ -513,16 +513,16 @@ Sorts the modules from highest to lowest score (ties broken by name) and splits 
 These functions use an Engram `MemoryStore` and `Session`; `MemoryStore` and `Session` are Engram types, not Atlas ones.
 
 #### `moduleTopicKey(moduleName: string): string`
-Builds the topic key under which a module's report is saved. Defined at `src/modules/memory/module-topic.ts:10`.
+Builds the topic key (the stable identifier of a report within a project) under which a module's report is saved. Defined at `src/modules/memory/module-topic.ts:10`.
 
 - **Returns:** `atlas:module:<name>`, with the name unmodified (including its relative path if it is a nested module).
 - **Throws:** never.
 - **Used by:** `src/modules/memory/module-report.ts:28` and `src/modules/memory/run-state.ts:43`.
 
 #### `deriveSessionId(directory: string): string`
-Computes a repository's stable session identifier. It starts from its common Git folder (`git rev-parse --git-common-dir`, resolved to its real path) or, if Git does not give it, from the real path of `directory`; so the same repository gives the same identifier from the root, from a subfolder or from another `worktree` (another working folder of the same repository). Defined at `src/modules/memory/session-id.ts:53`.
+Computes a repository's stable session identifier. It starts from its common Git folder (`git rev-parse --path-format=absolute --git-common-dir`, resolved to its real path) or, if Git does not give it, from the real path of `directory`; so the same repository gives the same identifier from the root, from a subfolder or from another `worktree` (another working folder of the same repository). Defined at `src/modules/memory/session-id.ts:53`.
 
-- **Returns:** `atlas:` and the first 16 hexadecimal characters of the SHA-256 of that path.
+- **Returns:** `atlas:` and the first 16 hexadecimal characters of the SHA-256 (a stable digest) of that path.
 - **Throws:** the file-system error (for example `ENOENT`, the path does not exist) if it cannot resolve the real path.
 - **Used by:** `src/modules/memory/run-state.ts:23` and `src/modules/memory/session-id.ts:67`.
 
@@ -537,7 +537,7 @@ Computes the identifier of the forced run (`--force`): the stable one followed b
 Opens the repository's Atlas session with its stable identifier or resumes the one that is already open; it is also where Engram writes `.forge614/project.json` (see [chapter 13](13-data-files.md)). Defined at `src/modules/memory/run-state.ts:22`.
 
 - **Returns:** `{ status: "active", session }`, or `{ status: "already-complete" }` if Engram answers `SESSION_CONFLICT` (in practice, the identifier already belongs to a closed session).
-- **Throws:** the other Engram errors unchanged (for example `MIGRATION_REQUIRED` if the database does not support sessions, or `PROJECT_FILE_INVALID`) and the `ENOENT` of `deriveSessionId`.
+- **Throws:** the other Engram errors unchanged (for example `MIGRATION_REQUIRED`, if the database does not support sessions, or `PROJECT_FILE_INVALID`, if the existing `.forge614/project.json` file is not valid) and the `ENOENT` of `deriveSessionId`.
 - **Used by:** `src/modules/cli/init.ts:210`.
 
 #### `isModuleReportSaved(store: MemoryStore, projectId: string, moduleName: string): boolean`
@@ -551,14 +551,14 @@ Checks whether a saved report of that module already exists under its topic key.
 Saves a module's report text as a memory of type `fact`, with the module's topic key and the title `Atlas: <module>`, tied to the session. If a memory with that key already existed, it passes its current version to update it instead of clashing (so a re-run with `--force` does not fail). Defined at `src/modules/memory/module-report.ts:21`.
 
 - **Returns:** the result of Engram's save, with the memory created or updated.
-- **Throws:** `SECRET_REJECTED` if Engram detects something that looks like a secret; `VERSION_CONFLICT` if another write changed the version between the read and the save.
+- **Throws:** `SECRET_REJECTED` if Engram detects something that looks like a secret; `VERSION_CONFLICT` (the expected version of the memory is no longer the current one) if another write changed the version between the read and the save.
 - **Used by:** `src/modules/cli/dispatch-modules.ts:118`.
 
 #### `finalizeRun(store: MemoryStore, session: Session, report: FinalReport): void`
 Saves a finished run's final summary in Engram and closes the session. It must only be called when the run has completely finished: a paused run leaves the session open on purpose and never calls it, because a closed session cannot be reopened with the same identifier. Defined at `src/modules/memory/finalize-run.ts:52`.
 
 - **Returns:** nothing (`void`).
-- **Throws:** `SUMMARY_TOPIC_CONFLICT` if the summary's reserved topic is taken; `SESSION_NOT_FOUND` or `SESSION_KIND` if Engram cannot close the indicated session.
+- **Throws:** `SUMMARY_TOPIC_CONFLICT` if the summary's reserved topic already belongs to another memory; `SESSION_NOT_FOUND` if the session does not exist for that project, or `SESSION_KIND` if it is a manual session (those are not closed this way).
 - **Used by:** `src/modules/cli/dispatch-modules.ts:198`.
 
 #### `readPauseCount(store: MemoryStore, projectId: string | null): number`
@@ -572,7 +572,7 @@ Reads the project's quota-pause counter (the memory with the key `atlas:meta:pau
 Adds one pause to the counter and saves it tied to the session. Defined at `src/modules/memory/pause-count.ts:30`.
 
 - **Returns:** the new total after the save.
-- **Throws:** `VERSION_CONFLICT` if another save changed the version read; it propagates the other Engram errors (for example `SESSION_CLOSED` if the session is already closed).
+- **Throws:** `VERSION_CONFLICT` if another save changed the version read; it propagates the other Engram errors (for example `SESSION_CLOSED`, the session is already closed).
 - **Used by:** `src/modules/cli/dispatch-modules.ts:161`.
 
 ---
@@ -612,7 +612,7 @@ Builds the path of the Workers program. Defined at `src/modules/workers-client/b
 - **Used by:** `src/interfaces/cli/commands.ts:58`.
 
 #### `runWorkersBatch(workersBinaryPath: string, enginesBin: string, tasks: WorkersTask[], onEvent: (event: WorkersEvent) => void): Promise<number>`
-Launches Workers, writes the batch (`{ enginesBin, tasks }`) to its standard input and hands each event it prints (one NDJSON line per event) to `onEvent`, in order. Workers runs the tasks one after another, in the order received. If a line is not valid JSON or `onEvent` throws an error, it kills Workers and rejects. Defined at `src/modules/workers-client/run-batch.ts:101`.
+Launches Workers, writes the batch (`{ enginesBin, tasks }`) to its standard input and hands each event it prints (one NDJSON line, that is, one JSON object per line) to `onEvent`, in order. Workers runs the tasks one after another, in the order received. If a line is not valid JSON or `onEvent` throws an error, it kills Workers and rejects. Defined at `src/modules/workers-client/run-batch.ts:101`.
 
 - **Returns:** a promise with Workers's exit code: `0` if the batch finished without a quota pause (even if some task failed), `75` if it paused for quota, `2` for invalid input or a missing Engines and `1` for an unexpected failure (also `1` if Workers ended because of a system signal).
 - **Throws:** the promise rejects if Workers cannot be launched, if a line is not valid JSON (`runWorkersBatch: failed to parse NDJSON line from forge614-workers: …`) or if `onEvent` throws (`runWorkersBatch: onEvent handler threw while processing a "<event>" event`, with the original error in `cause`).
@@ -637,7 +637,7 @@ Discovers the project's modules, scores them (the four signals, the composite sc
 - **Used by:** `src/modules/cli/init.ts:203` (with `--force`, `skipCompleted: false`) and `:217` (`skipCompleted: true`).
 
 #### `runInitCommand(store: MemoryStore, options: RunInitOptions): Promise<InitOutcome>`
-Runs the whole `init` flow: detects and chooses the engine, checks the read-only requirements (before opening any Engram session), opens or resumes the session, builds the plan and dispatches it to Workers. Defined at `src/modules/cli/init.ts:164`.
+Runs the whole `init` flow: detects and chooses the engine, checks the prerequisites (that Engines guarantees the read-only lock and that the Workers program exists and is version 1.0.0 or later; all before opening any Engram session), opens or resumes the session, builds the plan and dispatches it to Workers. Defined at `src/modules/cli/init.ts:164`.
 
 - **Returns:** a promise with the `InitOutcome` that the CLI prints (see [chapter 13](13-data-files.md)).
 - **Throws:** expected failures do not throw: they come out as `{ status: "error" }` with their code. Engram errors when opening the session (for example `PROJECT_FILE_INVALID`) and the `ENOENT` of `deriveSessionId` do pass through; `src/interfaces/cli/main.ts:73` turns them into `UNEXPECTED_ERROR`.
@@ -651,7 +651,7 @@ Discovers the modules of `directory` again and returns the files of those reques
 - **Used by:** `src/modules/cli/dispatch-modules.ts:81`.
 
 #### `resolveTaskConfig(tier: Tier, engineId: string, capabilities: { supportsReasoningLevel: boolean }): TaskModelConfig`
-Gives a task's model and reasoning level according to a fixed Atlas table (`MODEL_TABLE`). Defined at `src/modules/cli/task-config.ts:43`.
+Gives a task's model and reasoning level according to a fixed Atlas table (`MODEL_TABLE`, at `task-config.ts:20-33`; the names in the table are the code's literal values and change when the code changes). Defined at `src/modules/cli/task-config.ts:43`.
 
 | Tier | `claude-code` | `codex` |
 |---|---|---|
@@ -674,14 +674,14 @@ Builds the text a helper is asked to analyze a module with: a narrative explanat
 Sends Workers a batch with one task per module (always with `readOnly: true`, ordered by tier: `profundo` first, then `estandar` and `ligero` last) and saves each one's report in Engram. A module whose answer arrives cut off, that fails or whose report Engram rejects because it looks like a secret (`SECRET_REJECTED`) is skipped. If the quota runs out it notes a pause and leaves the session open; if the batch finishes, it builds the final report and closes the session. Defined at `src/modules/cli/dispatch-modules.ts:67`.
 
 - **Returns:** a promise with `completed` (and the `report`), `paused` (with `analyzedCount` and `pendingCount`), `fatal_error` (with Workers's message, `<reason>: <detail>`) or `read_only_unsupported` (Workers refused to run tasks without the lock; the session is not closed). The priority is: fatal error, missing lock, quota exhausted.
-- **Throws:** no code of its own: it rejects with the `Error` of `resolveTaskConfig` if the engine is not in its table; with that of `runWorkersBatch` if Workers cannot be launched, prints a line that is not JSON, or if saving a report fails with an Engram error other than `SECRET_REJECTED` (it arrives wrapped, with the original in `cause`); and with Engram's error, unwrapped, if `recordPause`, `readPauseCount` or `finalizeRun` fail. `runInitCommand` turns it into `WORKERS_FATAL_ERROR`.
+- **Throws:** no code of its own: it rejects with the file-system error of `resolveModuleFiles` (for example `ENOENT`) if `directory` cannot be read; with the `Error` of `resolveTaskConfig` if the engine is not in its table; with that of `runWorkersBatch` if Workers cannot be launched, prints a line that is not JSON, or if saving a report fails with an Engram error other than `SECRET_REJECTED` (it arrives wrapped, with the original in `cause`); and with Engram's error, unwrapped, if `recordPause`, `readPauseCount` or `finalizeRun` fail. `runInitCommand` turns it into `WORKERS_FATAL_ERROR`.
 - **Used by:** `src/modules/cli/init.ts:109`.
 
 ---
 
-## 3. Production-Ready End-to-End Integration Example
+## 3. End-to-End Integration Example
 
-The following script demonstrates end-to-end usage of the scoring pipeline:
+The following script uses only the scoring part of the library (it does not use Engram, Engines or Workers): it discovers a project's modules, computes their four signals and assigns a tier to each one. `repoPath` must be the root of a Git repository with at least one commit (otherwise `computeChurn` throws). The function does not run by itself: it has to be called, for example `analyzeRepository("/path/to/my-project");`.
 
 ```typescript
 import {

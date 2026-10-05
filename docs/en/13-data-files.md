@@ -12,9 +12,9 @@ This chapter describes, one by one, the data and automation files that are part 
 The repository's identity card: a project identifier (and, where applicable, a group identifier) that travels with the code and does not depend on which folder of the disk it sits in.
 
 - **What it is for:** so that Engram recognizes the same project even if the folder moves or is cloned onto another computer. It is meant to be committed: in this repository it is in Git.
-- **Who writes it:** Engram, never Atlas (in Atlas's `src`, `scripts` and `test` there is only a comment that names it, `src/modules/scoring/discovery.ts:27`). Engram writes it when Atlas opens a session or saves something. `init` opens the session with `startProjectSession` at `src/modules/cli/init.ts:200` (with `--force`) or, without `--force`, at `src/modules/memory/run-state.ts:25` (called from `init.ts:210`). That function (`forge614-engram/src/app/project-context.ts:202`) reads the file (`:179`) and publishes it (`:188`) with `publishIdentity`, which calls `writeIdentity` and `ensureProjectFile` (`src/app/project-identity.ts:109` and `:89`; `src/infrastructure/filesystem/project-identity-file.ts:195`). Every module report (`src/modules/memory/module-report.ts:32`) and every change of the pause counter (`src/modules/memory/pause-count.ts:37`) goes through the same path (`project-context.ts:141` and `:146`). `ensureProjectFile` creates the file only if it does not exist; if it already exists, it never changes `project.id` or `project.name` and only completes `ecosystem` when it is missing or, being `null`, when the project already belongs to a group (`project-identity-file.ts:197-209`). If Engram cannot write it (for example, because of permissions) it only produces the `PROJECT_FILE_NOT_WRITTEN` notice (`project-identity.ts:95`) and `init` goes on: `startProjectSession` returns only the session, without the notices (`project-context.ts:202`).
-- **Who reads it:** only Engram. `readProjectFile` (`project-identity-file.ts:119`) reads it inside `applyIdentityFile` (`project-identity.ts:60`), which runs when the session opens and when each report is saved. Atlas does not read it and excludes the `.forge614` folder when it discovers modules: it is in `EXCLUDED_DIRS` (`src/modules/scoring/discovery.ts:19-28`, line 27) and the filters at `:81` and `:105` also discard any folder whose name starts with a dot.
-- **If it is invalid:** Engram does not modify it and throws `PROJECT_FILE_INVALID` (`project-identity-file.ts:86`, with a message in Spanish); Atlas does not catch it and `init` answers `UNEXPECTED_ERROR` with that message (see [chapter 11](11-troubleshooting.md)).
+- **Who writes it:** Engram, never Atlas (in Atlas's `src`, `scripts` and `test` there is only a comment that names it, `src/modules/scoring/discovery.ts:27`). Engram writes it when Atlas opens a session or saves something. `init` opens the session with `startProjectSession` at `src/modules/cli/init.ts:200` (with `--force`) or, without `--force`, at `src/modules/memory/run-state.ts:25` (called from `init.ts:210`). That function (`forge614-engram/src/app/project-context.ts:202`, Engram 1.8.7 lines) only delegates to `startProjectSessionWithNotices` (`:175`), which reads the file with `applyIdentityFile` (`:179`) and publishes it (`:188`) with `publishIdentity` (`src/app/project-identity.ts:109`); that one calls `writeIdentity` (`:89`) and `writeIdentity` calls `ensureProjectFile` (`src/infrastructure/filesystem/project-identity-file.ts:195`). If the session identifier belongs to a closed session, Engram throws `SESSION_CONFLICT` before publishing (`project-context.ts:186`) and `init` answers `already-complete` without that publication. Every module report (`src/modules/memory/module-report.ts:32`) and every change of the pause counter (`src/modules/memory/pause-count.ts:37`) goes through the same path (`project-context.ts:141` and `:146`). `ensureProjectFile` creates the file only if it does not exist; if it already exists, it never changes `project.id` or `project.name` and only completes `ecosystem` when it is missing or, being `null`, when the project already belongs to a group (`project-identity-file.ts:197-209`). If Engram cannot write it (for example, because of permissions) it only produces the `PROJECT_FILE_NOT_WRITTEN` notice (`project-identity.ts:95`) and `init` goes on: `startProjectSession` returns only the session, without the notices (`project-context.ts:202`).
+- **Who reads it:** only Engram reads its content. `readProjectFile` (`project-identity-file.ts:119`) reads it inside `applyIdentityFile` (`project-identity.ts:60`), which runs when the session opens and when each memory is saved (each report and the pause counter), and inside `publishIdentity` (`:112`). Atlas does not read it and excludes the `.forge614` folder when it discovers modules: it is in `EXCLUDED_DIRS` (`src/modules/scoring/discovery.ts:19-28`, line 27) and the filters at `:81` and `:105` also discard any folder whose name starts with a dot.
+- **If it is invalid:** Engram does not modify it and throws `PROJECT_FILE_INVALID` (`project-identity-file.ts:87`, with a message in Spanish); Atlas does not catch it and `init` answers `UNEXPECTED_ERROR` with that message (see [chapter 11](11-troubleshooting.md)).
 
 ### Fields
 
@@ -22,11 +22,11 @@ The repository's identity card: a project identifier (and, where applicable, a g
 |---|---|:---:|---|---|
 | `schemaVersion` | number | Yes | Version of the file's shape; only `1` exists (`project-identity-file.ts:46`). | `1` |
 | `project` | object | Yes | The project's identity; it only admits `id` and `name`. | `{ "id": …, "name": … }` |
-| `project.id` | text (UUID v4) | Yes | The project's unique identifier; Engram never changes it. | `"f35e737c-1648-40b0-bfa2-aa4e7f37334d"` |
+| `project.id` | text (UUID v4) | Yes | The project's unique identifier (a UUID v4: a randomly generated 36-character text); Engram never changes it. | `"f35e737c-1648-40b0-bfa2-aa4e7f37334d"` |
 | `project.name` | text | Yes | Display name: not empty, without a NUL character and up to 300 characters (`:42`). | `"forge614-atlas"` |
 | `ecosystem` | object or `null` | No | The group (ecosystem) the project belongs to. It may be missing or `null` (a standalone project); Engram completes it later. | `{ "id": …, "name": … }` |
 | `ecosystem.id` | text (UUID v4) | Yes, if `ecosystem` is present | The group's identifier. The one of the `forge614` group is fixed (`forge614-engram/src/modules/ecosystem/rules.ts:16`). | `"e0b3e1c9-ffbb-4b6b-8a55-79fbf3e8f0b4"` |
-| `ecosystem.name` | text | Yes, if `ecosystem` is present | The group's name: lowercase letters, digits and single hyphens, from 1 to 64 characters (`rules.ts:12-13`). | `"forge614"` |
+| `ecosystem.name` | text | Yes, if `ecosystem` is present | The group's name: lowercase letters, digits and single hyphens, from 1 to 64 characters (`rules.ts:12-13` and `:47-49`). | `"forge614"` |
 
 Rules Engram demands when it reads it (`project-identity-file.ts:119-131`): valid JSON; a size of up to 64 KiB (`:15`); `.forge614` must be a real folder and `project.json` a regular file, not symbolic links (`:122` and `:126`); and no unknown field (the schema is strict, `:28-49`). Engram writes it with a two-space indent, a final line break and a missing `ecosystem` saved as `null` (`:106`).
 
@@ -47,7 +47,7 @@ This repository's real file:
 The record of which local manuals already have a copy published in Notion and which version that copy corresponds to.
 
 - **What it is for:** to know which chapters have a Notion page, where each one is and when they were last published.
-- **Who writes it:** whoever publishes the Notion pages, when republishing them or creating a new one; no program in the repository generates it. Its history is five commits (`f6e0dc6`, `a97e276`, `d7d7cec`, `5319ed9` and `e8b923a`: «document Plan N … and index the Notion mirror» and «record real Notion URLs …»). `reviewedProductVersion` and `reviewedCommit` change only when the pages are republished; today they say `1.0.0` and `5319ed9` although the product is already at `1.1.0`, because the pages have not been republished (`STATE.md:302`).
+- **Who writes it:** whoever publishes the Notion pages, when republishing them or creating a new one; no program in the repository generates it. Its history is five commits (`f6e0dc6`, `a97e276`, `d7d7cec`, `5319ed9` and `e8b923a`: «document Plan N … and index the Notion mirror» and «record real Notion URLs …»). `reviewedProductVersion` and `reviewedCommit` change when the pages are republished (`reviewedCommit` was also corrected when the addresses of the chapter 10 pages were recorded: `e8b923a` changed it from `6952559` to `5319ed9`); today they say `1.0.0` and `5319ed9` although the product is already at `1.1.0`, because the pages have not been republished (`STATE.md:302`).
 - **Who reads it:** no program in this repository: `grep` finds neither its name nor its fields in `src`, `scripts`, `test` or `.github`; only `STATE.md:302` mentions it. It is a record for people, and Atlas does not consume it at runtime.
 - **What it includes:** only chapters 08, 09 and 10 (in Spanish and in English, six pages); the other chapters, including 11, 12 and this one, do not appear in the map.
 
@@ -69,7 +69,7 @@ The record of which local manuals already have a copy published in Notion and wh
 
 ## `package.json`
 
-The package's card. Only the fields that Atlas, its compiled binary, its CI or its tests really use matter here.
+The package's data sheet. Only the fields that Atlas, its compiled binary, its CI or its tests really use matter here.
 
 - **Who writes it:** the project team (the version goes up with each release; `test/versions.test.ts` forces chapter 10 and `CHANGELOG.md` to say the same one).
 - **Who reads it:** Bun and TypeScript when installing and compiling; Atlas's code (only `version`); the tests and the CI workflows, according to the table.
@@ -84,7 +84,7 @@ The package's card. Only the fields that Atlas, its compiled binary, its CI or i
 | `scripts.test` | text | No | Runs all the tests. | Local use; the CI does not call it: it runs `bun test` with a list of files (`verify.yml:65`). | `"bun test"` |
 | `scripts.build` | text | No | Compiles the standalone binary. | Local use (chapter 08); the CI compiles with the same entry point, but with `--target` (`release.yml:130`). | `"bun build ./src/interfaces/cli/main.ts --compile --outfile dist/forge614-atlas"` |
 | `engines.bun` | text | No | Minimum Bun version. | No program in the repository checks it; `README.md` repeats it as a requirement (`:76`) and the CI pins Bun 1.4.2 separately (`verify.yml:39`, `release.yml:39`). | `">=1.3.9"` |
-| `dependencies.typescript` | text | Yes | The compiler, at an exact version. | Atlas uses it while running to count paths and dependencies (`src/modules/scoring/cyclomatic.ts:10`, `src/modules/scoring/fan-in.ts:11`; it ends up inside the binary) and `tsc` for the types. | `"5.9.3"` |
+| `dependencies.typescript` | text | Yes | The compiler, at an exact version. | Atlas uses it while running to count paths and dependencies (`src/modules/scoring/cyclomatic.ts:10`, `src/modules/scoring/fan-in.ts:11`; it ends up inside the binary) and the `tsc` command (the TypeScript compiler) to check the types. | `"5.9.3"` |
 | `dependencies.forge614-engram` | text | Yes | The Engram library, taken from a sibling folder. | Atlas imports it in `src` (for example `src/modules/cli/init.ts:6`) and it ends up inside the binary; the CI downloads that sibling folder at the `ENGRAM_REF` version (`verify.yml:30-36`). | `"file:../forge614-engram"` |
 | `devDependencies.@types/bun` | text | No | Bun types for the type checker. | `tsconfig.json:10` asks for the `bun-types` types, which this package brings. | `"latest"` |
 
@@ -114,10 +114,10 @@ The «Verify» workflow: the check that runs on every change.
 ### Main steps
 
 1. Downloads Atlas into the `forge614-atlas` folder (`actions/checkout@v4`).
-2. Downloads Engram, at the `ENGRAM_REF` version, into the sibling folder `forge614-engram` (Atlas depends on it through `file:../forge614-engram`) and installs its dependencies with `bun install --frozen-lockfile` (the lock file rules: it does not change versions).
-3. Installs Bun 1.4.2 (`oven-sh/setup-bun@v2`) and Atlas's dependencies, also with `--frozen-lockfile`.
+2. Downloads Engram, at the `ENGRAM_REF` version, into the sibling folder `forge614-engram` (Atlas depends on it through `file:../forge614-engram`).
+3. Installs Bun 1.4.2 (`oven-sh/setup-bun@v2`), then Engram's dependencies with `bun install --frozen-lockfile` (the lock file rules: it does not change versions) and Atlas's, also with `--frozen-lockfile`.
 4. Installs Engines and Workers at fixed versions with the shared action (see below).
-5. Runs all the tests (`*.test.ts`) except `src/modules/cli/init.test.ts`: its `completed` tests launch a real, authenticated Claude Code, which a shared runner does not have. The others run for real, including the ones that call the pinned Engines and Workers (their AI engine is a test script).
+5. Runs all the tests (`*.test.ts`) except `src/modules/cli/init.test.ts`: its `completed` tests launch a real, authenticated Claude Code, which a shared runner (the GitHub virtual machine where the workflow runs) does not have. The others run for real, including the ones that call the pinned Engines and Workers (their AI engine is a test script).
 6. `bun run typecheck`, `git diff --check` (looks for stray whitespace in the pending changes; in a clean run it would only find what an earlier step had left) and `bash -n scripts/install.sh` (checks the installer's syntax without running it).
 
 ### Pinned versions
@@ -181,7 +181,7 @@ The «Release standalone artifacts» workflow: it builds and publishes the binar
 The shared action that `verify.yml` and `release.yml` (`verify`) use to have real Engines and Workers, at a fixed version, without depending on the latest release or on the runner's own home folder.
 
 - **Who writes it and who reads it:** the project team writes it; both workflows run it with `uses: ./forge614-atlas/.github/actions/install-forge614-dependencies`.
-- **What it checks:** that each download matches its published checksum, that the installed binary reports the requested version and that Engines guarantees the read-only lock for `claude-code` (`"supportsReadOnly": true`). A wrong or old Engines fails here with a clear message, not as a pile of broken tests.
+- **What it checks:** that each download matches its published checksum, that the installed binary reports the requested version and that Engines guarantees, for `claude-code`, the read-only lock (the helper cannot modify the project: `"supportsReadOnly": true`). A wrong or old Engines fails here with a clear message, not as a pile of broken tests.
 - **What it publishes:** nothing; it leaves the binaries in a temporary folder.
 
 ### Inputs
@@ -197,7 +197,7 @@ The shared action that `verify.yml` and `release.yml` (`verify`) use to have rea
 2. Installs Engines (`:25-55`): picks the package according to the system (`Linux-X64`, `Linux-ARM64`, `macOS-ARM64` or `macOS-X64`; any other fails), downloads `forge614-engines-<version>-<target>.tar.gz` and its `.sha256` from `https://github.com/jotredev/forge614-engines/releases/download/v<version>/`, verifies the checksum with `shasum -a 256 -c`, installs it at `$FORGE614_HOME/engines/bin/forge614-engines`, requires `--version` to say `forge614-engines <version>` and `capabilities --agent claude-code` to carry `"supportsReadOnly": true`.
 3. Installs Workers (`:57-84`): downloads `forge614-workers-<target>` and `SHA256SUMS` from `https://github.com/jotredev/forge614-workers/releases/download/v<version>/`, verifies the binary against its own line of `SHA256SUMS`, installs it at `$FORGE614_HOME/workers/bin/forge614-workers` and requires `--version` to say `forge614-workers <version>`.
 
-The pinned versions are those of the inputs table: Engines `1.17.0` and Workers `1.0.0`, which are also the minimums Atlas requires at runtime (see [chapter 09](09-subagent-dispatch.md)).
+The pinned versions are those of the inputs table: Engines `1.17.0` and Workers `1.0.0`. They are also the minimums Atlas needs at runtime: it checks Workers' version and it checks that Engines declares `supportsReadOnly: true`, a field that exists since 1.17.0 (see [chapter 09](09-subagent-dispatch.md)).
 
 ## `init` JSON response
 

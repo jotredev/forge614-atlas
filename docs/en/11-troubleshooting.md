@@ -81,7 +81,7 @@ Note: the five `init` statuses in the last section exit with `0` even though the
 
 ### `ANALYSIS_FAILED`
 
-- **What you see:** exit 1; the most common message is `git log failed in <folder>: <git error>` (`src/modules/scoring/churn.ts:53`). `init` answers it at `src/modules/cli/init.ts:205` and `:219`.
+- **What you see:** exit 1; the most common message is `git log failed in <folder>: <git error>` (`src/modules/scoring/churn.ts:55`). `init` answers it at `src/modules/cli/init.ts:205` and `:219`.
 - **Why it happens:** Atlas could not score the project. The typical cause is that the folder is not a Git repository or has no commits: churn (how many times each file changed) comes from the Git history. An error while reading the project's folders also ends up here.
 - **What to do:** run `forge614-atlas init` from the root of a repository with at least one commit (`git status` and `git log -1` must work). In a new project: `git init`, `git add .` and `git commit -m "first commit"`. If the message is about permissions, fix them on the folder it names.
 

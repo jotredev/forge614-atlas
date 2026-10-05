@@ -81,7 +81,7 @@ Ojo: los cinco estados de `init` de la última sección salen con `0` aunque no 
 
 ### `ANALYSIS_FAILED`
 
-- **Qué ves:** salida 1; lo más común es `git log failed in <carpeta>: <error de git>` (`src/modules/scoring/churn.ts:53`). `init` lo responde en `src/modules/cli/init.ts:205` y `:219`.
+- **Qué ves:** salida 1; lo más común es `git log failed in <carpeta>: <error de git>` (`src/modules/scoring/churn.ts:55`). `init` lo responde en `src/modules/cli/init.ts:205` y `:219`.
 - **Por qué pasa:** Atlas no pudo puntuar el proyecto. La causa típica es que la carpeta no es un repositorio de Git o no tiene ningún commit: el churn (cuántas veces cambió cada archivo) sale del historial de Git. También llega aquí un error al leer las carpetas del proyecto.
 - **Qué hacer:** corre `forge614-atlas init` desde la raíz de un repositorio con al menos un commit (`git status` y `git log -1` deben funcionar). En un proyecto nuevo: `git init`, `git add .` y `git commit -m "first commit"`. Si el mensaje es de permisos, corrígelos en la carpeta que nombra.
 
