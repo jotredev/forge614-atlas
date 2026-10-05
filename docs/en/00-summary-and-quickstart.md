@@ -157,3 +157,4 @@ All documentation adheres to strict two-digit sequential numbering across both l
 | **10** | [Instalador Público y Pipeline de Release](../es/10-instalador-y-release.md) | [Public Installer and Release Pipeline](10-installer-and-release.md) | `curl \| bash`, Engram chaining, 4-job release workflow, accepted risk. |
 | **11** | [Resolución de Errores](../es/11-resolucion-de-errores.md) | [Troubleshooting](11-troubleshooting.md) | What the person sees, why it happens and what to do for each error code and each `init` status. |
 | **12** | [Glosario](../es/12-glosario.md) | [Glossary](12-glossary.md) | Atlas's own terms and the chapter that explains each one. |
+| **13** | [Archivos de datos y automatización](../es/13-archivos-de-datos.md) | [Data files and automation](13-data-files.md) | Data files, automation, and CI workflows. |

@@ -68,6 +68,7 @@ Engram also writes `.forge614/project.json` (the project's portable identity) in
 | 10 | [Instalador y release](docs/es/10-instalador-y-release.md) | [Installer and release](docs/en/10-installer-and-release.md) |
 | 11 | [Resolución de errores](docs/es/11-resolucion-de-errores.md) | [Troubleshooting](docs/en/11-troubleshooting.md) |
 | 12 | [Glosario](docs/es/12-glosario.md) | [Glossary](docs/en/12-glossary.md) |
+| 13 | [Archivos de datos y automatización](docs/es/13-archivos-de-datos.md) | [Data files and automation](docs/en/13-data-files.md) |
 
 Also: the product contract ([`CONTRACT.md`](CONTRACT.md) / [`CONTRACT.en.md`](CONTRACT.en.md)), the [project state](STATE.md) (Spanish) and the [changelog](CHANGELOG.md).
 

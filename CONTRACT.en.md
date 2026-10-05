@@ -45,7 +45,7 @@ Atlas's installer makes sure of Engram, Workers and Engines before it creates an
 ## Error codes
 | Code | Meaning |
 | --- | --- |
-| `INVALID_FORGE614_HOME` | `FORGE614_HOME` is set but empty, relative or contains a NUL character; `init`, `update` and `uninstall` answer it before doing anything else |
+| `INVALID_FORGE614_HOME` | `FORGE614_HOME` is set but empty, relative or contains a NUL character; `init`, `update` and `uninstall` answer it as soon as they start (`uninstall` checks its arguments first, so an invalid one answers `INVALID_ARGUMENT`) |
 | `ENGINES_UNREACHABLE` | The Engines binary does not respond or its answer failed |
 | `ANALYSIS_FAILED` | The project could not be scored (for example, no Git or no commits) |
 | `READ_ONLY_UNSUPPORTED` | Engines does not declare `supportsReadOnly: true` for the chosen engine (an Engines older than 1.17.0 does not have that field and counts as not declared), or Workers refused to run tasks for the same reason |

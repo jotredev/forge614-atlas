@@ -135,6 +135,33 @@ Sorts modules descending by composite score with alphabetical tie-breaking and a
 
 ## 3. Production-Ready End-to-End Integration Example
 
+## 2.7 Sessions, engines, and dispatch
+
+Besides the scoring engine, `src/index.ts` exports these pieces. The CLI and its tests use them; an external application can use them when it already has Engram's `MemoryStore` and `Session`.
+
+| Symbol | Signature | What it does / returns |
+|---|---|---|
+| `moduleTopicKey` | `(moduleName: string): string` | Returns `atlas:module:<name>`. |
+| `deriveSessionId` | `(directory: string): string` | Derives stable repository identity; can throw when the path does not exist. |
+| `deriveForcedSessionId` | `(directory: string): string` | Adds the current time for `--force`. |
+| `startOrResumeSession` | `(store, directory): RunState` | Opens/resumes a session or returns `already-complete`; propagates Engram errors. |
+| `isModuleReportSaved` | `(store, projectId, moduleName): boolean` | Checks for a saved report. |
+| `recordModuleReport` | `(store, directory, session, moduleName, report): SessionSaveResult` | Saves or updates a report; can throw Engram errors. |
+| `finalizeRun` | `(store, session, report): void` | Saves the final report and closes the session. |
+| `readPauseCount` / `recordPause` | `(store, projectId): number` / `(store, directory, session): number` | Reads or increments the pause count. |
+| `detectAgents` / `getCapabilities` | `(binaryPath): AgentDetection[]` / `(binaryPath, agentId): Capabilities` | Runs Engines; throws when its binary fails. |
+| `resolveEnginesBinaryPath` / `resolveWorkersBinaryPath` | `(platform, forgeHome): string` | Builds the platform binary path. |
+| `resolveEngine` | `(agents, capabilitiesById, requestedId?): EngineResolution` | Chooses an engine or returns its resolution status. |
+| `buildRunPlan` | `(store, projectId, directory, options): RunPlanResult` | Discovers, scores, and excludes saved modules; can throw while reading the project. |
+| `runInitCommand` | `(store, options): Promise<InitOutcome>` | Runs the `init` flow and returns its typed JSON envelope. |
+| `resolveModuleFiles` | `(directory, moduleNames): Map<string, string[]>` | Groups files by module; only internal dispatch and tests use it. |
+| `resolveTaskConfig` | `(tier, engineId, capabilities): TaskModelConfig` | Returns model/reasoning; throws for an engine outside its table. |
+| `buildAnalysisPrompt` | `(moduleName, filePaths): string` | Creates a module prompt; internal dispatch uses it. |
+| `runWorkersBatch` | `(workersBinaryPath, enginesBinaryPath, tasks, onEvent): Promise<void>` | Runs Workers and delivers events; rejects for process or invalid NDJSON errors. |
+| `dispatchModules` | `(store, directory, session, workersBinaryPath, enginesBinaryPath, engine, capabilities, modules): Promise<DispatchResult>` | Dispatches, persists reports, and returns completion, pause, or error. |
+
+Associated types are `RunState`, `FinalReport`, `AgentDetection`, `Capabilities`, `EngineResolution`, `RunPlanModule`, `RunPlanResult`, `RunInitOptions`, `InitOutcome`, `WorkersTask`, `WorkersEvent`, `TaskModelConfig`, and `DispatchResult`; their fields are defined in the source modules reexported by `src/index.ts`.
+
 The following script demonstrates end-to-end usage of the scoring pipeline:
 
 ```typescript

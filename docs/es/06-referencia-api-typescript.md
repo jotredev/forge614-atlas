@@ -135,6 +135,33 @@ Ordena de forma descendente y determinista los módulos por puntaje y asigna los
 
 ## 3. Ejemplo de Integración de Extremo a Extremo (Listo para Producción)
 
+## 2.7 Sesiones, motores y despacho
+
+Además del motor de puntuación, `src/index.ts` exporta estas piezas. Las usan el CLI y sus pruebas; una aplicación externa puede usarlas si ya tiene un `MemoryStore` y una `Session` de Engram.
+
+| Símbolo | Firma | Qué hace / devuelve |
+|---|---|---|
+| `moduleTopicKey` | `(moduleName: string): string` | Devuelve `atlas:module:<nombre>`. |
+| `deriveSessionId` | `(directory: string): string` | Deriva el identificador estable del repositorio; puede lanzar si la ruta no existe. |
+| `deriveForcedSessionId` | `(directory: string): string` | Añade la hora al identificador para `--force`. |
+| `startOrResumeSession` | `(store, directory): RunState` | Abre/retoma sesión o devuelve `already-complete`; propaga errores de Engram. |
+| `isModuleReportSaved` | `(store, projectId, moduleName): boolean` | Consulta si existe el reporte guardado. |
+| `recordModuleReport` | `(store, directory, session, moduleName, report): SessionSaveResult` | Guarda o actualiza el reporte; puede lanzar errores de Engram. |
+| `finalizeRun` | `(store, session, report): void` | Guarda el reporte final y cierra la sesión. |
+| `readPauseCount` / `recordPause` | `(store, projectId): number` / `(store, directory, session): number` | Lee o incrementa el contador de pausas. |
+| `detectAgents` / `getCapabilities` | `(binaryPath): AgentDetection[]` / `(binaryPath, agentId): Capabilities` | Ejecutan Engines; lanzan si el binario falla. |
+| `resolveEnginesBinaryPath` / `resolveWorkersBinaryPath` | `(platform, forgeHome): string` | Construyen la ruta del binario para el sistema operativo. |
+| `resolveEngine` | `(agents, capabilitiesById, requestedId?): EngineResolution` | Elige motor o devuelve el estado de resolución. |
+| `buildRunPlan` | `(store, projectId, directory, options): RunPlanResult` | Descubre, puntúa y deja fuera módulos ya reportados; puede lanzar al leer el proyecto. |
+| `runInitCommand` | `(store, options): Promise<InitOutcome>` | Ejecuta el flujo de `init` y devuelve el sobre JSON tipado. |
+| `resolveModuleFiles` | `(directory, moduleNames): Map<string, string[]>` | Agrupa archivos por módulo; solo lo usan pruebas y despacho interno. |
+| `resolveTaskConfig` | `(tier, engineId, capabilities): TaskModelConfig` | Devuelve modelo/razonamiento; lanza para un motor fuera de tabla. |
+| `buildAnalysisPrompt` | `(moduleName, filePaths): string` | Crea el prompt de un módulo; lo usa el despacho interno. |
+| `runWorkersBatch` | `(workersBinaryPath, enginesBinaryPath, tasks, onEvent): Promise<void>` | Ejecuta Workers y entrega eventos; rechaza ante proceso o NDJSON inválido. |
+| `dispatchModules` | `(store, directory, session, workersBinaryPath, enginesBinaryPath, engine, capabilities, modules): Promise<DispatchResult>` | Despacha, persiste reportes y devuelve completado, pausa o error. |
+
+Los tipos asociados son `RunState`, `FinalReport`, `AgentDetection`, `Capabilities`, `EngineResolution`, `RunPlanModule`, `RunPlanResult`, `RunInitOptions`, `InitOutcome`, `WorkersTask`, `WorkersEvent`, `TaskModelConfig` y `DispatchResult`; sus campos están definidos en los módulos fuente que reexporta `src/index.ts`.
+
 El siguiente script muestra cómo consumir la librería completa para puntuar un proyecto:
 
 ```typescript
