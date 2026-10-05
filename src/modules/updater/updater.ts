@@ -1,16 +1,18 @@
 /**
  * Autoactualización de Forge614 Atlas: baja el instalador publicado con la última versión y lo corre con
- * `--force`, y luego informa qué versión quedó instalada. Toda dependencia externa (la descarga, el
- * lanzamiento del proceso y la lectura de la versión instalada) se puede sustituir por parámetro para
- * probar el flujo sin red ni un instalador real. Comparte con `updater.ts` de Forge614 Workers el orden de descarga,
- * ejecución y lectura de versión; aquí el comando devuelve una respuesta JSON (texto con campos).
+ * `--force` (la opción que le permite reemplazar la instalación existente), y luego informa qué versión quedó
+ * instalada. Toda dependencia externa (la descarga, el lanzamiento del proceso y la lectura de la versión instalada)
+ * se puede sustituir por parámetro para probar el flujo sin red ni un instalador real. Sigue el mismo orden de
+ * descarga, ejecución y lectura de versión que `updater.ts` de Forge614 Workers (son archivos separados, sin código
+ * común); aquí `runUpdateCommand` devuelve el código de salida y la respuesta JSON (texto con campos), y
+ * `src/interfaces/cli/commands.ts` la imprime.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-/** Instalador que acompaña cada release de Atlas; `latest` siempre apunta al más nuevo. */
+/** Instalador que acompaña cada release (versión publicada en GitHub) de Atlas; `latest` apunta al de la release más reciente (sin contar borradores ni versiones previas). */
 export const LATEST_INSTALLER_URL = "https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh";
 
 /** Opciones al lanzar el proceso del instalador: `inherit` muestra su salida en la terminal actual. */
@@ -28,9 +30,9 @@ type ReadInstalledVersion = () => string;
 
 /** Resultado de un intento de actualización. */
 export interface UpdateResult {
-  /** Si la versión instalada cambió. */
+  /** Si la versión instalada después del intento es distinta de la del programa en ejecución. */
   updated: boolean;
-  /** Versión que estaba instalada antes del intento. */
+  /** Versión del programa en ejecución, que se toma como la instalada antes del intento. */
   previousVersion: string;
   /** Versión instalada después del intento (igual a `previousVersion` si nada cambió). */
   installedVersion: string;
@@ -49,7 +51,7 @@ export function installedAtlasCommand(forgeHome: string): string {
  * Corre el comando instalado con `--version` y comprueba la forma de su respuesta.
  * @param command Ruta del comando instalado.
  * @returns La versión informada, por ejemplo `1.1.0`.
- * @throws Error del proceso si el comando no corre, o Error de validación si no imprime `forge614-atlas X.Y.Z` con un posible sufijo de versión.
+ * @throws Error del proceso si el comando no corre o sale con código distinto de 0, o Error de validación si lo que imprime no es exactamente `forge614-atlas X.Y.Z` (con un posible sufijo de versión como `-rc.1`).
  */
 function readVersionOf(command: string): string {
   const output = execFileSync(command, ["--version"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
@@ -62,8 +64,9 @@ function readVersionOf(command: string): string {
  * Baja un instalador a un archivo temporal privado marcado como ejecutable.
  * @param url De dónde bajar el instalador.
  * @returns La ruta del instalador y un `cleanup` que borra su carpeta temporal.
- * @throws Error con el mensaje de descarga si el servidor responde con un estado HTTP de error; propaga
- * errores de `fetch` ante fallas de red y del sistema de archivos al crear o escribir el temporal.
+ * @throws Error con el mensaje de descarga si el servidor responde con un estado HTTP de error (el número con que un
+ * servidor web indica un fallo, como 404); propaga los errores de `fetch` (la función estándar que descarga de la red)
+ * ante fallas de red y los del sistema de archivos al crear o escribir el temporal.
  */
 export async function downloadInstaller(url: string): Promise<{ installer: string; cleanup: () => void }> {
   const response = await fetch(url);
@@ -86,7 +89,7 @@ export async function downloadInstaller(url: string): Promise<{ installer: strin
  * @param options.spawn Lanzador de procesos; por defecto `spawnSync`, heredando la terminal para que se vean los mensajes del instalador.
  * @param options.readInstalledVersion Lectura de la versión tras instalar; por defecto corre el comando instalado.
  * @returns Si la versión cambió, la anterior y la instalada.
- * @throws Error de descarga o del proceso si el instalador no arranca; Error del instalador si sale con estado distinto de 0; Error de validación si la versión instalada no tiene la forma esperada. También propaga errores de limpieza del temporal.
+ * @throws Error de descarga; Error del proceso si el instalador no arranca o si, al leer la versión, el comando instalado no corre; Error del instalador si sale con estado distinto de 0 o termina por una señal; Error de validación si la versión instalada no tiene la forma esperada. También propaga errores de limpieza del temporal.
  */
 export async function updateInstalledAtlas(
   currentVersion: string,
@@ -126,7 +129,7 @@ export interface UpdateCommandOutcome {
  * @param currentVersion Versión del programa en ejecución.
  * @param forgeHome Carpeta Forge614 ya resuelta.
  * @param update Actualización a correr; por defecto {@link updateInstalledAtlas}.
- * @returns Código 0 con `status: "updated"`, o código 1 con respuesta de error (`INVALID_ARGUMENT` si sobran argumentos, `UPDATE_FAILED` si la actualización falla).
+ * @returns Código 0 con `status: "updated"` (también si la versión no cambió: eso lo dice el campo `updated`), o código 1 con respuesta de error (`INVALID_ARGUMENT` si sobran argumentos, `UPDATE_FAILED` si la actualización falla). No lanza: todo error de `update` se convierte en `UPDATE_FAILED`.
  */
 export async function runUpdateCommand(
   args: string[],

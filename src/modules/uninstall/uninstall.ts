@@ -12,8 +12,9 @@ export type UninstallErrorCode = "UNINSTALL_UNSAFE" | "PATH_REMOVE_FAILED";
 
 /**
  * Algo impide desinstalar con seguridad; el código dice qué. `UNINSTALL_UNSAFE` y los `PATH_REMOVE_FAILED`
- * de la comprobación (`planUninstall`) salen antes de cambiar nada; un `PATH_REMOVE_FAILED` al reescribir
- * un perfil puede llegar con los perfiles anteriores de la lista ya limpios.
+ * de la comprobación (`planUninstall`) salen antes de cambiar nada. En cambio, un `PATH_REMOVE_FAILED` al reescribir
+ * un perfil puede llegar con los perfiles anteriores de la lista ya limpios, y el `UNINSTALL_UNSAFE` de
+ * `removeFolder` llega cuando todos los perfiles ya están limpios.
  */
 export class UninstallError extends Error {
   /** Indica si se encontró una ruta insegura o si no se pudo retirar un bloque del perfil. */
@@ -34,7 +35,7 @@ export class UninstallError extends Error {
 interface PlannedPathChange {
   /** Ruta del perfil que contenía al menos un bloque de Atlas. */
   path: string;
-  /** Texto nuevo del archivo; `null` significa borrar el archivo (solo el archivo de fish que solo traía el bloque). */
+  /** Texto nuevo del archivo; `null` significa borrar el archivo (solo el archivo propio de fish, otra terminal, cuando solo traía el bloque). */
   content: string | null;
   /** Permisos originales para que el archivo reescrito conserve el mismo acceso. */
   mode: number;
@@ -48,7 +49,7 @@ export interface UninstallPlan {
   pathFiles: string[];
   /** Quita los bloques de PATH. @returns Los archivos que cambió. @throws UninstallError con código `PATH_REMOVE_FAILED`. */
   removePathBlocks(): string[];
-  /** Borra la carpeta de Atlas, si existía. @throws UninstallError con código `UNINSTALL_UNSAFE` si cambió a algo inseguro; también puede propagar errores del sistema de archivos al consultar o borrar la ruta. */
+  /** Borra la carpeta de Atlas si existía al armar el plan (si no existía, no hace nada). @throws UninstallError con código `UNINSTALL_UNSAFE` si, justo antes de borrar, la ruta ya no es una carpeta real (se volvió un enlace u otro tipo de archivo, o desapareció); también puede propagar errores del sistema de archivos al consultar o borrar la ruta (por ejemplo, de permisos). */
   removeFolder(): void;
 }
 
@@ -78,8 +79,9 @@ function isRealDirectory(path: string): boolean {
 
 /**
  * Comprueba todo lo que la desinstalación va a tocar y arma el plan, sin cambiar nada. Solo se tocan la
- * carpeta `<forgeHome>/atlas` y el bloque de PATH de Atlas en `~/.zshrc`, `~/.bash_profile`, `~/.bashrc`
- * y `~/.config/fish/conf.d/forge614-atlas.fish`; nunca Engram, Engines, Shell, Workers ni las memorias.
+ * carpeta `<forgeHome>/atlas` y el bloque de PATH de Atlas en `<home>/.zshrc`, `<home>/.bash_profile`,
+ * `<home>/.bashrc` y `<home>/.config/fish/conf.d/forge614-atlas.fish` (este último se borra entero si solo traía el
+ * bloque); nunca Engram, Engines, Shell, Workers ni las memorias.
  * @param forgeHome Carpeta Forge614 ya resuelta (ver `resolveForgeHome`).
  * @param home Carpeta personal del usuario, donde viven los archivos de perfil de shell.
  * @returns El plan, con las operaciones para aplicarlo en el orden correcto.
@@ -101,7 +103,7 @@ export function planUninstall(forgeHome: string, home: string): UninstallPlan {
     throw new UninstallError("UNINSTALL_UNSAFE", "The Forge614 Atlas folder is not a real folder; nothing was removed.");
   }
 
-  // El orden fija la secuencia de escritura; el perfil propio de fish se borra si solo contenía el bloque de Atlas.
+  // El orden fija la secuencia de escritura; el archivo propio de fish se borra si, sin el bloque de Atlas, solo queda espacio en blanco; los otros tres se reescriben aunque queden vacíos.
   const candidates: readonly { path: string; deleteWhenEmpty: boolean }[] = [
     { path: join(home, ".zshrc"), deleteWhenEmpty: false },
     { path: join(home, ".bash_profile"), deleteWhenEmpty: false },

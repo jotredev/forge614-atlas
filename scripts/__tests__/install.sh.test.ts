@@ -310,7 +310,6 @@ afterEach(() => {
 /**
  * Comprueba que, para zsh, bash y fish, instalar dos veces (la segunda con `--force`) en una carpeta elegida deje el
  * archivo de configuración con su contenido anterior, la línea de PATH propia de cada terminal y un solo bloque marcado.
- * Importa para que el instalador no duplique ni borre la configuración de la persona.
  */
 test.each([
   ["zsh", "/bin/zsh", ".zshrc"],
@@ -352,7 +351,6 @@ test.each([
 /**
  * Comprueba que con una terminal desconocida (`/bin/unknown`) el instalador termine bien, imprima la orden `export PATH=…`
  * y la palabra «manually» (a mano), y deje intactos los cuatro archivos de configuración, también en la segunda corrida con `--force`.
- * Importa porque no debe escribir en archivos de una terminal que no sabe manejar.
  */
 test("leaves shell files untouched and prints manual PATH guidance for an unknown shell", async () => {
   const root = temporaryDirectory();
@@ -389,7 +387,6 @@ test("leaves shell files untouched and prints manual PATH guidance for an unknow
 /**
  * Comprueba que una instalación sin opciones deje el binario en `<HOME>/.forge614/atlas/bin`, imprima `forge614-atlas init`
  * y ponga permisos 700 (solo la persona dueña) en `atlas` y en `atlas/bin`.
- * Importa porque esas carpetas no deben quedar abiertas a otros usuarios.
  */
 test("default install uses the product bin with locked-down permissions", async () => {
   const root = temporaryDirectory();
@@ -413,7 +410,7 @@ test("default install uses the product bin with locked-down permissions", async 
 /**
  * Comprueba que una segunda instalación sobre el mismo destino, sin `--force`, termine con un código distinto de 0 y
  * que el binario siga con el contenido de la release de prueba (las dos copias son idénticas, así que no detecta un
- * reemplazo). Importa para no pisar una instalación existente sin que se pida.
+ * reemplazo).
  */
 test("refuses replacement without force", async () => {
   const root = temporaryDirectory();
@@ -437,7 +434,7 @@ test("refuses replacement without force", async () => {
 
 /**
  * Comprueba que, si la huella SHA-256 publicada no coincide con la del binario descargado, el instalador termine con un
- * código distinto de 0 y no cree ni el binario ni la carpeta `.forge614`. Importa para no instalar un archivo alterado o dañado.
+ * código distinto de 0 y no cree ni el binario ni la carpeta `.forge614`.
  */
 test("rejects a checksum mismatch before creating the destination", async () => {
   const root = temporaryDirectory();
@@ -462,7 +459,6 @@ test("rejects a checksum mismatch before creating the destination", async () => 
 /**
  * Comprueba que una dirección de pruebas con HTTPS o con usuario incrustado (`@`) se rechace con el aviso de que debe
  * ser HTTP local (loopback: la propia máquina) y sin crear el destino ni `.forge614`.
- * Importa porque la vía de pruebas no debe poder apuntar a servidores de fuera.
  */
 test.each([
   ["an HTTPS endpoint", "https://127.0.0.1:1"],
@@ -486,7 +482,6 @@ test.each([
 /**
  * Comprueba que usar la dirección de pruebas sin `FORGE614_ATLAS_INSTALLER_TEST=1` termine con un código distinto de 0 y el
  * aviso «reserved for test fixtures» (reservado para pruebas), sin crear el destino ni `.forge614`.
- * Importa para que ese desvío no se use fuera de las pruebas.
  */
 test("rejects a test endpoint without the test sentinel", async () => {
   const root = temporaryDirectory();
@@ -507,7 +502,6 @@ test("rejects a test endpoint without the test sentinel", async () => {
 /**
  * Comprueba que, si los datos de la release anuncian sus archivos en una dirección que no es HTTP local, el instalador
  * termine con un código distinto de 0 y el aviso «unsafe test fixture URL», sin crear el destino ni `.forge614`.
- * Importa porque en modo de pruebas cada descarga debe quedarse en la propia máquina.
  */
 test("rejects non-loopback release asset URLs from a test fixture", async () => {
   const root = temporaryDirectory();
@@ -534,7 +528,7 @@ test("rejects non-loopback release asset URLs from a test fixture", async () => 
 /**
  * Comprueba que, con un instalador de Engram FALSO, Atlas deje Engram en `<HOME>/.forge614/engram/bin` y no cree
  * `.claude.json` ni `.codex/config.toml` (la configuración de Claude Code y de Codex).
- * Importa porque instalar la dependencia no debe tocar la configuración de esos dos asistentes (no se revisa ninguna otra).
+ * No revisa la configuración de ningún otro asistente.
  */
 test("installs Forge614 Engram as a dependency without configuring an AI client", async () => {
   const root = temporaryDirectory();
@@ -560,7 +554,7 @@ test("installs Forge614 Engram as a dependency without configuring an AI client"
 
 /**
  * Comprueba que una URL de reemplazo del instalador de Engram que no es `file://` (aquí HTTPS) se rechace con «must be a
- * local file URL», con un código distinto de 0 y sin crear el destino. Importa para que el reemplazo no descargue de la red.
+ * local file URL», con un código distinto de 0 y sin crear el destino.
  */
 test("rejects a non-file Engram installer override", async () => {
   const root = temporaryDirectory();
@@ -687,7 +681,7 @@ describe("dependencies and FORGE614_HOME", () => {
 
   /**
    * Comprueba que con Engram, Workers y Engines ya en la versión mínima o en una más nueva no se corra ningún instalador y se
-   * impriman las tres líneas «… is compatible». Importa para no reinstalar lo que ya sirve y dejar a la vista qué se verificó.
+   * impriman las tres líneas «… is compatible».
    */
   test.each([
     ["the minimum versions", "1.8.7", "1.0.0", "1.17.0"],
@@ -705,7 +699,7 @@ describe("dependencies and FORGE614_HOME", () => {
 
   /**
    * Comprueba que un Engram anterior a 1.8.7, o que no responde `--version`, se actualice corriendo solo su instalador con
-   * `--force` y que Atlas quede instalado. Importa porque, al haber ya algo en esa ruta, Atlas pide el reemplazo de forma explícita.
+   * `--force` (el instalador lo pide cuando ya hay un archivo en la ruta de Engram) y que Atlas quede instalado.
    */
   test.each([
     ["is 1.5.0", "1.5.0"],
@@ -721,7 +715,7 @@ describe("dependencies and FORGE614_HOME", () => {
 
   /**
    * Comprueba que un Workers 0.1.0, o que no responde `--version`, se reinstale corriendo solo el instalador de Workers y sin
-   * `--force`, y que Atlas quede instalado. Importa porque reinstalar un Workers viejo no debe forzar ningún reemplazo.
+   * `--force`, y que Atlas quede instalado.
    */
   test.each([
     ["is 0.1.0", "0.1.0"],
@@ -737,7 +731,7 @@ describe("dependencies and FORGE614_HOME", () => {
   /**
    * Comprueba ocho situaciones en que una dependencia no se puede cumplir (instalador que falla, versión que sigue vieja,
    * Engines sin el candado de solo lectura, viejo o ausente): salida 1, el motivo y «Atlas was not changed.» en stderr, y nada
-   * de Atlas creado ni PATH publicado. Importa porque Atlas no debe quedar a medio instalar.
+   * de Atlas creado ni PATH publicado.
    */
   test.each([
     ["the Workers installer fails", { workersInstaller: { fails: true } }, "Forge614 Workers could not be installed"],
@@ -764,7 +758,6 @@ describe("dependencies and FORGE614_HOME", () => {
   /**
    * Comprueba que con un `FORGE614_HOME` absoluto todo quede ahí (los binarios de Engram, Workers y Engines, el de Atlas con
    * permisos 700 en su `bin` y la línea de PATH en `.zshrc`) y nada en `<HOME>/.forge614`.
-   * Importa porque esa variable decide dónde vive todo el ecosistema.
    */
   test("an absolute FORGE614_HOME receives everything: the dependencies, the Atlas binary and its permissions", async () => {
     const run = await runScenario({ forgeHome: "custom" });
@@ -783,7 +776,7 @@ describe("dependencies and FORGE614_HOME", () => {
 
   /**
    * Comprueba que sin la variable `FORGE614_HOME` el instalador use `<HOME>/.forge614`: corre los instaladores de Engram y
-   * de Workers allí y deja el binario de Atlas. Importa porque es la ruta por omisión que dice la ayuda.
+   * de Workers allí y deja el binario de Atlas.
    */
   test("without FORGE614_HOME everything falls in $HOME/.forge614", async () => {
     const run = await runScenario({ forgeHome: "unset" });
@@ -797,7 +790,6 @@ describe("dependencies and FORGE614_HOME", () => {
   /**
    * Comprueba que un `FORGE614_HOME` vacío o relativo termine con salida 1 y el mensaje `INVALID_FORGE614_HOME: …`, sin
    * correr ningún instalador, sin crear nada en `HOME` y sin crear una carpeta `relative` en el directorio actual.
-   * Importa para que una ruta relativa no cree carpetas según desde dónde se corra el comando.
    */
   test.each([
     ["empty", ""],
@@ -814,7 +806,7 @@ describe("dependencies and FORGE614_HOME", () => {
 
   /**
    * Comprueba que `--help` termine con salida 0, nombre `FORGE614_HOME` y las versiones mínimas de Engram (1.8.7) y de
- * Workers (1.0.0), y no corra ningún instalador. Importa para que la ayuda diga lo que el instalador exige de ellos (la de Engines, 1.17.0, no se verifica).
+   * Workers (1.0.0), y no corra ningún instalador; la versión mínima de Engines (1.17.0) no se verifica.
    */
   test("--help names FORGE614_HOME and the minimum versions, and exits 0", async () => {
     const run = await runScenario({ args: ["--help"] });
