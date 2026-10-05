@@ -1,261 +1,45 @@
-# 07.02 (EN) Module Discovery (discovery.ts and test)
+# 07.02 Module Discovery
 
-> **Architecture and Code Reference — Forge614 Atlas Ecosystem**  
-> **Scope:** `src/modules/scoring/discovery.ts` and `discovery.test.ts`  
-> **Sister Translation:** [07.02 Descubrimiento de Módulos (Discovery)](../../es/07-estructura/02-descubrimiento-discovery.md)
+[Sister translation: 07.02 (ES) Descubrimiento e Inspección del Sistema de Archivos](../../es/07-estructura/02-descubrimiento-discovery.md)
 
----
+## What it is for
 
-## 1. Architectural Rationale
+Identifies the folders that make up a project's code to analyze them as "modules". In real life, it is like a city census, where census takers visit all the streets and buildings (folders) to register which houses (code files) belong to each neighborhood (module).
 
-The initial stage of Atlas is to map the project structure deterministically, discovering which first-level directories qualify as architectural modules and enumerating their source code files:
-1. Skips standard tooling directories (`node_modules`, `.git`, `dist`, `build`, etc.) via an immutable $O(1)$ set.
-2. Sorts folders and files using strict lexicographical `localeCompare`, guaranteeing identical outputs on macOS, Linux, or CI runners.
-3. Distinguishes automated unit and spec tests (`.test.ts`, `.spec.ts`) via regular expressions to prevent test code from polluting production metrics.
+## Files
 
-### Real-World Analogy
-> It is like a city postal survey: the inspector navigates only inhabited residential and commercial addresses, ignoring scrap yards (`node_modules`) and underground subway shafts (`.git`), registering precise street numbers to visit later.
+- `src/modules/scoring/discovery.ts`: Recursive exploration algorithm that finds modules and test files ([Card in Chapter 06](../06-typescript-api-reference.md)).
 
----
+## How it works
 
-## 2. Documented Source Code: `src/modules/scoring/discovery.ts`
+1. `discoverModules` starts the discovery process from the repository root, reading folders (ignoring loose files at the root) (`src/modules/scoring/discovery.ts:74`).
+2. Delegates to `collectModules` to recursively analyze each folder (`src/modules/scoring/discovery.ts:80`).
+3. In `collectModules`, if a folder has no subfolders but does have code files, it considers it a module and registers it (`src/modules/scoring/discovery.ts:103`).
+4. If the folder is mixed (it has its own code files and also subfolders), the loose files form a module named after the folder, and it continues down to the subfolders (`src/modules/scoring/discovery.ts:109-111`).
+5. If the folder only has subfolders (it is a pure container), it simply traverses it and inspects each subfolder (`src/modules/scoring/discovery.ts:114-116`).
+6. `relativeModuleName` is used to generate a uniform name based on the relative path, with forward slashes `/` for stability across operating systems (`src/modules/scoring/discovery.ts:126-128`).
+7. `listDirectSourceFiles` is used with a `Glob` to list only direct `.ts, .tsx, .js, .jsx` files in the folder, alphabetically sorted (`src/modules/scoring/discovery.ts:138-144`).
 
-```typescript
-import { Glob } from "bun";
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
+## Edge cases and decisions
 
-/**
- * Immutable in-memory set (O(1) lookup) containing standard system folders
- * that must never be treated as business modules or recursively traversed,
- * preventing infinite loops, compiled artifacts, and ephemeral caches.
- */
-const EXCLUDED_DIRS = new Set([
-  "node_modules", // External dependencies installed by package managers
-  ".git",         // Git version control internal database
-  "dist",         // Bundled compilation outputs
-  "build",        // Intermediate build artifacts
-  "coverage",     // Automated test coverage reports
-  ".next",        // Next.js framework build cache
-  "out",          // Static frontend export directories
-  ".forge614",    // Forge614 project folder (portable identity `project.json`, written by Engram)
-]);
+- Excluded folders: Explicitly skips `node_modules`, `.git`, `dist`, `build`, `coverage`, `.next`, `out`, `.forge614`, and any folder starting with a dot, to avoid processing dependencies or build outputs (`src/modules/scoring/discovery.ts:19`).
+- Name collision: Because the module name is its relative path (`src/auth` instead of just `auth`), two folders with the same name in different branches do not collide (`src/modules/scoring/discovery.ts:65`).
+- Loose root files: Files located directly at the root do not belong to any module; the `discoverModules` function only traverses direct folders from the root (`src/modules/scoring/discovery.ts:68-75`).
 
-/**
- * Canonical descriptor of a discovered on-disk module.
- */
-export interface ModuleDescriptor {
-  /** First-level root directory name defining the module */
-  name: string;
-  /** Absolute filesystem path to the module directory */
-  path: string;
-  /** Exhaustive, alphabetically sorted list of source TypeScript/JavaScript files */
-  files: string[];
-}
+## Tests
 
-/**
- * Deterministic predicate to detect whether a file is a unit or integration test.
- * 
- * Matching Rule:
- * - Allowed extensions: .test.ts, .test.tsx, .test.js, .test.jsx, .spec.ts, .spec.tsx, etc.
- * - Used by cyclomatic and fan-in engines to exclude test assertions and avoid
- *   artificially inflating production code complexity.
- * 
- * @param filePath - Relative or absolute path of the file to inspect
- * @returns `true` if the filename ends with `.(test|spec).[tj]sx?`
- */
-export function isTestFile(filePath: string): boolean {
-  return /\.(test|spec)\.[tj]sx?$/.test(filePath);
-}
+| Test | What it checks |
+|------|----------------|
+| `finds top-level folders that contain source files` | Finds top-level folders that have loose code files. |
+| `excludes folders with no ts/tsx/js/jsx files` | Skips folders that do not contain files with supported code extensions. |
+| `ignores node_modules even when scanning from the repo root` | Verifies that the `node_modules` directory is excluded from the search. |
+| `excludes nested dot-directories from file scanning` | Ensures that subdirectories starting with a dot (e.g., `.hidden`) are not scanned. |
+| `descends into a purely-nested container folder instead of collapsing it into one module` | Ensures a container of pure folders is traversed internally to create a module per subfolder, rather than unifying them. |
+| `splits a mixed folder (loose files + subfolders) into a loose-files module plus one module per subfolder` | Checks that mixed folders register their files as a separate module and split their subfolders. |
+| `keeps flat top-level modules working exactly as before (no regression)` | Guarantees that flat top-level folders continue to be evaluated and treated identically as before. |
+| `returns modules and files in stable, alphabetically sorted order regardless of creation order` | Returns the modules and their files in alphabetical order to ensure deterministic behavior. |
 
-/**
- * Top-level module discovery algorithm.
- * 
- * Step-by-step:
- * 1. Synchronously reads all directory entries at `root`.
- * 2. Filters exclusively directory entries, discarding blacklisted directories (`EXCLUDED_DIRS`)
- *    and hidden dot-directories.
- * 3. Sorts directory names alphabetically using `localeCompare` for strict determinism.
- * 4. For each candidate directory, recursively scans all source code files.
- * 5. If the directory contains at least 1 valid source file, registers it as a `ModuleDescriptor`.
- * 
- * @param root - Absolute path to the project repository root
- * @returns List of discovered modules sorted alphabetically by name
- */
-export function discoverModules(root: string): ModuleDescriptor[] {
-  // 1. Read first-level directory entries with file types (avoids redundant statSync calls)
-  const topLevelDirs = readdirSync(root, { withFileTypes: true })
-    // 2. Filter only directories not in blacklist and not starting with a dot
-    .filter(entry => entry.isDirectory() && !EXCLUDED_DIRS.has(entry.name) && !entry.name.startsWith("."))
-    // 3. Extract directory name
-    .map(entry => entry.name)
-    // 4. Stable lexicographical sort to eliminate OS-dependent filesystem variations
-    .sort((a, b) => a.localeCompare(b));
+## Where it is used
 
-  const modules: ModuleDescriptor[] = [];
-
-  // 5. Inspect each candidate folder to verify presence of actual code
-  for (const dirName of topLevelDirs) {
-    const modulePath = join(root, dirName);
-    const files = listSourceFiles(modulePath);
-
-    // Only qualify as a functional module if it contains at least one .ts, .tsx, .js, or .jsx file
-    if (files.length > 0) {
-      modules.push({
-        name: dirName,
-        path: modulePath,
-        files,
-      });
-    }
-  }
-
-  return modules;
-}
-
-/**
- * Recursively scans a directory searching for TypeScript and JavaScript source files.
- * 
- * Step-by-step:
- * 1. Initializes a `Bun.Glob` scanner with pattern `**\/*.{ts,tsx,js,jsx}`.
- * 2. Performs synchronous scan filtering files only (skips folders).
- * 3. Splits each relative path into segments to verify whether it crosses any nested
- *    hidden or blacklisted folder (e.g., `my-module/.cache/file.ts`).
- * 4. Resolves normalized absolute paths.
- * 5. Returns the file list sorted lexicographically.
- * 
- * @param dir - Absolute path of the module directory
- * @returns Sorted list of absolute source file paths
- */
-function listSourceFiles(dir: string): string[] {
-  // 1. Instantiate glob pattern optimized for Bun
-  const glob = new Glob("**/*.{ts,tsx,js,jsx}");
-  const matches: string[] = [];
-
-  // 2. Iterate over synchronous scan matches
-  for (const relativePath of glob.scanSync({ cwd: dir, onlyFiles: true })) {
-    const segments = relativePath.split("/");
-
-    // 3. Guard against nested undesirable directories
-    if (segments.some(segment => EXCLUDED_DIRS.has(segment) || segment.startsWith("."))) {
-      continue;
-    }
-
-    // 4. Resolve absolute path
-    matches.push(join(dir, relativePath));
-  }
-
-  // 5. Stable lexicographical sort
-  return matches.sort((a, b) => a.localeCompare(b));
-}
-```
-
----
-
-## 3. Automated Tests: `src/modules/scoring/discovery.test.ts`
-
-```typescript
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { discoverModules } from "./discovery";
-
-describe("discoverModules", () => {
-  let root: string;
-
-  /**
-   * Before each test, constructs an isolated ephemeral filesystem in the OS temp directory.
-   */
-  beforeEach(() => {
-    // 1. Create unique temporary directory
-    root = mkdtempSync(join(tmpdir(), "atlas-discovery-"));
-
-    // 2. Create valid 'src/auth' module with a TypeScript source file
-    mkdirSync(join(root, "src", "auth"), { recursive: true });
-    writeFileSync(join(root, "src", "auth", "login.ts"), "export const login = () => true;");
-
-    // 3. Create 'src/styles' directory containing only CSS (must not qualify as code module)
-    mkdirSync(join(root, "src", "styles"), { recursive: true });
-    writeFileSync(join(root, "src", "styles", "index.css"), "body { margin: 0; }");
-
-    // 4. Create 'node_modules' (must be ignored by blacklist)
-    mkdirSync(join(root, "node_modules", "some-package"), { recursive: true });
-    writeFileSync(join(root, "node_modules", "some-package", "index.js"), "module.exports = {};");
-  });
-
-  /**
-   * Cleanup temporary files after execution.
-   */
-  afterEach(() => {
-    rmSync(root, { recursive: true, force: true });
-  });
-
-  test("finds top-level folders that contain source files", () => {
-    // Scanning inside 'src': finds 'auth' and lists 'login.ts'
-    const modules = discoverModules(join(root, "src"));
-    expect(modules).toHaveLength(1);
-    expect(modules[0]?.name).toBe("auth");
-    expect(modules[0]?.files).toEqual([join(root, "src", "auth", "login.ts")]);
-  });
-
-  test("excludes folders with no ts/tsx/js/jsx files", () => {
-    // Scanning inside 'src': 'styles' contains only CSS, thus excluded
-    const modules = discoverModules(join(root, "src"));
-    const names = modules.map(module => module.name);
-    expect(names).not.toContain("styles");
-  });
-
-  test("ignores node_modules even when scanning from the repo root", () => {
-    // Scanning from repo root: 'node_modules' is blacklisted
-    const modules = discoverModules(root);
-    const names = modules.map(module => module.name);
-    expect(names).not.toContain("node_modules");
-  });
-
-  test("excludes nested dot-directories from file scanning", () => {
-    const srcPath = join(root, "src");
-    // Create nested hidden directory '.cache' inside valid module
-    mkdirSync(join(srcPath, "auth", ".cache"), { recursive: true });
-    writeFileSync(join(srcPath, "auth", ".cache", "generated.ts"), "export const x = 1;");
-
-    const modules = discoverModules(srcPath);
-    expect(modules).toHaveLength(1);
-    expect(modules[0]?.name).toBe("auth");
-    // Nested dot-directory file must be excluded
-    expect(modules[0]?.files).toHaveLength(1);
-    expect(modules[0]?.files).toEqual([join(srcPath, "auth", "login.ts")]);
-  });
-
-  test("returns modules and files in stable, alphabetically sorted order regardless of creation order", () => {
-    const stableRoot = mkdtempSync(join(tmpdir(), "atlas-discovery-stable-"));
-
-    // Directories created intentionally in reverse-alphabetical order
-    // to prove sorting is enforced deterministically by algorithm, not filesystem inodes.
-    mkdirSync(join(stableRoot, "zebra"), { recursive: true });
-    writeFileSync(join(stableRoot, "zebra", "z.ts"), "export const z = 1;");
-
-    mkdirSync(join(stableRoot, "mango"), { recursive: true });
-    writeFileSync(join(stableRoot, "mango", "m.ts"), "export const m = 1;");
-
-    mkdirSync(join(stableRoot, "apple"), { recursive: true });
-    writeFileSync(join(stableRoot, "apple", "z-file.ts"), "export const z = 1;");
-    writeFileSync(join(stableRoot, "apple", "a-file.ts"), "export const a = 1;");
-    writeFileSync(join(stableRoot, "apple", "m-file.ts"), "export const m = 1;");
-
-    const modules = discoverModules(stableRoot);
-
-    // Modules must be sorted: apple -> mango -> zebra
-    expect(modules.map(module => module.name)).toEqual(["apple", "mango", "zebra"]);
-
-    // Files inside 'apple' must be sorted: a-file -> m-file -> z-file
-    const apple = modules.find(module => module.name === "apple");
-    expect(apple?.files).toEqual([
-      join(stableRoot, "apple", "a-file.ts"),
-      join(stableRoot, "apple", "m-file.ts"),
-      join(stableRoot, "apple", "z-file.ts"),
-    ]);
-
-    rmSync(stableRoot, { recursive: true, force: true });
-  });
-});
-```
+- `discoverModules`: Called by `resolveModuleFiles` in `src/modules/cli/module-files.ts:16` and `buildRunPlan` in `src/modules/cli/build-run-plan.ts:54`.
+- `isTestFile`: Called by `test-coverage-gap.ts:72`, `fan-in.ts:156`, and `cyclomatic.ts:120`.

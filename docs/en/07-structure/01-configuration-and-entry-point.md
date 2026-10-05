@@ -1,149 +1,47 @@
-# 07.01 (EN) Environment Configuration and Entry Point
+# 07.01 Environment Configuration and Entry Point
 
-> **Architecture and Code Reference — Forge614 Atlas Ecosystem**  
-> **Scope:** `package.json`, `tsconfig.json`, `.gitignore`, `src/index.ts`  
-> **Sister Translation:** [07.01 Configuración del Entorno y Punto de Entrada](../../es/07-estructura/01-configuracion-y-punto-entrada.md)
+[Sister translation: 07.01 (ES) Configuración del Entorno y Punto de Entrada](../../es/07-estructura/01-configuracion-y-punto-entrada.md)
 
----
+## What it is for
 
-## 1. Architectural Rationale
+Configures compilation rules, version control ignores, and the main access point for anyone importing the Atlas library. As a real-life example, it is like the reception of a building, where the rules (`tsconfig.json` and `.gitignore`) are displayed and a directory or receptionist (`src/index.ts`) redirects to the different offices (modules).
 
-Forge614 Atlas is engineered as a standalone, deterministic library within the Forge614 ecosystem. To guarantee strict parity across local workstations, CI/CD runners, and integrations with `forge614-engram` and `forge614-shell`, the runtime is strictly locked to **Bun >= 1.3.9** and strictly compiled under **TypeScript 5.9.3**.
+## Files
 
-### Real-World Analogy
-> It is like the cargo manifest and customs checkpoint of a merchant vessel: before containers (modules) are inspected by complexity cranes, the manifest (`package.json`) and safety protocols (`tsconfig.json`) dictate exact dimensions, weights, and hermetic seals without exception.
+- `tsconfig.json`: Compilation rules and strict typing for TypeScript (no index card link).
+- `.gitignore`: List of folders and files that Git ignores (no index card link).
+- `src/index.ts`: Entry point of the library; re-exports public functions grouped in 11 sections ([Card in Chapter 06](../06-typescript-api-reference.md)).
+- For `package.json`, see [Chapter 13](../13-package-metadata.md).
 
----
+## How it works
 
-## 2. Documented Source Code
+1. `tsconfig.json` defines rules to compile to `ESNext` and use the `Bun` engine.
+2. `.gitignore` hides local dependencies, build outputs, and secrets, keeping the repository clean.
+3. `src/index.ts` contains no logic; instead, it re-exports elements grouped into these sections:
+   - Section 1: Module discovery (`src/index.ts:9`).
+   - Section 2: Cyclomatic complexity (`src/index.ts:13`).
+   - Section 3: Fan-in dependency centrality (`src/index.ts:16`).
+   - Section 4: Git volatility (`src/index.ts:19`).
+   - Section 5: Coverage gap (`src/index.ts:22`).
+   - Section 6: Composite score (`src/index.ts:25`).
+   - Section 7: Tier allocation (`src/index.ts:29`).
+   - Section 8: Engram integration (`src/index.ts:33`).
+   - Section 9: Engines client (`src/index.ts:41`).
+   - Section 10: CLI core (`src/index.ts:47`).
+   - Section 11: Workers client (`src/index.ts:55`).
 
-### 2.1 `package.json`
+## Edge cases and decisions
 
-```json
-{
-  // Formal package identifier within the Forge614 monorepo
-  "name": "forge614-atlas",
-  // Semantic version of the product (kept equal to CHANGELOG.md and chapter 10 by a test)
-  "version": "1.1.0",
-  // Prevents accidental publishing to public npm registries
-  "private": true,
-  // Enforces native ECMAScript Modules (ESM) for import/export
-  "type": "module",
-  // Formal architectural description (literal Spanish as in source package.json)
-  "description": "Orquestacion de contextualizacion profunda para el ecosistema Forge614",
-  // Public package entry point exposed to external consumers
-  "exports": "./src/index.ts",
-  "scripts": {
-    // Executes the test suite under native Bun runner
-    "test": "bun test",
-    // Strict static type checking without emitting files to disk
-    "typecheck": "tsc --noEmit",
-    // Compiles the standalone binary (the release pipeline adds --target per platform)
-    "build": "bun build ./src/interfaces/cli/main.ts --compile --outfile dist/forge614-atlas"
-  },
-  // Minimum required runtime version
-  "engines": {
-    "bun": ">=1.3.9"
-  },
-  // Type definitions for the Bun runtime environment
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  // Official TypeScript compiler pinned for AST syntax parsing, and the local copy of Engram
-  // (a sibling folder; its code is compiled into the Atlas binary)
-  "dependencies": {
-    "typescript": "5.9.3",
-    "forge614-engram": "file:../forge614-engram"
-  }
-}
-```
+- Unified entry point: By using a single `index.ts` barrel file, external importers do not need to know the internal structure of `src/modules/` or `src/interfaces/` (`src/index.ts:1-7`).
 
----
+## Tests
 
-### 2.2 `tsconfig.json`
+| Test | What it checks |
+|------|----------------|
+| (No direct tests) | The configuration and the barrel file do not contain executable logic that requires standalone unit tests. |
 
-```json
-{
-  "compilerOptions": {
-    // Target modern ECMAScript standard
-    "target": "ESNext",
-    // Native ESM module output
-    "module": "ESNext",
-    // Modern bundler module resolution compatible with Bun
-    "moduleResolution": "bundler",
-    // Enforce strict type safety (no implicit any, strict null checks)
-    "strict": true,
-    // Skip checking declaration files to accelerate build time
-    "skipLibCheck": true,
-    // Enable interoperability helpers for CommonJS dependencies
-    "esModuleInterop": true,
-    // Inject Bun global types (Bun.Glob, etc.)
-    "types": ["bun-types"]
-  }
-}
-```
+## Where it is used
 
----
-
-### 2.3 `.gitignore`
-
-```text
-# Third-party dependencies
-node_modules/
-
-# Build and compilation outputs
-dist/
-build/
-coverage/
-*.tgz
-
-# OS metadata
-.DS_Store
-
-# Local environment secrets
-.env
-.env.*
-!.env.example
-
-# Temporary SDD planning artifacts
-.superpowers/sdd/
-```
-
----
-
-### 2.4 Main Entry Point: `src/index.ts`
-
-```typescript
-/**
- * Forge614 Atlas — Deterministic Complexity Scoring Engine (Plan 1/5)
- * 
- * Public library barrel file. Re-exports deterministic primitives for module discovery,
- * Abstract Syntax Tree (AST) analysis, dependency graph centrality (Fan-In), Git commit
- * volatility (Churn UTF-8), test coverage gap, Min-Max normalization, composite scoring,
- * and context budget tier allocation (Tiers).
- */
-
-// 1. Module Discovery and Filesystem Inspection
-export { discoverModules, isTestFile } from "./modules/scoring/discovery";
-export type { ModuleDescriptor } from "./modules/scoring/discovery";
-
-// 2. McCabe AST Cyclomatic Complexity
-export { fileCyclomaticComplexity, computeCyclomaticComplexity } from "./modules/scoring/cyclomatic";
-
-// 3. Fan-In Dependency Centrality
-export { computeFanIn } from "./modules/scoring/fan-in";
-
-// 4. Git Historical Volatility (Churn UTF-8)
-export { computeChurn } from "./modules/scoring/churn";
-
-// 5. Unit Test Coverage Gap
-export { computeTestCoverageGap } from "./modules/scoring/test-coverage-gap";
-
-// 6. Normalized Composite Score and Fragility Modifier
-export { computeCompositeScores } from "./modules/scoring/composite-score";
-export type { ModuleSignals, ModuleScore } from "./modules/scoring/composite-score";
-
-// 7. Context Budget Tier Allocation
-export { assignTiers } from "./modules/scoring/tiers";
-export type { Tier, TieredModule } from "./modules/scoring/tiers";
-```
+- `tsconfig.json`: Used by `bun test`, `bun run typecheck`, and the build process.
+- `.gitignore`: Used by Git to prevent tracking certain paths.
+- `src/index.ts`: Imported externally by the general orchestrator or CLI when using the library.

@@ -1,182 +1,39 @@
-# 07.06 Brecha de Cobertura de Pruebas (Test Coverage Gap)
+# 07.06 Brecha de Cobertura de Pruebas (Test Gap)
 
-> **Documento de Arquitectura y Código — Ecosistema Forge614 Atlas**  
-> **Alcance:** `src/modules/scoring/test-coverage-gap.ts` y `test-coverage-gap.test.ts`  
-> **Traducción hermana:** [07.06 (EN) Test Coverage Gap (test-coverage-gap.ts and test)](../../en/07-structure/06-test-coverage-gap.md)
+[Traducción hermana: 07.06 (EN) Test Coverage Gap](../../en/07-structure/06-test-coverage-gap.md)
 
----
+## Para qué sirve
 
-## 1. Justificación Arquitectónica
+Mide qué proporción de los archivos de un módulo no tiene un archivo de pruebas asociado, devolviendo un valor de 0 (todo cubierto) a 1 (nada cubierto). Esta señal se usa para penalizar los módulos complejos que, además, no están probados. En la vida real, es como contar qué porcentaje de los empleados de una fábrica de químicos no lleva equipo de protección; a mayor porcentaje, mayor es el riesgo de accidentes.
 
-La Brecha de Cobertura de Pruebas (Test Coverage Gap) cuantifica la fragilidad operativa de un módulo evaluando la ausencia de suites de pruebas unitarias colocalizadas (*sibling tests*). En sistemas guiados por agentes de Inteligencia Artificial como Atlas, modificar un módulo complejo que carece de pruebas automatizadas representa un riesgo mayúsculo de introducir regresiones silenciosas.
+## Archivos
 
-### Reglas Críticas del Algoritmo
-1. **Detección de Archivos Hermanos (*Sibling Tests*):** Por convención estándar, para cada archivo productivo `auth.ts`, busca si existe en el mismo directorio `auth.test.ts` o `auth.spec.ts` (preservando la extensión `.tsx`, `.js`, etc.).
-2. **Fórmula Normalizada en $[0.0, 1.0]$:**
-   $$\text{TestGap} = 1.0 - \frac{|\text{Archivos con Prueba Hermana}|}{|\text{Total Archivos Fuente Productivos}|}$$
-   - $\text{TestGap} = 0.0$: Todos los archivos productivos están respaldados por pruebas.
-   - $\text{TestGap} = 1.0$: Ningún archivo productivo cuenta con pruebas unitarias (máxima desprotección).
-3. **Manejo de Casos Borde:** Módulos que únicamente contienen configuraciones o carecen de código productivo devuelven $0.0$ de brecha para no penalizar estructuras de soporte.
-4. **Función en el Sistema:** No es una señal aditiva; opera como un **multiplicador de riesgo** del $+20\%$ en la fórmula compuesta ($1 + 0.20 \cdot \text{TestGap}$).
+- `src/modules/scoring/test-coverage-gap.ts`: Examina el sistema de archivos buscando pruebas "hermanas" por cada archivo fuente y calcula la proporción sin cubrir ([Ficha en el Capítulo 06](../06-referencia-api-typescript.md)).
 
-### Analogía del Mundo Real
-> Es como circular por una cornisa montañosa con un camión pesado: el peso y la velocidad representan la complejidad del módulo, pero la presencia o ausencia de barandillas de contención en el acantilado representa la cobertura de pruebas. Si no hay barandilla ($\text{TestGap} = 1.0$), cualquier maniobra imprevista es fatal.
+## Cómo funciona
 
----
+1. `computeTestCoverageGap` recibe los módulos detectados (`src/modules/scoring/test-coverage-gap.ts:67`).
+2. Para cada módulo, filtra y se queda sólo con sus archivos productivos, dejando fuera los propios archivos de pruebas usando la función `isTestFile` de descubrimiento (`src/modules/scoring/test-coverage-gap.ts:71-72`).
+3. Si un módulo carece de archivos productivos, le asigna inmediatamente una brecha de 0 para no penalizarlo (`src/modules/scoring/test-coverage-gap.ts:75-78`).
+4. Usa la función `hasSiblingTest` sobre cada archivo productivo para contar cuántos tienen prueba (`src/modules/scoring/test-coverage-gap.ts:81`).
+5. En `hasSiblingTest`, separa la ruta base de la extensión, y comprueba con `existsSync` si existe un archivo con `.test` o `.spec` y la misma extensión original en esa misma carpeta (`src/modules/scoring/test-coverage-gap.ts:31-36`).
+6. La brecha se calcula restando a `1` la división entre los archivos que sí tienen prueba y el total de archivos productivos (`src/modules/scoring/test-coverage-gap.ts:84`).
+7. El resultado se guarda en el mapa que devuelve la función (`src/modules/scoring/test-coverage-gap.ts:87`).
 
-## 2. Código Fuente Documentado: `src/modules/scoring/test-coverage-gap.ts`
+## Casos borde y decisiones
 
-```typescript
-import { existsSync } from "node:fs";
-import { isTestFile, type ModuleDescriptor } from "./discovery";
+- Convención de pruebas hermanas: Atlas asume estrictamente que las pruebas viven al lado del código, en la misma carpeta (`ej. src/auth/jwt.test.ts` para `src/auth/jwt.ts`). Una arquitectura con pruebas en una carpeta separada `tests/` dará un test gap de 1.0 (brecha total) (`src/modules/scoring/test-coverage-gap.ts:35-36`).
+- Penalizador, no suma directa: El resultado `[0, 1]` no se suma al puntaje de complejidad, sino que se usa después en `composite-score.ts` como un multiplicador de riesgo de hasta un 20% más si no hay pruebas (`src/modules/scoring/test-coverage-gap.ts:60-61`).
+- Módulos vacíos o de solo tests: Un módulo sin archivos productivos recibe brecha 0 (ningún riesgo de falta de pruebas), evitando la división entre cero (`src/modules/scoring/test-coverage-gap.ts:75-76`).
 
-/**
- * Comprueba si un archivo fuente productivo tiene un archivo de pruebas hermano (sibling test).
- * 
- * Convención estándar de la industria (co-located tests):
- * - Para un archivo como `/src/auth/jwt.ts`, se buscan dos variantes hermanas directas:
- *   1. `/src/auth/jwt.test.ts` (o con la extensión original: .tsx, .js, .jsx)
- *   2. `/src/auth/jwt.spec.ts`
- * 
- * Algoritmo paso a paso:
- * 1. Encuentra la última posición del punto (`.`) en la ruta para extraer la extensión (`ext`)
- *    y la ruta base (`base`).
- * 2. Verifica mediante `existsSync` si existe `{base}.test{ext}` o `{base}.spec{ext}`.
- * 
- * @param filePath - Ruta absoluta del archivo fuente productivo
- * @returns `true` si existe un archivo de prueba hermano en disco, `false` en caso contrario
- */
-function hasSiblingTest(filePath: string): boolean {
-  const dotIndex = filePath.lastIndexOf(".");
-  const base = filePath.slice(0, dotIndex);
-  const ext = filePath.slice(dotIndex);
+## Pruebas
 
-  return existsSync(`${base}.test${ext}`) || existsSync(`${base}.spec${ext}`);
-}
+| Prueba | Qué comprueba |
+|--------|---------------|
+| `returns 0 when every source file has a sibling .test file` | Confirma que si todos los archivos tienen su prueba al lado, la brecha reportada es 0. |
+| `returns 1 when no source file has a sibling test` | Asegura que un módulo completamente sin pruebas obtenga un puntaje de brecha máxima de 1. |
+| `returns a fractional gap when only some files are covered` | Verifica que el cálculo proporcional sea correcto (ej. 1 protegido de 2 da un gap de 0.5). |
 
-/**
- * Calcula la Brecha de Cobertura de Pruebas (Test Coverage Gap) para cada módulo.
- * 
- * Definición y Fundamento de Calidad:
- * - El "Test Coverage Gap" cuantifica la proporción de archivos fuente productivos que
- *   carecen de una suite de pruebas unitarias asociada.
- * - Rango normalizado: `[0.0, 1.0]`.
- *   - `0.0`: Cobertura de pruebas completa (todos los archivos tienen su test hermano).
- *   - `1.0`: Brecha total (ningún archivo productivo cuenta con pruebas automatizadas).
- * 
- * Algoritmo paso a paso:
- * 1. Por cada módulo, filtra exclusivamente sus archivos productivos excluyendo los tests existentes.
- * 2. Caso borde: Si el módulo no contiene archivos productivos (ej. solo configuración o vacío),
- *    la brecha es estrictamente 0.0 para no penalizar módulos que no ejecutan lógica de negocio.
- * 3. Cuenta cuántos de esos archivos productivos poseen un archivo hermano de prueba (`withTests`).
- * 4. Aplica la fórmula complementaria:
- *    `gap = 1.0 - (withTests / sourceFiles.length)`
- * 5. Almacena el resultado en el mapa por cada módulo.
- * 
- * Rol en el Motor de Puntuación:
- * - Esta métrica NO se suma directamente a las señales estructurales (ciclomática, fan-in, churn).
- * - En su lugar, se utiliza en `composite-score.ts` como un MULTIPLICADOR DE RIESGO:
- *   `score = base * (1 + 0.20 * testGap)`.
- *   Un módulo complejo sin pruebas recibe un castigo del +20% en su puntuación de complejidad,
- *   garantizando que reciba mayor presupuesto de contexto en los agentes de Forge614 Atlas.
- * 
- * @param modules - Lista de módulos descubiertos
- * @returns Diccionario `Map<string, number>` con el gap en rango [0.0, 1.0] por cada módulo
- */
-export function computeTestCoverageGap(modules: ModuleDescriptor[]): Map<string, number> {
-  const result = new Map<string, number>();
+## Dónde se usa
 
-  for (const module of modules) {
-    // 1. Filtrar solo los archivos de código fuente productivo (excluir archivos de prueba)
-    const sourceFiles = module.files.filter(file => !isTestFile(file));
-
-    // 2. Manejo de caso borde: módulo sin código productivo
-    if (sourceFiles.length === 0) {
-      result.set(module.name, 0);
-      continue;
-    }
-
-    // 3. Filtrar aquellos archivos que sí disponen de su respectivo archivo hermano de pruebas
-    const withTests = sourceFiles.filter(hasSiblingTest);
-
-    // 4. Calcular la proporción de archivos desprotegidos (brecha)
-    const gap = 1 - withTests.length / sourceFiles.length;
-
-    // 5. Guardar la brecha calculada
-    result.set(module.name, gap);
-  }
-
-  return result;
-}
-```
-
----
-
-## 3. Pruebas Automatizadas: `src/modules/scoring/test-coverage-gap.test.ts`
-
-```typescript
-import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { computeTestCoverageGap } from "./test-coverage-gap";
-import type { ModuleDescriptor } from "./discovery";
-
-describe("computeTestCoverageGap", () => {
-  test("returns 0 when every source file has a sibling .test file", () => {
-    // Escenario: Cobertura perfecta (1 archivo productivo acompañado de 1 archivo de test hermano).
-    // Fórmula: 1 - (1 con test / 1 fuente) = 0.0 de brecha.
-    const root = mkdtempSync(join(tmpdir(), "atlas-gap-covered-"));
-    const modulePath = join(root, "auth");
-    mkdirSync(modulePath, { recursive: true });
-    const source = join(modulePath, "login.ts");
-    const testFile = join(modulePath, "login.test.ts");
-    writeFileSync(source, "export const login = () => true;");
-    writeFileSync(testFile, "// test");
-
-    const modules: ModuleDescriptor[] = [{ name: "auth", path: modulePath, files: [source, testFile] }];
-    const result = computeTestCoverageGap(modules);
-
-    expect(result.get("auth")).toBe(0);
-    rmSync(root, { recursive: true, force: true });
-  });
-
-  test("returns 1 when no source file has a sibling test", () => {
-    // Escenario: Brecha total (1 archivo productivo sin archivo de test hermano).
-    // Fórmula: 1 - (0 con test / 1 fuente) = 1.0 de brecha (máximo riesgo).
-    const root = mkdtempSync(join(tmpdir(), "atlas-gap-uncovered-"));
-    const modulePath = join(root, "billing");
-    mkdirSync(modulePath, { recursive: true });
-    const source = join(modulePath, "charge.ts");
-    writeFileSync(source, "export const charge = () => true;");
-
-    const modules: ModuleDescriptor[] = [{ name: "billing", path: modulePath, files: [source] }];
-    const result = computeTestCoverageGap(modules);
-
-    expect(result.get("billing")).toBe(1);
-    rmSync(root, { recursive: true, force: true });
-  });
-
-  test("returns a fractional gap when only some files are covered", () => {
-    // Escenario: Cobertura mixta (2 archivos productivos, solo 1 tiene prueba hermana).
-    // Fórmula: 1 - (1 con test / 2 fuentes) = 0.5 (50% de brecha).
-    const root = mkdtempSync(join(tmpdir(), "atlas-gap-partial-"));
-    const modulePath = join(root, "mixed");
-    mkdirSync(modulePath, { recursive: true });
-    const covered = join(modulePath, "a.ts");
-    const coveredTest = join(modulePath, "a.test.ts");
-    const uncovered = join(modulePath, "b.ts");
-    writeFileSync(covered, "export const a = 1;");
-    writeFileSync(coveredTest, "// test");
-    writeFileSync(uncovered, "export const b = 2;");
-
-    const modules: ModuleDescriptor[] = [
-      { name: "mixed", path: modulePath, files: [covered, coveredTest, uncovered] },
-    ];
-    const result = computeTestCoverageGap(modules);
-
-    expect(result.get("mixed")).toBe(0.5);
-    rmSync(root, { recursive: true, force: true });
-  });
-});
-```
+- `computeTestCoverageGap`: Llamado por `buildRunPlan` en `src/modules/cli/build-run-plan.ts:64` y reexportado en `src/index.ts:23`.

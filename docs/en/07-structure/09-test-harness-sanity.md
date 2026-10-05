@@ -1,93 +1,32 @@
-# 07.09 (EN) Test Harness and Sanity (scaffold.test.ts)
+# 07.09 Test Harness Sanity (Scaffold)
 
-> **Architecture and Code Reference — Forge614 Atlas Ecosystem**  
-> **Scope:** `src/modules/scoring/scaffold.test.ts`  
-> **Sister Translation:** [07.09 Arnés de Pruebas y Sanidad (Scaffold Test)](../../es/07-estructura/09-arnes-pruebas-sanidad.md)
+[Sister translation: 07.09 (ES) Arnés de Pruebas de Sanidad (Scaffold)](../../es/07-estructura/09-arnes-pruebas-sanidad.md)
 
----
+## What it is for
 
-## 1. Architectural Rationale
+Guarantees that the test runner (`bun test`) is correctly installed, configured, and capable of running assertions. In real life, it is like testing if a microphone is on by saying "Testing, one, two, three" before starting a speech: if the mic is broken, it does not matter what you are going to say.
 
-Before implementing incremental phases of the SDD (Software Design Description) plan, a baseline sanity verification test was required. The `scaffold.test.ts` file validates that the Bun test runner (`bun test`) is operational within the monorepo, global types from `@types/bun` resolve cleanly, and the testing framework assertions succeed before complex logic runs.
+## Files
 
-### Real-World Analogy
-> It is like turning the ignition key and checking the dashboard warning lights before starting an engine for a long journey: if the dashboard does not illuminate, there is no point in putting the car in gear.
+- `src/modules/scoring/scaffold.test.ts`: Isolated unit test that does not test the library's code, but rather the test engine itself (no index card link).
 
----
+## How it works
 
-## 2. Documented Source Code: `src/modules/scoring/scaffold.test.ts`
+1. The file contains a single `describe` block that does not import any function from the project.
+2. Contains a single test with a trivial mathematical assertion (`expect(1 + 1).toBe(2)`).
+3. The project's complete test suite is executed by running `bun test` in the terminal (defined in `package.json`).
+4. For type checking, the suite includes running `bun run typecheck`, which internally calls `tsc --noEmit`.
 
-```typescript
-import { describe, expect, test } from "bun:test";
+## Edge cases and decisions
 
-/**
- * Initial test harness sanity suite (scaffold test).
- * 
- * Purpose:
- * - Guarantees that Bun's native test runner (`bun test`)
- *   is properly wired, configured, and functional before running
- *   unit and integration tests for Forge614 Atlas.
- */
-describe("project scaffold", () => {
-  test("the test runner is wired up", () => {
-    // Minimal deterministic sanity assertion
-    expect(1 + 1).toBe(2);
-  });
-});
-```
+- Configuration isolation: If complex tests fail, it is useful to know at a glance whether they are failing due to logical errors or because the local Bun environment is broken. If this minimal test also fails, it is immediately deduced that the problem lies in the local installation, not in the Atlas code.
 
----
+## Tests
 
-## 3. Test Runner Execution Output
+| Test | What it checks |
+|------|----------------|
+| `the test runner is wired up` | Verifies that `1 + 1` is `2`; it does not test Atlas code, only that the runner finds a test and its `expect` assertion works. |
 
-```bash
-$ bun test
-bun test v1.3.8 (b64edcb4)
+## Where it is used
 
-src/modules/scoring/test-coverage-gap.test.ts:
-✓ computeTestCoverageGap > returns 0 when every source file has a sibling .test file
-✓ computeTestCoverageGap > returns 1 when no source file has a sibling test
-✓ computeTestCoverageGap > returns a fractional gap when only some files are covered
-
-src/modules/scoring/tiers.test.ts:
-✓ assignTiers > splits 20 modules into roughly 50/35/15 by descending score
-✓ assignTiers > a project with a single module still gets a tier, never crashes
-✓ assignTiers > ties on score break deterministically by name, regardless of input order
-
-src/modules/scoring/scaffold.test.ts:
-✓ project scaffold > the test runner is wired up
-
-src/modules/scoring/fan-in.test.ts:
-✓ computeFanIn > counts how many other modules import from this one
-✓ computeFanIn > does not count a module importing from itself
-✓ computeFanIn > handles sibling modules with overlapping names correctly (path-prefix collision)
-✓ computeFanIn > counts distinct importing modules, not import statements or files
-✓ computeFanIn > does not count imports from a module's own test files
-
-src/modules/scoring/cyclomatic.test.ts:
-✓ fileCyclomaticComplexity > a function with no branching has the baseline complexity of 1
-✓ fileCyclomaticComplexity > counts if/else-if, loops, switch cases, and logical operators (never default)
-✓ computeCyclomaticComplexity > sums complexity across every file in a module
-✓ computeCyclomaticComplexity > excludes *.test.ts files from the module's complexity total
-
-src/modules/scoring/composite-score.test.ts:
-✓ computeCompositeScores > weights cyclomatic and fan-in higher than churn, and never lets testGap fully decide
-✓ computeCompositeScores > a module that is complex but well-tested still outranks a trivial one, without the test gap inflating it
-
-src/modules/scoring/discovery.test.ts:
-✓ discoverModules > finds top-level folders that contain source files
-✓ discoverModules > excludes folders with no ts/tsx/js/jsx files
-✓ discoverModules > ignores node_modules even when scanning from the repo root
-✓ discoverModules > excludes nested dot-directories from file scanning
-✓ discoverModules > returns modules and files in stable, alphabetically sorted order regardless of creation order
-
-src/modules/scoring/churn.test.ts:
-✓ computeChurn > counts changed-file entries per module across commit history
-✓ computeChurn > correctly attributes files to modules with prefix-overlapping names
-✓ computeChurn > correctly attributes churn for modules with non-ASCII names
-
- 26 pass
- 0 fail
- 46 expect() calls
-Ran 26 tests across 8 files. [287.00ms]
-```
+- This file is not imported by any other module in the library. It is automatically detected and executed when the orchestrator or developer runs `bun test`.
