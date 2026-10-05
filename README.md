@@ -66,6 +66,8 @@ Engram guarda además `.forge614/project.json` (la identidad portátil del proye
 | 08 | [Núcleo del CLI y plan de corrida](docs/es/08-nucleo-cli-y-plan-de-corrida.md) | [CLI core and run plan](docs/en/08-cli-core-and-run-plan.md) |
 | 09 | [Despacho real de subagentes](docs/es/09-despacho-de-subagentes.md) | [Real subagent dispatch](docs/en/09-subagent-dispatch.md) |
 | 10 | [Instalador y release](docs/es/10-instalador-y-release.md) | [Installer and release](docs/en/10-installer-and-release.md) |
+| 11 | [Resolución de errores](docs/es/11-resolucion-de-errores.md) | [Troubleshooting](docs/en/11-troubleshooting.md) |
+| 12 | [Glosario](docs/es/12-glosario.md) | [Glossary](docs/en/12-glossary.md) |
 
 Además: el contrato del producto ([`CONTRACT.md`](CONTRACT.md) / [`CONTRACT.en.md`](CONTRACT.en.md)), el [estado del proyecto](STATE.md) y el [historial de cambios](CHANGELOG.md).
 

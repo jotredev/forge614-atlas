@@ -48,7 +48,7 @@ Atlas's installer makes sure of Engram, Workers and Engines before it creates an
 | `INVALID_FORGE614_HOME` | `FORGE614_HOME` is set but empty, relative or contains a NUL character; `init`, `update` and `uninstall` answer it before doing anything else |
 | `ENGINES_UNREACHABLE` | The Engines binary does not respond or its answer failed |
 | `ANALYSIS_FAILED` | The project could not be scored (for example, no Git or no commits) |
-| `READ_ONLY_UNSUPPORTED` | Engines does not guarantee read-only helpers (older than 1.17.0 or `supportsReadOnly` not `true`), or Workers refused to run the tasks for the same reason |
+| `READ_ONLY_UNSUPPORTED` | Engines does not declare `supportsReadOnly: true` for the chosen engine (an Engines older than 1.17.0 does not have that field and counts as not declared), or Workers refused to run tasks for the same reason |
 | `WORKERS_UNREACHABLE` | The Workers binary does not exist or is not executable |
 | `WORKERS_OUTDATED` | Workers is older than 1.0.0 or `--version` does not answer `forge614-workers X.Y.Z` |
 | `WORKERS_FATAL_ERROR` | Workers could not run the batch |

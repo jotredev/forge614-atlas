@@ -301,7 +301,7 @@ describe("forge614-atlas uninstall", () => {
     expect(existsSync(join(sandbox.atlas, "bin", "forge614-atlas"))).toBe(true);
   });
 
-  // Quitar el permiso de escritura solo frena a quien no es root; con root las dos pruebas siguientes se saltan (`skipIf`) porque no podrían fallar.
+  // Quitar el permiso de escritura solo frena a quien no es root; con root las dos pruebas siguientes se saltan (`skipIf`) porque con root el permiso no impide escribir ni borrar y no ocurriría el fallo que esperan.
   const asRoot = process.getuid?.() === 0;
 
   /** Comprueba que, sin permiso para crear el temporal del perfil, `PATH_REMOVE_FAILED` conserva perfil y Atlas. */

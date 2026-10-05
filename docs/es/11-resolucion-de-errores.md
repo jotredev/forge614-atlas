@@ -5,7 +5,7 @@
 
 ## Propósito
 
-Este capítulo es el «qué hago ahora» de Atlas. Por cada respuesta que no es un éxito dice qué ve la persona, por qué pasa (con el archivo y la línea del código que la produce) y qué hacer. La lista sale de la tabla «Códigos de error» de `CONTRACT.md` (16 códigos) y de los cuatro estados de `init` que no son un análisis terminado. El detalle de cada comando está en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y el del despacho en el [capítulo 09](09-despacho-de-subagentes.md).
+Este capítulo es el «qué hago ahora» de Atlas. Por cada respuesta que no es un éxito dice qué ve la persona, por qué pasa (con el archivo y la línea del código que la produce) y qué hacer. La lista sale de la tabla «Códigos de error» de `CONTRACT.md` (16 códigos) y de los cinco estados de `init` que no entregan un análisis terminado. El detalle de cada comando está en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y el del despacho en el [capítulo 09](09-despacho-de-subagentes.md).
 
 Todo error sale en la salida estándar con el mismo sobre (la forma fija de la respuesta de error):
 
@@ -13,7 +13,7 @@ Todo error sale en la salida estándar con el mismo sobre (la forma fija de la r
 { "schemaVersion": 1, "status": "error", "error": { "code": "…", "message": "…" } }
 ```
 
-`UNKNOWN_COMMAND` es la excepción: lleva `argv` (los argumentos recibidos) en vez de `message`. Los mensajes del código están en inglés; aquí se citan tal cual.
+`UNKNOWN_COMMAND` es la excepción: lleva `argv` (los argumentos recibidos) en vez de `message`. Los mensajes de Atlas están en inglés y aquí se citan tal cual; los que vienen de Engram (por ejemplo, el de `UNEXPECTED_ERROR` por `.forge614/project.json`) están en español.
 
 ## Códigos de salida
 
@@ -23,13 +23,13 @@ Todo error sale en la salida estándar con el mismo sobre (la forma fija de la r
 | `1` | Cualquier respuesta con `status: "error"`, salvo `UNINSTALL_CANCELLED`. |
 | `130` | Solo `UNINSTALL_CANCELLED`: la persona escribió otra cosa en vez de la frase de confirmación. |
 
-Ojo: los cuatro estados de `init` de la última sección salen con `0` aunque no hayan analizado nada (`src/interfaces/cli/commands.ts:61` solo pone `1` cuando la respuesta lleva `error`). Un programa que llama a Atlas debe leer `status`, no solo el código de salida.
+Ojo: los cinco estados de `init` de la última sección salen con `0` aunque no hayan entregado un análisis terminado (`paused` ya pudo guardar parte de los reportes; `already-complete` no analiza nada; `src/interfaces/cli/commands.ts:61` solo pone `1` cuando la respuesta lleva `error`). Un programa que llama a Atlas debe leer `status`, no solo el código de salida.
 
 ## Errores de configuración y de uso
 
 ### `INVALID_FORGE614_HOME`
 
-- **Qué ves:** `"code": "INVALID_FORGE614_HOME"`, mensaje `FORGE614_HOME must be a non-empty absolute path.`, salida 1. Lo responden `init`, `update` y `uninstall` antes de hacer cualquier otra cosa (`init` no llega a abrir Engram).
+- **Qué ves:** `"code": "INVALID_FORGE614_HOME"`, mensaje `FORGE614_HOME must be a non-empty absolute path.`, salida 1. Lo responden `init`, `update` y `uninstall` apenas empiezan (`init` no llega a abrir Engram; `uninstall` revisa antes sus argumentos, así que con un argumento inválido responde `INVALID_ARGUMENT`).
 - **Por qué pasa:** la variable `FORGE614_HOME` existe pero está vacía, es una ruta relativa (por ejemplo `relative/forge614`) o tiene un carácter nulo (`src/modules/forge-home/forge-home.ts:38`). Una variable vacía no se ignora: es un error, igual que en Engram.
 - **Qué hacer:** mira su valor con `echo "$FORGE614_HOME"`. Dale una ruta absoluta (`export FORGE614_HOME="$HOME/.forge614"`) o quítala (`unset FORGE614_HOME`) para usar la carpeta por omisión, `~/.forge614`. Si la pusiste en el perfil de tu terminal (`~/.zshrc`, `~/.bashrc`…), corrígela también ahí.
 
@@ -50,8 +50,8 @@ Ojo: los cuatro estados de `init` de la última sección salen con `0` aunque no
 ### `UNEXPECTED_ERROR`
 
 - **Qué ves:** `"code": "UNEXPECTED_ERROR"` con el mensaje original del fallo, salida 1.
-- **Por qué pasa:** algo falló fuera de los casos previstos y llegó hasta el `.catch` de `src/interfaces/cli/main.ts:81`. Casos conocidos: Engram no pudo abrir su base o su sesión al empezar `init`; el archivo `.forge614/project.json` del proyecto existe pero no es válido (Engram lo rechaza; ver el capítulo 08); o un error del sistema de archivos que `uninstall` no tenía previsto (por ejemplo, de permisos).
-- **Qué hacer:** lee el mensaje: dice la causa real. Si nombra `project.json`, corrige o borra `.forge614/project.json` en la raíz del proyecto y vuelve a correr `forge614-atlas init`. Si es de permisos, corrige los permisos de la ruta que nombra. Si el mensaje no da una pista, vuelve a intentarlo; un error que se repite igual es un fallo de Atlas o de Engram y no hay nada más que la persona pueda hacer que reportarlo con el mensaje completo.
+- **Por qué pasa:** algo falló fuera de los casos previstos y llegó hasta el `.catch` de `src/interfaces/cli/main.ts:73`. Casos conocidos: Engram no pudo abrir su base o su sesión al empezar `init`; el archivo `.forge614/project.json` del proyecto existe pero no es válido (Engram lo rechaza; ver el capítulo 08); o un error del sistema de archivos que `uninstall` no tenía previsto (por ejemplo, de permisos).
+- **Qué hacer:** lee el mensaje: dice la causa real. Si nombra `project.json`, corrige o borra `.forge614/project.json` en la raíz del proyecto y vuelve a correr `forge614-atlas init`. Si es de permisos, corrige los permisos de la ruta que nombra. Si el mensaje no da una pista, vuelve a intentarlo; un error que se repite igual es un fallo de Atlas o de Engram: lo que queda es avisar a quien mantiene Forge614, con el mensaje completo.
 
 ## Errores de `init` antes del análisis
 
@@ -91,15 +91,15 @@ Ojo: los cuatro estados de `init` de la última sección salen con `0` aunque no
 
 - **Qué ves:** salida 1 con uno de estos mensajes:
   - `<motivo>: <detalle>` cuando Workers avisó un error fatal (`src/modules/cli/dispatch-modules.ts:140`, respondido en `src/modules/cli/init.ts:127`). Los motivos que Workers usa son `invalid_input`, `engines_bin_not_found` y `unexpected_error`.
-  - El error que cortó el despacho (`src/modules/cli/init.ts:120`), por ejemplo `runWorkersBatch: failed to parse NDJSON line from forge614-workers: …` (Workers imprimió una línea que no es JSON) o `runWorkersBatch: onEvent handler threw while processing a "task_completed" event` (falló guardar un reporte en Engram por una causa distinta de `SECRET_REJECTED`).
+  - El error que cortó el despacho (`src/modules/cli/init.ts:120`), por ejemplo `runWorkersBatch: failed to parse NDJSON line from forge614-workers: …` (Workers imprimió una línea que no es JSON) o `runWorkersBatch: onEvent handler threw while processing a "task_completed" event` (falló guardar un reporte en Engram por una causa distinta de `SECRET_REJECTED`, que es cuando Engram se niega a guardar un texto que parece un secreto: en ese caso Atlas omite el módulo y sigue; ver el [glosario](12-glosario.md), «Reporte rechazado»).
 - **Por qué pasa:** Workers no pudo correr el lote de tareas, o Atlas no pudo procesar lo que devolvió. La sesión de Engram no se cierra y los reportes ya guardados se quedan.
-- **Qué hacer:** con `engines_bin_not_found`, instala o repara Engines como en `ENGINES_UNREACHABLE`. En los demás casos, comprueba Workers (`forge614-workers --version`) y vuelve a correr `forge614-atlas init`: retoma la sesión y no repite los módulos que ya tienen reporte. Si se repite igual, no hay nada más que la persona pueda hacer que reportarlo con el mensaje completo.
+- **Qué hacer:** con `engines_bin_not_found`, instala o repara Engines como en `ENGINES_UNREACHABLE`. En los demás casos, comprueba Workers (`forge614-workers --version`) y vuelve a correr `forge614-atlas init`: retoma la sesión y no repite los módulos que ya tienen reporte. Si se repite igual, lo que queda es avisar a quien mantiene Forge614, con el mensaje completo.
 
 ## Errores de `update`
 
 ### `UPDATE_FAILED`
 
-- **Qué ves:** primero los mensajes del instalador en la terminal y después, salida 1 y un JSON con uno de estos mensajes (lo arma `src/modules/updater/updater.ts:157`):
+- **Qué ves:** salida 1 y un JSON con uno de estos mensajes (lo arma `src/modules/updater/updater.ts:157`); si el instalador llegó a correr, sus mensajes salen antes en la terminal:
   - `Could not download the Forge614 Atlas installer.` (`src/modules/updater/updater.ts:73`), o un error de red: no se pudo bajar el instalador.
   - `The Forge614 Atlas installer failed; the installed version was not confirmed.` (`src/modules/updater/updater.ts:106`): el instalador terminó con error; la causa está en sus mensajes, justo arriba (por ejemplo, una dependencia que no se pudo instalar, seguida de `Atlas was not changed.`).
   - `The installed Forge614 Atlas did not report a valid version.` (`src/modules/updater/updater.ts:59`): el binario instalado no respondió `forge614-atlas X.Y.Z`.
@@ -133,7 +133,7 @@ En todos estos casos, salvo `PATH_REMOVE_FAILED` al reescribir y `UNINSTALL_FAIL
   - `The Forge614 Atlas PATH block in <perfil> cannot be removed safely: <motivo>` (`src/modules/uninstall/uninstall.ts:118`), con motivo `it is not a regular file.`, `it cannot be read.`, `The Forge614 Atlas PATH block is nested or duplicated.`, `… has an end mark without a start.` o `… was never closed.` (`src/modules/uninstall/path-block.ts:46`, `:50` y `:57`). Esto se comprueba antes de cambiar nada.
   - `The Forge614 Atlas PATH block in <perfil> could not be rewritten.` (`src/modules/uninstall/uninstall.ts:161`): falló la escritura; los perfiles anteriores de la lista (`~/.zshrc`, `~/.bash_profile`, `~/.bashrc` y el de fish, en ese orden) ya quedaron limpios.
 - **Por qué pasa:** el bloque de PATH (las líneas que el instalador agregó entre `# >>> forge614-atlas PATH >>>` y `# <<< forge614-atlas PATH <<<`) está incompleto, repetido o editado a mano, o el perfil es un enlace o no se puede leer o escribir. Una marca solo cuenta si la línea es exactamente igual a ella.
-- **Qué hacer:** abre el perfil que nombra el mensaje y deja un solo bloque con sus dos marcas, o bórralo entero a mano. Revisa los permisos si no se pudo leer o escribir. Vuelve a correr `forge614-atlas uninstall`: los perfiles ya limpios no tienen bloque y no se tocan.
+- **Qué hacer:** abre el perfil que nombra el mensaje y deja un solo bloque con sus dos marcas, o bórralo entero a mano. Si el motivo es `it is not a regular file.` (el perfil es un enlace simbólico, por ejemplo hacia una carpeta de configuración compartida), Atlas no lo toca nunca, aunque ya no tenga el bloque: quita el bloque a mano en el archivo al que apunta el enlace y, para que `uninstall` pueda seguir, reemplaza el enlace por un archivo normal (por ejemplo, con una copia de su contenido). Revisa los permisos si no se pudo leer o escribir. Vuelve a correr `forge614-atlas uninstall`: los perfiles que ya son archivos normales y están limpios no tienen bloque y no se tocan.
 
 ### `UNINSTALL_FAILED`
 
@@ -163,8 +163,14 @@ Salen con código 0 (no son errores), pero no analizaron nada nuevo o no termina
 - **Por qué pasa:** el valor de `--engine` no es uno de los candidatos (`src/modules/cli/resolve-engine.ts:37`): está mal escrito, ese asistente no está instalado o no puede correr sin pantalla. La lista puede venir vacía.
 - **Qué hacer:** usa un `id` de `candidates`. Si la lista está vacía, sigue los pasos de `engine-unavailable`.
 
+### `already-complete`
+
+- **Qué ves:** `{ "schemaVersion": 1, "status": "already-complete" }`, salida 0 (`src/modules/cli/init.ts:212`).
+- **Por qué pasa:** el análisis de este proyecto ya terminó: Engram responde que el identificador de sesión de este repositorio pertenece a una sesión cerrada (`src/modules/memory/run-state.ts:28`). Atlas no analiza nada.
+- **Qué hacer:** nada, si el análisis guardado te sirve. Para rehacerlo desde cero corre `forge614-atlas init --force`: abre una sesión nueva y analiza todos los módulos otra vez.
+
 ### `paused`
 
 - **Qué ves:** `{ "schemaVersion": 1, "status": "paused", "engine": {…}, "session": {…}, "analyzedCount": N, "pendingCount": M }` (`src/modules/cli/init.ts:140`).
-- **Por qué pasa:** se agotó la cuota de tu suscripción de IA a mitad del lote. Los reportes de los `analyzedCount` módulos ya están guardados en Engram; la sesión queda abierta a propósito y el contador de pausas suma uno (`src/modules/cli/dispatch-modules.ts:161`). Como se despacha primero lo profundo, lo que quedó pendiente es lo menos crítico.
+- **Por qué pasa:** se agotó la cuota de tu suscripción de IA a mitad del lote. Los reportes de los `analyzedCount` módulos ya están guardados en Engram; la sesión queda abierta a propósito y el contador de pausas suma uno (`src/modules/cli/dispatch-modules.ts:161`). Como se despacha primero lo profundo, lo que se quedó sin analizar por la cuota suele ser lo menos crítico; `pendingCount` cuenta además los módulos que fallaron, llegaron cortados o se rechazaron, de cualquier nivel (`src/modules/cli/dispatch-modules.ts:159`).
 - **Qué hacer:** espera a que tu cuota se renueve y corre otra vez `forge614-atlas init` (sin `--force`): retoma la misma sesión y solo analiza los `pendingCount` módulos que faltan. Con `--force` empezaría de cero y reharía todos.

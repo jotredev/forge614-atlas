@@ -5,7 +5,7 @@
 
 ## Purpose
 
-This chapter is Atlas's "what do I do now". For every answer that is not a success it says what the person sees, why it happens (with the file and line of the code that produces it) and what to do. The list comes from the "Códigos de error" table in `CONTRACT.md` (16 codes) and from the four `init` statuses that are not a finished analysis. Each command is detailed in [chapter 08](08-cli-core-and-run-plan.md) and the dispatch in [chapter 09](09-subagent-dispatch.md).
+This chapter is Atlas's "what do I do now". For every answer that is not a success it says what the person sees, why it happens (with the file and line of the code that produces it) and what to do. The list comes from the "Códigos de error" table in `CONTRACT.md` (16 codes) and from the five `init` statuses that do not deliver a finished analysis. Each command is detailed in [chapter 08](08-cli-core-and-run-plan.md) and the dispatch in [chapter 09](09-subagent-dispatch.md).
 
 Every error goes to standard output with the same envelope (the fixed shape of an error answer):
 
@@ -13,7 +13,7 @@ Every error goes to standard output with the same envelope (the fixed shape of a
 { "schemaVersion": 1, "status": "error", "error": { "code": "…", "message": "…" } }
 ```
 
-`UNKNOWN_COMMAND` is the exception: it carries `argv` (the arguments received) instead of `message`. The code's messages are in English and are quoted here as they are.
+`UNKNOWN_COMMAND` is the exception: it carries `argv` (the arguments received) instead of `message`. Atlas's messages are in English and are quoted here as they are; those that come from Engram (for example, the `UNEXPECTED_ERROR` one about `.forge614/project.json`) are in Spanish.
 
 ## Exit codes
 
@@ -23,13 +23,13 @@ Every error goes to standard output with the same envelope (the fixed shape of a
 | `1` | Any answer with `status: "error"`, except `UNINSTALL_CANCELLED`. |
 | `130` | Only `UNINSTALL_CANCELLED`: the person typed something other than the confirmation phrase. |
 
-Note: the four `init` statuses in the last section exit with `0` even though they analyzed nothing (`src/interfaces/cli/commands.ts:61` only sets `1` when the answer carries `error`). A program that calls Atlas must read `status`, not only the exit code.
+Note: the five `init` statuses in the last section exit with `0` even though they did not deliver a finished analysis (`paused` may already have saved part of the reports; `already-complete` analyzes nothing; `src/interfaces/cli/commands.ts:61` only sets `1` when the answer carries `error`). A program that calls Atlas must read `status`, not only the exit code.
 
 ## Configuration and usage errors
 
 ### `INVALID_FORGE614_HOME`
 
-- **What you see:** `"code": "INVALID_FORGE614_HOME"`, message `FORGE614_HOME must be a non-empty absolute path.`, exit 1. `init`, `update` and `uninstall` answer it before doing anything else (`init` never opens Engram).
+- **What you see:** `"code": "INVALID_FORGE614_HOME"`, message `FORGE614_HOME must be a non-empty absolute path.`, exit 1. `init`, `update` and `uninstall` answer it as soon as they start (`init` never opens Engram; `uninstall` checks its arguments first, so with an invalid argument it answers `INVALID_ARGUMENT`).
 - **Why it happens:** the `FORGE614_HOME` variable exists but is empty, is a relative path (for example `relative/forge614`) or contains a null character (`src/modules/forge-home/forge-home.ts:38`). An empty variable is not ignored: it is an error, just as in Engram.
 - **What to do:** check its value with `echo "$FORGE614_HOME"`. Give it an absolute path (`export FORGE614_HOME="$HOME/.forge614"`) or remove it (`unset FORGE614_HOME`) to use the default folder, `~/.forge614`. If you set it in your terminal profile (`~/.zshrc`, `~/.bashrc`…), fix it there too.
 
@@ -50,8 +50,8 @@ Note: the four `init` statuses in the last section exit with `0` even though the
 ### `UNEXPECTED_ERROR`
 
 - **What you see:** `"code": "UNEXPECTED_ERROR"` with the original failure message, exit 1.
-- **Why it happens:** something failed outside the expected cases and reached the `.catch` at `src/interfaces/cli/main.ts:81`. Known cases: Engram could not open its database or its session when `init` starts; the project's `.forge614/project.json` file exists but is not valid (Engram rejects it; see chapter 08); or a file-system error that `uninstall` did not expect (for example, a permission error).
-- **What to do:** read the message: it states the real cause. If it names `project.json`, fix or delete `.forge614/project.json` at the project root and run `forge614-atlas init` again. If it is a permission error, fix the permissions of the path it names. If the message gives no clue, try again; an error that repeats the same way is an Atlas or Engram bug, and there is nothing more the person can do than report it with the full message.
+- **Why it happens:** something failed outside the expected cases and reached the `.catch` at `src/interfaces/cli/main.ts:73`. Known cases: Engram could not open its database or its session when `init` starts; the project's `.forge614/project.json` file exists but is not valid (Engram rejects it; see chapter 08); or a file-system error that `uninstall` did not expect (for example, a permission error).
+- **What to do:** read the message: it states the real cause. If it names `project.json`, fix or delete `.forge614/project.json` at the project root and run `forge614-atlas init` again. If it is a permission error, fix the permissions of the path it names. If the message gives no clue, try again; an error that repeats the same way is an Atlas or Engram bug: what is left is to tell whoever maintains Forge614, with the full message.
 
 ## `init` errors before the analysis
 
@@ -91,15 +91,15 @@ Note: the four `init` statuses in the last section exit with `0` even though the
 
 - **What you see:** exit 1 with one of these messages:
   - `<reason>: <detail>` when Workers reported a fatal error (`src/modules/cli/dispatch-modules.ts:140`, answered at `src/modules/cli/init.ts:127`). The reasons Workers uses are `invalid_input`, `engines_bin_not_found` and `unexpected_error`.
-  - The error that stopped the dispatch (`src/modules/cli/init.ts:120`), for example `runWorkersBatch: failed to parse NDJSON line from forge614-workers: …` (Workers printed a line that is not JSON) or `runWorkersBatch: onEvent handler threw while processing a "task_completed" event` (saving a report in Engram failed for a reason other than `SECRET_REJECTED`).
+  - The error that stopped the dispatch (`src/modules/cli/init.ts:120`), for example `runWorkersBatch: failed to parse NDJSON line from forge614-workers: …` (Workers printed a line that is not JSON) or `runWorkersBatch: onEvent handler threw while processing a "task_completed" event` (saving a report in Engram failed for a reason other than `SECRET_REJECTED`, which is when Engram refuses to save a text that looks like a secret: in that case Atlas skips the module and goes on; see the [glossary](12-glossary.md), «Rejected report»).
 - **Why it happens:** Workers could not run the task batch, or Atlas could not process what it returned. The Engram session is not closed and the reports already saved stay.
-- **What to do:** with `engines_bin_not_found`, install or repair Engines as in `ENGINES_UNREACHABLE`. Otherwise, check Workers (`forge614-workers --version`) and run `forge614-atlas init` again: it resumes the session and does not repeat the modules that already have a report. If it repeats the same way, there is nothing more the person can do than report it with the full message.
+- **What to do:** with `engines_bin_not_found`, install or repair Engines as in `ENGINES_UNREACHABLE`. Otherwise, check Workers (`forge614-workers --version`) and run `forge614-atlas init` again: it resumes the session and does not repeat the modules that already have a report. If it repeats the same way, what is left is to tell whoever maintains Forge614, with the full message.
 
 ## `update` errors
 
 ### `UPDATE_FAILED`
 
-- **What you see:** first the installer's messages in the terminal, then exit 1 and a JSON with one of these messages (built at `src/modules/updater/updater.ts:157`):
+- **What you see:** exit 1 and a JSON with one of these messages (built at `src/modules/updater/updater.ts:157`); if the installer got to run, its messages come out first in the terminal:
   - `Could not download the Forge614 Atlas installer.` (`src/modules/updater/updater.ts:73`), or a network error: the installer could not be downloaded.
   - `The Forge614 Atlas installer failed; the installed version was not confirmed.` (`src/modules/updater/updater.ts:106`): the installer ended with an error; the cause is in its messages, right above (for example, a dependency that could not be installed, followed by `Atlas was not changed.`).
   - `The installed Forge614 Atlas did not report a valid version.` (`src/modules/updater/updater.ts:59`): the installed binary did not answer `forge614-atlas X.Y.Z`.
@@ -133,7 +133,7 @@ In all these cases, except `PATH_REMOVE_FAILED` while rewriting and `UNINSTALL_F
   - `The Forge614 Atlas PATH block in <profile> cannot be removed safely: <reason>` (`src/modules/uninstall/uninstall.ts:118`), with reason `it is not a regular file.`, `it cannot be read.`, `The Forge614 Atlas PATH block is nested or duplicated.`, `… has an end mark without a start.` or `… was never closed.` (`src/modules/uninstall/path-block.ts:46`, `:50` and `:57`). This is checked before anything changes.
   - `The Forge614 Atlas PATH block in <profile> could not be rewritten.` (`src/modules/uninstall/uninstall.ts:161`): writing failed; the earlier profiles in the list (`~/.zshrc`, `~/.bash_profile`, `~/.bashrc` and the fish one, in that order) were already cleaned.
 - **Why it happens:** the PATH block (the lines the installer added between `# >>> forge614-atlas PATH >>>` and `# <<< forge614-atlas PATH <<<`) is incomplete, repeated or edited by hand, or the profile is a link or cannot be read or written. A mark only counts when the line is exactly equal to it.
-- **What to do:** open the profile the message names and leave a single block with its two marks, or delete it entirely by hand. Check the permissions if it could not be read or written. Run `forge614-atlas uninstall` again: profiles already cleaned have no block and are not touched.
+- **What to do:** open the profile the message names and leave a single block with its two marks, or delete it entirely by hand. If the reason is `it is not a regular file.` (the profile is a symbolic link, for example into a shared configuration folder), Atlas never touches it, even if it no longer has the block: remove the block by hand in the file the link points to and, so that `uninstall` can go on, replace the link with a regular file (for example, a copy of its content). Check the permissions if it could not be read or written. Run `forge614-atlas uninstall` again: profiles that are already regular files and clean have no block and are not touched.
 
 ### `UNINSTALL_FAILED`
 
@@ -163,8 +163,14 @@ They exit with code 0 (they are not errors), but they analyzed nothing new or di
 - **Why it happens:** the `--engine` value is not one of the candidates (`src/modules/cli/resolve-engine.ts:37`): it is misspelled, that assistant is not installed or it cannot run without a screen. The list may be empty.
 - **What to do:** use an `id` from `candidates`. If the list is empty, follow the steps for `engine-unavailable`.
 
+### `already-complete`
+
+- **What you see:** `{ "schemaVersion": 1, "status": "already-complete" }`, exit 0 (`src/modules/cli/init.ts:212`).
+- **Why it happens:** the analysis of this project already finished: Engram answers that the session identifier of this repository belongs to a closed session (`src/modules/memory/run-state.ts:28`). Atlas analyzes nothing.
+- **What to do:** nothing, if the saved analysis is good enough for you. To redo it from scratch run `forge614-atlas init --force`: it opens a new session and analyzes every module again.
+
 ### `paused`
 
 - **What you see:** `{ "schemaVersion": 1, "status": "paused", "engine": {…}, "session": {…}, "analyzedCount": N, "pendingCount": M }` (`src/modules/cli/init.ts:140`).
-- **Why it happens:** your AI subscription quota ran out in the middle of the batch. The reports of the `analyzedCount` modules are already saved in Engram; the session is left open on purpose and the pause counter goes up by one (`src/modules/cli/dispatch-modules.ts:161`). Since the deep tier is dispatched first, what is left pending is the least critical.
+- **Why it happens:** your AI subscription quota ran out in the middle of the batch. The reports of the `analyzedCount` modules are already saved in Engram; the session is left open on purpose and the pause counter goes up by one (`src/modules/cli/dispatch-modules.ts:161`). Since the deep tier is dispatched first, what was left unanalyzed by the quota is usually the least critical; `pendingCount` also counts the modules that failed, arrived cut off or were rejected, of any tier (`src/modules/cli/dispatch-modules.ts:159`).
 - **What to do:** wait for your quota to renew and run `forge614-atlas init` again (without `--force`): it resumes the same session and only analyzes the `pendingCount` modules that are missing. With `--force` it would start over and redo all of them.

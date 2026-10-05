@@ -15,11 +15,11 @@ A folder that has loose code files and also subfolders. Atlas splits it: the loo
 
 ## Signal
 
-Each objective measure Atlas takes from a module's code to decide how much attention it deserves: cyclomatic complexity, fan-in, churn and test coverage gap. They always give the same result for the same code. Explained in [chapter 03](03-signals-metrics-and-formulas.md).
+Each objective measure Atlas takes from a module (from its code and, for churn, from the Git history) to decide how much attention it deserves: cyclomatic complexity, fan-in, churn and test coverage gap. They give the same result for the same code and the same history. Explained in [chapter 03](03-signals-metrics-and-formulas.md).
 
 ## Cyclomatic complexity
 
-How many different paths a module's code can take (McCabe's rule): it starts at 1 and adds one for each `if`, `? :`, loop, `catch`, `case` (not `default`), `&&`, `||` and `??`. It is the sum of its files, test files excluded, and weighs 35 % in the score. Explained in [chapter 03](03-signals-metrics-and-formulas.md), section 2.2.
+How many different paths a module's code can take (McCabe's rule): each file starts at 1 and adds one for each `if`, `? :`, loop, `catch`, `case` (not `default`), `&&`, `||` and `??`. It is the sum of its files, test files excluded, and weighs 35 % in the score. Explained in [chapter 03](03-signals-metrics-and-formulas.md), section 2.2.
 
 ## Fan-in
 
@@ -87,7 +87,7 @@ A session left open because the AI subscription quota ran out (`init` answers `p
 
 ## `FORGE614_HOME`
 
-The environment variable that says where the Forge614 products live; when it is not set, `~/.forge614` is used. Atlas installs into `<FORGE614_HOME>/atlas` and looks for Engines and Workers in that same folder; an empty or relative value is the `INVALID_FORGE614_HOME` error. Explained in [chapter 08](08-cli-core-and-run-plan.md) and [chapter 10](10-installer-and-release.md).
+The environment variable that says where the Forge614 products live; when it is not set, `~/.forge614` is used. Atlas installs into `<FORGE614_HOME>/atlas` and looks for Engines in `<FORGE614_HOME>/engines/bin` and Workers in `<FORGE614_HOME>/workers/bin`; an empty or relative value is the `INVALID_FORGE614_HOME` error. Explained in [chapter 08](08-cli-core-and-run-plan.md) and [chapter 10](10-installer-and-release.md).
 
 ## PATH block
 

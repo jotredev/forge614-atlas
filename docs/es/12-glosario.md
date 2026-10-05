@@ -15,11 +15,11 @@ Una carpeta que tiene archivos de código sueltos y también subcarpetas. Atlas 
 
 ## Señal
 
-Cada medida objetiva que Atlas saca del código de un módulo para decidir cuánta atención merece: complejidad ciclomática, fan-in, churn y brecha de cobertura de pruebas. Siempre dan el mismo resultado con el mismo código. Se explica en el [capítulo 03](03-senales-metricas-y-formulas.md).
+Cada medida objetiva que Atlas saca de un módulo (de su código y, en el caso del churn, del historial de Git) para decidir cuánta atención merece: complejidad ciclomática, fan-in, churn y brecha de cobertura de pruebas. Dan el mismo resultado con el mismo código y el mismo historial. Se explica en el [capítulo 03](03-senales-metricas-y-formulas.md).
 
 ## Complejidad ciclomática
 
-Cuántos caminos distintos puede seguir el código de un módulo (regla de McCabe): empieza en 1 y suma uno por cada `if`, `? :`, ciclo, `catch`, `case` (no `default`), `&&`, `||` y `??`. Es la suma de sus archivos, sin contar los de pruebas, y pesa 35 % en la puntuación. Se explica en el [capítulo 03](03-senales-metricas-y-formulas.md), sección 2.2.
+Cuántos caminos distintos puede seguir el código de un módulo (regla de McCabe): cada archivo empieza en 1 y suma uno por cada `if`, `? :`, ciclo, `catch`, `case` (no `default`), `&&`, `||` y `??`. Es la suma de sus archivos, sin contar los de pruebas, y pesa 35 % en la puntuación. Se explica en el [capítulo 03](03-senales-metricas-y-formulas.md), sección 2.2.
 
 ## Fan-in
 
@@ -73,7 +73,7 @@ El resumen que escribe el ayudante sobre un módulo; Atlas lo guarda en Engram e
 
 Un módulo que el lote no dejó con reporte: su tarea falló, su respuesta llegó cortada o Engram rechazó guardarla. Aparece en `skippedModuleNames` del reporte final; si la corrida terminó, solo se vuelve a analizar con `init --force`. Se explica en el [capítulo 09](09-despacho-de-subagentes.md).
 
-## Informe rechazado
+## Reporte rechazado
 
 Un reporte de módulo que Engram se negó a guardar porque su texto parece un secreto (`SECRET_REJECTED`). El análisis sigue; el módulo cuenta como omitido y su nombre sale también en `rejectedReportModuleNames`. Se explica en el [capítulo 09](09-despacho-de-subagentes.md).
 
@@ -87,7 +87,7 @@ Una sesión que quedó abierta porque se agotó la cuota de la suscripción de I
 
 ## `FORGE614_HOME`
 
-La variable de entorno que dice dónde viven los productos Forge614; si no está definida se usa `~/.forge614`. Atlas se instala en `<FORGE614_HOME>/atlas` y ahí mismo busca Engines y Workers; un valor vacío o relativo es el error `INVALID_FORGE614_HOME`. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y en el [capítulo 10](10-instalador-y-release.md).
+La variable de entorno que dice dónde viven los productos Forge614; si no está definida se usa `~/.forge614`. Atlas se instala en `<FORGE614_HOME>/atlas` y busca Engines en `<FORGE614_HOME>/engines/bin` y Workers en `<FORGE614_HOME>/workers/bin`; un valor vacío o relativo es el error `INVALID_FORGE614_HOME`. Se explica en el [capítulo 08](08-nucleo-cli-y-plan-de-corrida.md) y en el [capítulo 10](10-instalador-y-release.md).
 
 ## Bloque de PATH
 

@@ -699,7 +699,7 @@ describe("dependencies and FORGE614_HOME", () => {
 
   /**
    * Comprueba que un Engram anterior a 1.8.7, o que no responde `--version`, se actualice corriendo solo su instalador con
-   * `--force` (el instalador lo pide cuando ya hay un archivo en la ruta de Engram) y que Atlas quede instalado.
+   * `--force` (Atlas lo pasa porque ya hay un archivo o un enlace en la ruta de Engram) y que Atlas quede instalado.
    */
   test.each([
     ["is 1.5.0", "1.5.0"],
