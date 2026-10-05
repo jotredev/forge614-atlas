@@ -1,175 +1,36 @@
-# 07.07 (EN) Normalized Composite Score (composite-score.ts and test)
+# 07.07 Composite Scoring
 
-> **Architecture and Code Reference — Forge614 Atlas Ecosystem**  
-> **Scope:** `src/modules/scoring/composite-score.ts` and `composite-score.test.ts`  
-> **Sister Translation:** [07.07 Puntuación Compuesta Normalizada (Composite Score)](../../es/07-estructura/07-puntuacion-compuesta.md)
+[Sister translation: 07.07 (ES) Puntuación Compuesta Normalizada](../../es/07-estructura/07-puntuacion-compuesta.md)
 
----
+## What it is for
 
-## 1. Architectural Rationale
+Converts a module's various signals (complexity, fan-in, churn, and test gap) into a single risk and context-need score. Because each metric uses different scales (churn can reach thousands, fan-in rarely passes a few tens), this step standardizes and weighs them. In real life, it is like calculating a student's final grade where the final exam, practical work, and participation have different scales and weights.
 
-The three structural signals (Cyclomatic, Fan-In, and Churn) operate in vastly divergent numeric scales:
-- **Cyclomatic complexity** ranges in tens or hundreds of points.
-- **Fan-In centrality** is bounded by module count (rarely exceeding 10 to 20).
-- **Git Churn** can exceed 1,000 commits in mature codebases.
+## Files
 
-Unnormalized aggregation would allow Churn to dictate 95% of the scoring decisions, ignoring complex but stable foundational modules. Atlas resolves this using:
-1. **Min-Max Normalization:** Scales each vector independently to $[0.0, 1.0]$:
-   $$X_{\text{norm}} = \frac{X - \min(X)}{\max(X) - \min(X)}$$
-2. **Zero-Variance Guard:** If all modules share the same value ($\max = \min$), avoids zero-division ($0/0$) by returning $0.0$.
-3. **Linear Weighting:**
-   $$\text{Base} = 0.35 \cdot \text{Cyclo}_{\text{norm}} + 0.35 \cdot \text{FanIn}_{\text{norm}} + 0.30 \cdot \text{Churn}_{\text{norm}}$$
-4. **Fragility Risk Multiplier:**
-   $$\text{Score} = \text{Base} \cdot (1 + 0.20 \cdot \text{TestGap})$$
+- `src/modules/scoring/composite-score.ts`: Normalizes the values using a Min-Max formula, combines them with percentages, and applies the untested penalty ([Card in Chapter 06](../06-typescript-api-reference.md)).
 
-### Real-World Analogy
-> It is like Olympic decathlon scoring: you cannot directly sum 100m sprint seconds with high jump meters or shot put kilograms. Each discipline is normalized against benchmarks to determine a fair composite champion.
+## How it works
 
----
+1. `computeCompositeScores` receives a list of `ModuleSignals` objects (which group the values for each module) (`src/modules/scoring/composite-score.ts:67`).
+2. Extracts the `cyclomatic`, `fanIn`, and `churn` value lists and passes them through the `normalize` function independently (`src/modules/scoring/composite-score.ts:69-71`).
+3. The `normalize` function applies a classic Min-Max scaling: `(value - min) / (max - min)`, returning values between `0.0` and `1.0` (`src/modules/scoring/composite-score.ts:101-104`).
+4. Iterating through each module, it calculates a `base` score by adding `35%` of the normalized cyclomatic complexity, `35%` of fan-in, and `30%` of churn (`src/modules/scoring/composite-score.ts:76-79`).
+5. Multiplies the result by the test risk factor (`testGap`): `base * (1 + 0.2 * signal.testGap)`, adding up to 20% more if there are no tests (`src/modules/scoring/composite-score.ts:82`).
+6. Returns the list of modules with their final score, respecting the original order (`src/modules/scoring/composite-score.ts:84-87`).
 
-## 2. Documented Source Code: `src/modules/scoring/composite-score.ts`
+## Edge cases and decisions
 
-```typescript
-/**
- * Raw quantitative signals collected for a module.
- */
-export interface ModuleSignals {
-  /** Module directory name */
-  name: string;
-  /** Aggregate cyclomatic complexity of production code */
-  cyclomatic: number;
-  /** Number of other dependent modules (graph in-degree) */
-  fanIn: number;
-  /** Total historical Git commit modifications */
-  churn: number;
-  /** Unit test coverage gap in range [0.0, 1.0] */
-  testGap: number;
-}
+- Division by zero: If all modules have exactly the same value for a signal (the maximum equals the minimum), the Min-Max formula would divide by zero (`0/0`); the `normalize` function detects this and returns a vector of zeros (`src/modules/scoring/composite-score.ts:98-99`).
+- Signal weighting: Complexity and fan-in are worth more (35% each) than churn (30%) because they indicate intrinsic structural difficulty, while churn is only a historical indicator that does not always imply dense or critical code (`src/modules/scoring/composite-score.ts:77-79`).
 
-/**
- * Final composite complexity score computed for a module.
- */
-export interface ModuleScore {
-  /** Module name */
-  name: string;
-  /** Non-negative scalar score resulting from normalization and weighting */
-  score: number;
-}
+## Tests
 
-/**
- * Computes Composite Complexity Scores for a collection of modules.
- * 
- * Mathematical Challenge:
- * - Structural signals operate at vastly different scales:
- *   - Cyclomatic: 1 to 500.
- *   - Fan-In: 0 to 20.
- *   - Churn: 0 to 1,000+.
- * - Direct addition would allow Churn to overpower cognitive and architectural complexity.
- * 
- * Min-Max Normalization Solution:
- * 1. Each signal $X$ is scaled to $[0.0, 1.0]$:
- *    $X_{\text{norm}} = \frac{X - \min(X)}{\max(X) - \min(X)}$
- * 2. If all values are identical ($\max = \min$), returns $0.0$ to avoid zero division.
- * 
- * Linear Base Weighting:
- * - $\text{Base} = 0.35 \cdot \text{Cyclomatic}_{\text{norm}} + 0.35 \cdot \text{FanIn}_{\text{norm}} + 0.30 \cdot \text{Churn}_{\text{norm}}$
- *   - 35% Cyclomatic Complexity (intrinsic cognitive load).
- *   - 35% Fan-In Centrality (systemic blast radius of change).
- *   - 30% Churn Volatility (empirical developer activity).
- * 
- * Test Gap Fragility Multiplier:
- * - $\text{Score} = \text{Base} \cdot (1 + 0.20 \cdot \text{TestGap})$
- *   - Perfectly tested modules ($\text{TestGap} = 0.0$) retain unmodified base score.
- *   - Untested modules ($\text{TestGap} = 1.0$) receive a +20% score penalty.
- * 
- * @param signals - Raw signals across all modules
- * @returns Array of composite scores preserving input order
- */
-export function computeCompositeScores(signals: ModuleSignals[]): ModuleScore[] {
-  // 1. Independent Min-Max normalization per signal vector
-  const cyclomaticNorm = normalize(signals.map(s => s.cyclomatic));
-  const fanInNorm = normalize(signals.map(s => s.fanIn));
-  const churnNorm = normalize(signals.map(s => s.churn));
+| Test | What it checks |
+|------|----------------|
+| `weights cyclomatic and fan-in higher than churn, and never lets testGap fully decide` | Verifies that signals are weighted with the correct percentages and that the lack of tests only acts as a moderate multiplier. |
+| `a module that is complex but well-tested still outranks a trivial one, without the test gap inflating it` | Checks that the test gap of a trivial module does not give it a higher score than an inherently complex module that is well tested. |
 
-  // 2. Linear combination with fragility multiplier
-  return signals.map((signal, index) => {
-    // 3. Weighted base score
-    const base =
-      0.35 * (cyclomaticNorm[index] ?? 0) +
-      0.35 * (fanInNorm[index] ?? 0) +
-      0.30 * (churnNorm[index] ?? 0);
+## Where it is used
 
-    // 4. Fragility modifier (up to +20%)
-    const score = base * (1 + 0.2 * signal.testGap);
-
-    return {
-      name: signal.name,
-      score,
-    };
-  });
-}
-
-/**
- * Pure helper function projecting numeric arrays to [0.0, 1.0] using Min-Max.
- * 
- * Numerical Stability:
- * - Returns all zeros if array has length <= 1 or all values are equal.
- * 
- * @param values - Numeric vector
- * @returns Scaled numeric vector in [0.0, 1.0]
- */
-function normalize(values: number[]): number[] {
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-
-  // Prevent division by zero
-  if (max === min) {
-    return values.map(() => 0);
-  }
-
-  return values.map(value => (value - min) / (max - min));
-}
-```
-
----
-
-## 3. Automated Tests: `src/modules/scoring/composite-score.test.ts`
-
-```typescript
-import { describe, expect, test } from "bun:test";
-import { computeCompositeScores } from "./composite-score";
-
-describe("computeCompositeScores", () => {
-  test("weights cyclomatic and fan-in higher than churn, and never lets testGap fully decide", () => {
-    // Scenario: Two contrasting modules.
-    // 'trivial': all signals 0 -> score 0.
-    // 'complex-untested': max values -> normalized 1.0.
-    // Base = 0.35*1 + 0.35*1 + 0.30*1 = 1.0.
-    // Final score = 1.0 * (1 + 0.20*1) = 1.20.
-    const signals = [
-      { name: "trivial", cyclomatic: 0, fanIn: 0, churn: 0, testGap: 0 },
-      { name: "complex-untested", cyclomatic: 10, fanIn: 8, churn: 5, testGap: 1 },
-    ];
-
-    const [trivial, complex] = computeCompositeScores(signals);
-
-    expect(trivial?.score).toBe(0);
-    expect(complex?.score).toBeGreaterThan(0);
-    expect(complex?.score).toBeCloseTo(1.2, 5);
-  });
-
-  test("a module that is complex but well-tested still outranks a trivial one, without the test gap inflating it", () => {
-    // Scenario: Complex module with perfect test coverage (testGap = 0).
-    // Base = 1.0, multiplier = 1.0 (no inflation).
-    const signals = [
-      { name: "complex-tested", cyclomatic: 10, fanIn: 8, churn: 5, testGap: 0 },
-      { name: "trivial", cyclomatic: 0, fanIn: 0, churn: 0, testGap: 0 },
-    ];
-
-    const [complexTested, trivial] = computeCompositeScores(signals);
-
-    expect(complexTested?.score).toBeCloseTo(1, 5);
-    expect(trivial?.score).toBe(0);
-  });
-});
-```
+- `computeCompositeScores`: Called by `buildRunPlan` in `src/modules/cli/build-run-plan.ts:76` and re-exported in `src/index.ts:26`.

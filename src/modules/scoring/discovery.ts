@@ -35,7 +35,7 @@ export interface ModuleDescriptor {
   name: string;
   /** Ruta absoluta en el sistema de archivos hacia la carpeta del módulo */
   path: string;
-  /** Lista exhaustiva y ordenada alfabéticamente de archivos fuente TypeScript/JavaScript */
+  /** Archivos de código que están directamente en la carpeta del módulo (sin los de sus subcarpetas, que forman otros módulos), en orden alfabético */
   files: string[];
 }
 
