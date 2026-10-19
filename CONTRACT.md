@@ -26,7 +26,7 @@ Atlas contextualiza un proyecto de código a fondo y guarda el resultado en Engr
 ## Dependencias
 | Nodo o binario | Cómo se consume | Versión mínima |
 | --- | --- | --- |
-| Engram | SDK de TypeScript compilado dentro del binario de Atlas; la base de memoria se comparte con el Engram instalado (`<FORGE614_HOME>/engram`) | 1.8.7 |
+| Engram | SDK de TypeScript 1.10.0 compilado dentro del binario de Atlas; comparte la base de memoria en `<FORGE614_HOME>/memory` con el Engram instalado | 1.10.0 |
 | Engines | Binario `<FORGE614_HOME>/engines/bin/forge614-engines`: `detect` y `capabilities --agent <id>`; debe informar `supportsReadOnly: true` | 1.17.0 |
 | Workers | Binario `<FORGE614_HOME>/workers/bin/forge614-workers`: recibe el lote por `stdin` y emite eventos NDJSON; `--version` debe imprimir `forge614-workers X.Y.Z` | 1.0.0 |
 | Shell | No lo llama; lo instala el instalador de Engram y decide las elecciones ambiguas de motor | — |

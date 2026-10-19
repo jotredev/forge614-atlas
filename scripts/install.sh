@@ -19,7 +19,7 @@ usage() {
     'Default destination: $FORGE614_HOME (default $HOME/.forge614)/atlas/bin/forge614-atlas' \
     'FORGE614_HOME, when set, must be a non-empty absolute path; every Forge614 product is looked up there.' \
     '--force explicitly replaces an existing installation.' \
-    'Requires Forge614 Engram 1.8.7 or newer, Forge614 Workers 1.0.0 or newer and Forge614 Engines 1.17.0 or newer' \
+    'Requires Forge614 Engram 1.10.0 or newer, Forge614 Workers 1.0.0 or newer and Forge614 Engines 1.17.0 or newer' \
     'with the read-only lock (supportsReadOnly); Engram and Workers are installed when missing or too old.' \
     'Nothing of Atlas is installed when a requirement cannot be met.'
 }
@@ -28,7 +28,7 @@ usage() {
 fail() { printf '%s\n' "$1" >&2; exit 1; }
 
 # Versiones mínimas con las que funciona Atlas. La de Engram es la contra la que Atlas se compila.
-engram_min_version='1.8.7'
+engram_min_version='1.10.0'
 workers_min_version='1.0.0'
 engines_min_version='1.17.0'
 engram_hint='Install or update it with: curl -fsSL https://github.com/jotredev/forge614-engram/releases/latest/download/install.sh | bash'

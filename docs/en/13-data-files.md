@@ -1,6 +1,6 @@
 # 13 (EN). Data files and automation
 
-> **Status:** current for version 1.1.1 (branch `work/1.1.1`, not yet released).
+> **Status:** current for version 1.1.2 (branch `work/1.1.2`, not yet released).
 > **Sister translation:** [13. Archivos de datos y automatización](../es/13-archivos-de-datos.md)
 
 ## Purpose
@@ -9,10 +9,12 @@ This chapter describes, one by one, the data and automation files that are part 
 
 ## `.forge614/project.json`
 
+If you ran `forge614-atlas init` 1.1.1 with Engram 1.10.0, it may have left a separate empty database at `FORGE614_HOME/engram/engram.db`. To check how many memories it contains without showing their contents, use `sqlite3 "${FORGE614_HOME:-$HOME/.forge614}/engram/engram.db" 'SELECT COUNT(*) FROM memories;'`. Atlas does not delete that database automatically; keep any database that contains memories.
+
 The repository's identity card: a project identifier (and, where applicable, a group identifier) that travels with the code and does not depend on which folder of the disk it sits in.
 
 - **What it is for:** so that Engram recognizes the same project even if the folder moves or is cloned onto another computer. It is meant to be committed: in this repository it is in Git.
-- **Who writes it:** Engram, never Atlas (in Atlas's `src`, `scripts` and `test` there is only a comment that names it, `src/modules/scoring/discovery.ts:27`). Engram writes it when Atlas opens a session or saves something. `init` opens the session with `startProjectSession` at `src/modules/cli/init.ts:200` (with `--force`) or, without `--force`, at `src/modules/memory/run-state.ts:25` (called from `init.ts:210`). That function (`forge614-engram/src/app/project-context.ts:202`, Engram 1.8.7 lines) only delegates to `startProjectSessionWithNotices` (`:175`), which reads the file with `applyIdentityFile` (`:179`) and publishes it (`:188`) with `publishIdentity` (`src/app/project-identity.ts:109`); that one calls `writeIdentity` (`:89`) and `writeIdentity` calls `ensureProjectFile` (`src/infrastructure/filesystem/project-identity-file.ts:195`). If the session identifier belongs to a closed session, Engram throws `SESSION_CONFLICT` before publishing (`project-context.ts:186`) and `init` answers `already-complete` without that publication. Every module report (`src/modules/memory/module-report.ts:32`) and every change of the pause counter (`src/modules/memory/pause-count.ts:37`) goes through the same path (`project-context.ts:141` and `:146`). `ensureProjectFile` creates the file only if it does not exist; if it already exists, it never changes `project.id` or `project.name` and only completes `ecosystem` when it is missing or, being `null`, when the project already belongs to a group (`project-identity-file.ts:197-209`). If Engram cannot write it (for example, because of permissions) it only produces the `PROJECT_FILE_NOT_WRITTEN` notice (`project-identity.ts:95`) and `init` goes on: `startProjectSession` returns only the session, without the notices (`project-context.ts:202`).
+- **Who writes it:** Engram, never Atlas (in Atlas's `src`, `scripts` and `test` there is only a comment that names it, `src/modules/scoring/discovery.ts:27`). Engram writes it when Atlas opens a session or saves something. `init` opens the session with `startProjectSession` at `src/modules/cli/init.ts:200` (with `--force`) or, without `--force`, at `src/modules/memory/run-state.ts:25` (called from `init.ts:210`). That function (`forge614-engram/src/app/project-context.ts:202`, Engram 1.10.0 lines) only delegates to `startProjectSessionWithNotices` (`:175`), which reads the file with `applyIdentityFile` (`:179`) and publishes it (`:188`) with `publishIdentity` (`src/app/project-identity.ts:109`); that one calls `writeIdentity` (`:89`) and `writeIdentity` calls `ensureProjectFile` (`src/infrastructure/filesystem/project-identity-file.ts:195`). If the session identifier belongs to a closed session, Engram throws `SESSION_CONFLICT` before publishing (`project-context.ts:186`) and `init` answers `already-complete` without that publication. Every module report (`src/modules/memory/module-report.ts:32`) and every change of the pause counter (`src/modules/memory/pause-count.ts:37`) goes through the same path (`project-context.ts:141` and `:146`). `ensureProjectFile` creates the file only if it does not exist; if it already exists, it never changes `project.id` or `project.name` and only completes `ecosystem` when it is missing or, being `null`, when the project already belongs to a group (`project-identity-file.ts:197-209`). If Engram cannot write it (for example, because of permissions) it only produces the `PROJECT_FILE_NOT_WRITTEN` notice (`project-identity.ts:95`) and `init` goes on: `startProjectSession` returns only the session, without the notices (`project-context.ts:202`).
 - **Who reads it:** only Engram reads its content (Forge614 Shell merely checks whether it exists). `readProjectFile` (`project-identity-file.ts:119`) reads it inside `applyIdentityFile` (`project-identity.ts:60`), which runs when the session opens and when each memory is saved (each report and the pause counter), and inside `publishIdentity` (`:112`). Atlas does not read it and excludes the `.forge614` folder when it discovers modules: it is in `EXCLUDED_DIRS` (`src/modules/scoring/discovery.ts:19-28`, line 27) and the filters at `:81` and `:105` also discard any folder whose name starts with a dot.
 - **If it is invalid:** Engram does not modify it and throws `PROJECT_FILE_INVALID` (`project-identity-file.ts:87`, with a message in Spanish); Atlas does not catch it and `init` answers `UNEXPECTED_ERROR` with that message (see [chapter 11](11-troubleshooting.md)).
 
@@ -78,7 +80,7 @@ The package's data sheet. Only the fields that Atlas, its compiled binary, its C
 
 | Field | Type | Required | Meaning | Who uses it | Real example |
 |---|---|:---:|---|---|---|
-| `version` | text | Yes | The product version. | `src/interfaces/cli/main.ts:7` imports it and prints it in `--version` (`:40`) and in `--help` (`:34`), and passes it to `update` (`:45`): it ends up inside the binary. `test/versions.test.ts:8` and `src/interfaces/cli/main.test.ts:10` compare it. `release.yml:73`, `:79` and `:134` use it for the changelog, the tag and the binary check. | `"1.1.0"` |
+| `version` | text | Yes | The product version. | `src/interfaces/cli/main.ts:7` imports it and prints it in `--version` (`:40`) and in `--help` (`:34`), and passes it to `update` (`:45`): it ends up inside the binary. `test/versions.test.ts:8` and `src/interfaces/cli/main.test.ts:10` compare it. `release.yml:73`, `:79` and `:134` use it for the changelog, the tag and the binary check. | `"1.1.2"` |
 | `exports` | text | No | Public entry point when Atlas is used as a library. | No file in the repository reads it; `src/index.ts:2` mentions it. | `"./src/index.ts"` |
 | `scripts.typecheck` | text | No | Checks the types without generating files. | `verify.yml:66` and `release.yml:66` (`bun run typecheck`). | `"tsc --noEmit"` |
 | `scripts.test` | text | No | Runs all the tests. | Local use; the CI does not call it: it runs `bun test` with a list of files (`verify.yml:65`). | `"bun test"` |
@@ -124,7 +126,7 @@ The «Verify» workflow: the check that runs on every change.
 
 | What | Version | Line |
 |---|---|:---:|
-| Engram (`ENGRAM_REF`) | `v1.8.7` | `:12` |
+| Engram (`ENGRAM_REF`) | `v1.10.0` | `:12` |
 | Bun | `1.4.2` | `:39` |
 | Engines | `1.17.0` (through the shared action) | — |
 | Workers | `1.0.0` (through the shared action) | — |
@@ -168,7 +170,7 @@ The «Release standalone artifacts» workflow: it builds and publishes the binar
 
 | What | Version | Line |
 |---|---|:---:|
-| Engram (`ENGRAM_REF`) | `v1.8.7` | `:19` |
+| Engram (`ENGRAM_REF`) | `v1.10.0` | `:19` |
 | Bun | `1.4.2` (in `verify` and in each `build` row) | `:39`, `:98`, `:102`, `:106`, `:110` |
 | Engines | `1.17.0` (through the shared action) | — |
 | Workers | `1.0.0` (through the shared action) | — |

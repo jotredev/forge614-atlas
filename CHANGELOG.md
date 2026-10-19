@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.2
+
+Atlas vuelve a compartir la carpeta de memoria de Engram 1.10.0, tanto al compilar como al instalar.
+
+- **Engram 1.10.0:** Atlas se compila contra la versión `v1.10.0`, usa el mínimo 1.10.0 en el instalador y sincroniza las referencias de CI.
+- **Memoria:** se prueban los casos de solo `memory/`, migración desde `engram/` y ambas carpetas presentes; el instalador actualiza Engram anterior a 1.10.0.
+- **Recuperación:** los manuales explican cómo contar recuerdos de una posible base vacía creada por Atlas 1.1.1 y que Atlas no la elimina automáticamente.
+
 ## 1.1.1
 
 Atlas reparte bien lo que pasa en las subcarpetas de una carpeta mixta, su instalador dice cuando Forge614 Engines ya es compatible, y el código, las pruebas y los manuales quedan documentados por completo en español.

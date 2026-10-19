@@ -121,7 +121,7 @@ instalados. Atlas solo consume esos dos contratos.
 - Instalador: mismo patrón que forge614-engram (binario único compilado,
   autocontenido, sin Node/Bun en ejecución), **no** el patrón de
   forge614-shell (que necesita Node.js). `curl -fsSL .../install.sh | bash`
-  instala Atlas y antes asegura Engram (1.8.7 o posterior), Workers (1.0.0
+  instala Atlas y antes asegura Engram (1.10.0 o posterior), Workers (1.0.0
   o posterior) y Engines (1.17.0 o posterior con candado de solo lectura),
   todo dentro de `FORGE614_HOME` (`~/.forge614` si no está definida) y sin
   dejar nada de Atlas si alguno no se cumple — pero Atlas **no
@@ -218,11 +218,12 @@ variable no está definida; `.exe` en Windows), igual patrón que Engines.
 
 ### Dependencia: forge614-engram (consumida por el instalador, Plan 5)
 
-Ya existe y está en **v1.8.7**, publicada en GitHub Releases
-(`jotredev/forge614-engram`). Atlas compila contra esa versión: el SDK de
-Engram va dentro del binario (por eso el instalador exige Engram 1.8.7 o
-posterior, ya que Atlas comparte la base de memoria con el Engram
-instalado). El `scripts/install.sh` de Atlas, antes de crear nada, corre
+Engram 1.10.0 ya está publicada en GitHub Releases
+(`jotredev/forge614-engram`). Atlas 1.1.2 compila contra esa versión: el SDK
+de Engram va dentro del binario (por eso el instalador exige Engram 1.10.0
+o posterior, ya que Atlas comparte la base de memoria con el Engram
+instalado). Atlas 1.1.0 conserva Engram 1.8.7 como dato histórico. El
+`scripts/install.sh` de Atlas, antes de crear nada, corre
 el instalador publicado de Engram
 (`https://github.com/jotredev/forge614-engram/releases/latest/download/install.sh`)
 cuando falta o es anterior (con `--force` si ya había uno), corre el de
@@ -303,11 +304,11 @@ forge614. Ya está publicada (etiqueta `v1.1.0`). Las páginas de Notion
 siguen sin republicarse: `docs/notion-map.json` no cambió desde que se
 guardaron las direcciones del capítulo 10.
 
-En la rama `work/1.1.1` va la versión 1.1.1, aún sin publicar: el código
-y las pruebas documentados en español, los manuales nuevos (capítulos 11,
-resolución de errores; 12, glosario; y 13, archivos de datos), los
-capítulos 06 y 07 al día, la corrección de la carpeta mixta en churn y
-fan-in y el mensaje del instalador «Forge614 Engines is compatible».
+En la rama `work/1.1.2` va la versión 1.1.2, aún sin publicar: Atlas se
+compila contra Engram 1.10.0 y vuelve a usar la carpeta `memory/`; la
+prueba cubre una base moderna, la migración desde `engram/` y la prioridad
+de `memory/` cuando existen ambas. Los manuales explican cómo revisar y
+conservar una base vacía que pudo dejar Atlas 1.1.1.
 
 No queda ningún plan sin empezar en el roadmap original de Atlas.
 Trabajo futuro más allá de este roadmap (si lo hay) requiere una nueva

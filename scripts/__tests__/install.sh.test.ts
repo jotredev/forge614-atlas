@@ -17,6 +17,21 @@ const engramInstallerTestUrl = "FORGE614_ATLAS_ENGRAM_INSTALLER_TEST_URL";
 const workersInstallerTestUrl = "FORGE614_ATLAS_WORKERS_INSTALLER_TEST_URL";
 const forgeHomeVariable = "FORGE614_HOME";
 
+/** Asegura que CI compila el SDK que el instalador exige a la persona. */
+test("the Engram compile ref and installer minimum are v1.10.0", () => {
+  const repoRoot = resolve(import.meta.dir, "../..");
+  const verify = readFileSync(join(repoRoot, ".github/workflows/verify.yml"), "utf8");
+  const release = readFileSync(join(repoRoot, ".github/workflows/release.yml"), "utf8");
+  const installerSource = readFileSync(join(repoRoot, "scripts/install.sh"), "utf8");
+  const verifyRef = verify.match(/^\s*ENGRAM_REF: (v\d+\.\d+\.\d+)$/m)?.[1];
+  const releaseRef = release.match(/^\s*ENGRAM_REF: (v\d+\.\d+\.\d+)$/m)?.[1];
+  const minimum = installerSource.match(/^engram_min_version='(\d+\.\d+\.\d+)'$/m)?.[1];
+
+  expect(verifyRef).toBe("v1.10.0");
+  expect(releaseRef).toBe(verifyRef);
+  expect(minimum).toBe(verifyRef?.slice(1));
+});
+
 /** Cómo debe responder el Engines FALSO: su versión y el campo `supportsReadOnly` (`"absent"` lo omite). */
 interface EnginesSpec {
   /** Versión que el Engines falso imprime al recibir `--version`. */
@@ -87,7 +102,7 @@ interface InstallerBehavior {
 function writeFakeInstaller(directory: string, product: "engram" | "workers", behavior: InstallerBehavior, logFile: string) {
   const payload = join(directory, `${product}-payload`);
   // La versión que deja instalada es la indicada o, si no se dice nada, la mínima que exige Atlas para ese producto.
-  writeFakeVersioned(payload, `forge614-${product}`, behavior.installs === undefined ? (product === "engram" ? "1.8.7" : "1.0.0") : behavior.installs);
+  writeFakeVersioned(payload, `forge614-${product}`, behavior.installs === undefined ? (product === "engram" ? "1.10.0" : "1.0.0") : behavior.installs);
   const lines = [
     "#!/usr/bin/env bash",
     "set -euo pipefail",
@@ -120,7 +135,7 @@ function writeFakeInstaller(directory: string, product: "engram" | "workers", be
 // Las primeras pruebas de este archivo son anteriores a las dependencias que Atlas instala antes de
 // copiar su binario. Ninguna fija sus propios instaladores de Engram y Workers, así que sin un valor por
 // omisión caerían a las URL reales y dejarían de estar aisladas de la red: todas las corridas apuntan a estos dos
-// instaladores locales (que dejan Engram 1.8.7, Workers 1.0.0 y un Engines 1.17.0 con el candado de solo lectura, la
+// instaladores locales (que dejan Engram 1.10.0, Workers 1.0.0 y un Engines 1.17.0 con el candado de solo lectura, la
 // garantía de Engines de que un ayudante no modifica archivos), salvo que la prueba ponga el suyo.
 const defaultsDirectory = mkdtempSync(join(tmpdir(), "forge614-atlas-default-installers-"));
 const defaultEngramInstaller = writeFakeInstaller(defaultsDirectory, "engram", {}, "/dev/null");
@@ -684,8 +699,8 @@ describe("dependencies and FORGE614_HOME", () => {
    * impriman las tres líneas «… is compatible».
    */
   test.each([
-    ["the minimum versions", "1.8.7", "1.0.0", "1.17.0"],
-    ["newer versions", "1.9.2", "2.0.0", "1.18.0"],
+    ["the minimum versions", "1.10.0", "1.0.0", "1.17.0"],
+    ["newer versions", "1.10.1", "2.0.0", "1.18.0"],
   ])("does not reinstall Engram, Workers or Engines when %s are already there", async (_name, engram, workers, engines) => {
     const run = await runScenario({ engram, workers, engines: { version: engines, supportsReadOnly: true } });
 
@@ -698,18 +713,32 @@ describe("dependencies and FORGE614_HOME", () => {
   });
 
   /**
-   * Comprueba que un Engram anterior a 1.8.7, o que no responde `--version`, se actualice corriendo solo su instalador con
+   * Comprueba que un Engram anterior a 1.10.0, o que no responde `--version`, se actualice corriendo solo su instalador con
    * `--force` (Atlas lo pasa porque ya hay un archivo o un enlace en la ruta de Engram) y que Atlas quede instalado.
    */
   test.each([
     ["is 1.5.0", "1.5.0"],
     ["is 1.8.6", "1.8.6"],
+    ["is 1.8.7", "1.8.7"],
+    ["is 1.9.9", "1.9.9"],
     ["does not answer --version", null],
   ])("updates an Engram that %s with --force, the way Engram's own update does", async (_name, engram) => {
     const run = await runScenario({ engram, workers: "1.0.0", engines: goodEngines });
 
     expect(run.result.exitCode, run.result.stderr).toBe(0);
     expect(run.calls).toEqual([`engram|${run.forgeHome}|--force`]);
+    expect(existsSync(run.atlasBinary)).toBe(true);
+  });
+
+  /** Comprueba el camino de actualización de Engram 1.8.7 y que el instalador local compatible con el portero 1.10.0 lo deja actualizado, sin red real. */
+  test("updates Engram 1.8.7 through the local Engram 1.10.0 porter fixture", async () => {
+    const run = await runScenario({ engram: "1.8.7", workers: "1.0.0", engines: goodEngines });
+    const engram = Bun.spawnSync([join(run.forgeHome, "engram", "bin", "forge614-engram"), "--version"]);
+
+    expect(run.result.exitCode, run.result.stderr).toBe(0);
+    expect(run.calls).toEqual([`engram|${run.forgeHome}|--force`]);
+    expect(engram.exitCode).toBe(0);
+    expect(engram.stdout.toString().trim()).toBe("forge614-engram 1.10.0");
     expect(existsSync(run.atlasBinary)).toBe(true);
   });
 
@@ -721,7 +750,7 @@ describe("dependencies and FORGE614_HOME", () => {
     ["is 0.1.0", "0.1.0"],
     ["has no --version", null],
   ])("installs a Workers that %s, without --force", async (_name, workers) => {
-    const run = await runScenario({ engram: "1.8.7", workers, engines: goodEngines });
+    const run = await runScenario({ engram: "1.10.0", workers, engines: goodEngines });
 
     expect(run.result.exitCode, run.result.stderr).toBe(0);
     expect(run.calls).toEqual([`workers|${run.forgeHome}|`]);
@@ -737,11 +766,11 @@ describe("dependencies and FORGE614_HOME", () => {
     ["the Workers installer fails", { workersInstaller: { fails: true } }, "Forge614 Workers could not be installed"],
     ["the Workers installer leaves a Workers older than 1.0.0", { workersInstaller: { installs: "0.1.0", engines: goodEngines } }, "Forge614 Workers is still missing or older than 1.0.0"],
     ["the Engram installer fails", { engramInstaller: { fails: true } }, "Forge614 Engram could not be installed or updated"],
-    ["Engram stays older than 1.8.7", { engram: "1.5.0", engramInstaller: { installs: "1.5.0" } }, "Forge614 Engram is still missing or older than 1.8.7"],
-    ["Engines does not report supportsReadOnly: true", { engram: "1.8.7", workers: "1.0.0", engines: { version: "1.17.0", supportsReadOnly: false } }, "read-only lock"],
-    ["Engines does not report supportsReadOnly at all", { engram: "1.8.7", workers: "1.0.0", engines: { version: "1.17.0", supportsReadOnly: "absent" } }, "read-only lock"],
-    ["Engines is older than 1.17.0", { engram: "1.8.7", workers: "1.0.0", engines: { version: "1.16.0", supportsReadOnly: true } }, "Forge614 Engines 1.17.0 or newer"],
-    ["Engines is missing although Workers is fine", { engram: "1.8.7", workers: "1.0.0" }, "Forge614 Engines 1.17.0 or newer"],
+    ["Engram stays older than 1.10.0", { engram: "1.5.0", engramInstaller: { installs: "1.5.0" } }, "Forge614 Engram is still missing or older than 1.10.0"],
+    ["Engines does not report supportsReadOnly: true", { engram: "1.10.0", workers: "1.0.0", engines: { version: "1.17.0", supportsReadOnly: false } }, "read-only lock"],
+    ["Engines does not report supportsReadOnly at all", { engram: "1.10.0", workers: "1.0.0", engines: { version: "1.17.0", supportsReadOnly: "absent" } }, "read-only lock"],
+    ["Engines is older than 1.17.0", { engram: "1.10.0", workers: "1.0.0", engines: { version: "1.16.0", supportsReadOnly: true } }, "Forge614 Engines 1.17.0 or newer"],
+    ["Engines is missing although Workers is fine", { engram: "1.10.0", workers: "1.0.0" }, "Forge614 Engines 1.17.0 or newer"],
   ] as [string, Scenario, string][])("creates nothing of Atlas and exits 1 with the reason when %s", async (_name, scenario, reason) => {
     const run = await runScenario(scenario);
 
@@ -805,7 +834,7 @@ describe("dependencies and FORGE614_HOME", () => {
   });
 
   /**
-   * Comprueba que `--help` termine con salida 0, nombre `FORGE614_HOME` y las versiones mínimas de Engram (1.8.7) y de
+   * Comprueba que `--help` termine con salida 0, nombre `FORGE614_HOME` y las versiones mínimas de Engram (1.10.0) y de
    * Workers (1.0.0), y no corra ningún instalador; la versión mínima de Engines (1.17.0) no se verifica.
    */
   test("--help names FORGE614_HOME and the minimum versions, and exits 0", async () => {
@@ -813,7 +842,7 @@ describe("dependencies and FORGE614_HOME", () => {
 
     expect(run.result.exitCode, run.result.stderr).toBe(0);
     expect(run.result.stdout).toContain("FORGE614_HOME");
-    expect(run.result.stdout).toContain("Engram 1.8.7");
+    expect(run.result.stdout).toContain("Engram 1.10.0");
     expect(run.result.stdout).toContain("Workers 1.0.0");
     expect(run.calls).toEqual([]);
   });

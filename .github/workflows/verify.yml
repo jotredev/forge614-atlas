@@ -9,7 +9,7 @@ permissions:
 
 env:
   # Release tag of Forge614 Engram that Atlas is compiled against (the same variable release.yml uses).
-  ENGRAM_REF: v1.8.7
+  ENGRAM_REF: v1.10.0
 
 jobs:
   unix:
