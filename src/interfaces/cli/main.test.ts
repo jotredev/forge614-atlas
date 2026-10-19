@@ -43,11 +43,11 @@ test("--version and -v print the product name and the package version, and exit 
   }
 });
 
-/** Comprueba que `package.json` dice `1.1.1` y que `--version` imprime exactamente `forge614-atlas 1.1.1`; hay que actualizarla en cada cambio de versión. */
-test("the printed version is exactly forge614-atlas 1.1.1 while package.json says 1.1.1", async () => {
-  expect(version).toBe("1.1.1");
+/** Comprueba que `package.json` dice `1.1.2` y que `--version` imprime exactamente `forge614-atlas 1.1.2`; hay que actualizarla en cada cambio de versión. */
+test("the printed version is exactly forge614-atlas 1.1.2 while package.json says 1.1.2", async () => {
+  expect(version).toBe("1.1.2");
   const { stdout } = await runMain(["--version"]);
-  expect(stdout.trim()).toBe("forge614-atlas 1.1.1");
+  expect(stdout.trim()).toBe("forge614-atlas 1.1.2");
 });
 
 /** Comprueba que `--help` y `-h` salen con 0 e imprimen cada comando con sus opciones, `--version, -v`, `--help, -h` y `FORGE614_HOME`. */

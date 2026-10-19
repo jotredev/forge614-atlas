@@ -16,7 +16,7 @@ El contextualizador de proyectos de Forge614: puntúa los módulos de un reposit
 
 ## Requisitos
 - Bash, `curl` y una utilidad SHA-256 (`shasum` o `sha256sum`).
-- Forge614 Engram 1.8.7 o posterior, Forge614 Workers 1.0.0 o posterior y Forge614 Engines 1.17.0 o posterior con el candado de solo lectura (`supportsReadOnly`). El instalador de Atlas instala o actualiza Engram y Workers cuando faltan o son anteriores (el de Engram necesita Node.js 22.19 o posterior y `tar`) y comprueba Engines al final. Si algo no se cumple, no instala nada de Atlas y explica qué falta.
+- Forge614 Engram 1.10.0 o posterior, Forge614 Workers 1.0.0 o posterior y Forge614 Engines 1.17.0 o posterior con el candado de solo lectura (`supportsReadOnly`). El instalador de Atlas instala o actualiza Engram y Workers cuando faltan o son anteriores (el de Engram necesita Node.js 22.19 o posterior y `tar`) y comprueba Engines al final. Si algo no se cumple, no instala nada de Atlas y explica qué falta.
 - Git en el proyecto que se va a analizar, con al menos un commit.
 - Un asistente de IA que Forge614 Engines pueda correr sin pantalla (Claude Code o Codex), ya autenticado.
 
@@ -27,11 +27,13 @@ macOS / Linux:
 curl -fsSL https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh | bash
 ```
 
-Para instalar una versión concreta: `curl -fsSL https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh | bash -s -- --version v1.1.0`.
+Para instalar una versión concreta: `curl -fsSL https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh | bash -s -- --version v1.1.2`.
 
 El binario queda en `~/.forge614/atlas/bin/forge614-atlas` y esa carpeta se agrega al PATH de la siguiente terminal (si tu terminal no se reconoce, el instalador imprime la línea exacta para agregarla a mano). Si defines `FORGE614_HOME` (ruta absoluta), el instalador, `update`, `uninstall` y el propio Atlas usan esa carpeta en lugar de `~/.forge614`; una variable vacía o relativa se rechaza con `INVALID_FORGE614_HOME`.
 
 Para verificar: `forge614-atlas --version` (imprime `forge614-atlas X.Y.Z`).
+
+Si ejecutaste Atlas 1.1.1 con Engram 1.10.0, pudo quedar una base vacía aparte en `FORGE614_HOME/engram/engram.db`. Puedes consultar cuántos recuerdos tiene sin mostrar su contenido con `sqlite3 "${FORGE614_HOME:-$HOME/.forge614}/engram/engram.db" 'SELECT COUNT(*) FROM memories;'`. Atlas no borra esa base automáticamente; conserva cualquier base que tenga recuerdos.
 
 ## Órdenes
 | Orden | Qué hace |
@@ -73,7 +75,7 @@ Engram guarda además `.forge614/project.json` (la identidad portátil del proye
 Además: el contrato del producto ([`CONTRACT.md`](CONTRACT.md) / [`CONTRACT.en.md`](CONTRACT.en.md)), el [estado del proyecto](STATE.md) y el [historial de cambios](CHANGELOG.md).
 
 ## Desarrollo
-Requiere Bun 1.3.9 o posterior (la CI usa 1.4.2) y, como carpeta hermana, una copia de Engram 1.8.7 con sus dependencias instaladas (`bun install` dentro de `../forge614-engram`). Las pruebas pasan 192 de 192; las que llaman a Engines y a Workers necesitan ambos instalados en `~/.forge614` o en `FORGE614_HOME`, y `init.test.ts` necesita además un Claude Code real y autenticado.
+Requiere Bun 1.3.9 o posterior (la CI usa 1.4.2) y, como carpeta hermana, una copia de Engram 1.10.0 con sus dependencias instaladas (`bun install` dentro de `../forge614-engram`). La suite incluye pruebas con Engines y Workers simulados o fijados en un `FORGE614_HOME` temporal; `src/modules/cli/init.test.ts` contiene casos que llaman un Claude Code real y autenticado, por lo que no se ejecuta en CI compartida.
 
 ```bash
 bun install --frozen-lockfile
