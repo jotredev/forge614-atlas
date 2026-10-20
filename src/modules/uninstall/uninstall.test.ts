@@ -415,6 +415,20 @@ describe("forge614-atlas uninstall", () => {
     expect(readFileSync(join(sandbox.home, ".zshrc"), "utf8")).toBe(zshrcBefore);
   });
 
+  /** Comprueba que respuestas cortas como 's', 'y' o 'S' cancelan con código 130 y no borran nada. */
+  test("with a terminal, short answers like 's', 'y' or 'S' cancel with exit 130 and delete nothing", async () => {
+    for (const answer of ["s", "y", "S"]) {
+      const sandbox = makeSandbox();
+      installFakeAtlas(sandbox);
+      writeFileSync(join(sandbox.home, ".zshrc"), `export FOO=1\n${pathBlock("/x/bin")}`);
+
+      const result = await runUninstallInTerminal(sandbox, answer);
+
+      expect(result.exitCode).toBe(130);
+      expect(existsSync(join(sandbox.atlas, "bin", "forge614-atlas"))).toBe(true);
+    }
+  });
+
   /** Comprueba la llamada exacta de Engram (`--from forge614-engram`, con la entrada, la salida y los errores ignorados): sale 0, borra Atlas y limpia `.zshrc`. */
   test("the exact call Engram makes (stdin, stdout and stderr ignored) succeeds with exit code 0", async () => {
     const sandbox = makeSandbox();

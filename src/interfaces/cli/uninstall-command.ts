@@ -142,8 +142,7 @@ export async function runUninstallCommand(args: string[], env: Record<string, st
       return 1;
     }
     const answer = await io.ask(`This removes Forge614 Atlas. Type exactly ${UNINSTALL_CONFIRMATION_PHRASE} to confirm: `);
-    const normalized = answer.trim().toLowerCase();
-    if (answer !== UNINSTALL_CONFIRMATION_PHRASE && normalized !== "s" && normalized !== "y") {
+    if (answer !== UNINSTALL_CONFIRMATION_PHRASE) {
       io.print(failure("UNINSTALL_CANCELLED", "The confirmation did not match; nothing was removed."));
       return 130;
     }
