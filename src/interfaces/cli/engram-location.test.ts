@@ -29,6 +29,7 @@ function fixture() {
   mkdirSync(home);
   mkdirSync(forgeHome);
   mkdirSync(project);
+  spawnSync("git", ["init", project], { stdio: "ignore" });
   return { home, forgeHome, project };
 }
 
