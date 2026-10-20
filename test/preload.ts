@@ -27,21 +27,17 @@ if (
   process.env.FORGE614_HOME = isolatedForgeHome;
 
   // Si existen binarios de prueba en la caché local, ponerlos a disposición de los clientes de Engines y Workers
-  const testCacheDirs = [
-    "/tmp/forge614-test-cache",
-    "/tmp/claude-t46/test-cache",
-    join(tmpdir(), "forge614-test-cache"),
-  ];
+  const testCacheDir = join(tmpdir(), "forge614-test-cache");
   const target = process.platform === "darwin" ? `darwin-${process.arch}` : `linux-${process.arch}`;
-  const candidatesEngines = testCacheDirs.flatMap((dir) => [
-    join(dir, `forge614-engines-1.17.0-${target}`, "forge614-engines"),
-    join(dir, `extracted-engines-1.17.0-${target}`, `forge614-engines-1.17.0-${target}`, "forge614-engines"),
-  ]);
-  const candidatesWorkers = testCacheDirs.flatMap((dir) => [
-    join(dir, `forge614-workers-1.0.0-${target}`),
-    join(dir, `forge614-workers-${target}-1.0.0`),
-    join(dir, `forge614-workers-${target}`),
-  ]);
+  const candidatesEngines = [
+    join(testCacheDir, `forge614-engines-1.17.0-${target}`, "forge614-engines"),
+    join(testCacheDir, `extracted-engines-1.17.0-${target}`, `forge614-engines-1.17.0-${target}`, "forge614-engines"),
+  ];
+  const candidatesWorkers = [
+    join(testCacheDir, `forge614-workers-1.0.0-${target}`),
+    join(testCacheDir, `forge614-workers-${target}-1.0.0`),
+    join(testCacheDir, `forge614-workers-${target}`),
+  ];
 
   const cachedEngines = candidatesEngines.find((p) => existsSync(p));
   const cachedWorkers = candidatesWorkers.find((p) => existsSync(p));
