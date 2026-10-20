@@ -95,6 +95,19 @@ let installMjsContent: string;
 let installShContent: string;
 let sha256sums120: string;
 
+/** Descarga un asset de release de GitHub si no existe en la carpeta de destino. */
+async function downloadAsset(repo: string, tag: string, asset: string, destDir: string): Promise<string> {
+  const destPath = join(destDir, asset);
+  if (existsSync(destPath)) return destPath;
+  mkdirSync(destDir, { recursive: true });
+  const url = `https://github.com/jotredev/${repo}/releases/download/${tag}/${asset}`;
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw new Error(`Fallo descargando ${url}: HTTP ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  writeFileSync(destPath, buf);
+  return destPath;
+}
+
 /** Resuelve o prepara la caché local de binarios y dependencias. */
 async function setupCache(): Promise<string> {
   const candidates = [
@@ -104,9 +117,45 @@ async function setupCache(): Promise<string> {
   ];
   let cache = candidates.find((dir) => existsSync(dir) && existsSync(join(dir, "engram-1.10.0")));
   if (!cache) {
-    cache = candidates[2]!;
+    cache = candidates[0]!;
     mkdirSync(cache, { recursive: true });
   }
+
+  // Asegura que los assets necesarios para hostTarget existan en la caché (descargando en CI si hace falta)
+  const downloads: Promise<unknown>[] = [
+    downloadAsset("forge614-engram", "v1.10.0", `forge614-engram-${hostTarget}`, join(cache, "engram-1.10.0")),
+    downloadAsset("forge614-engram", "v1.10.0", "forge614.node.json", join(cache, "engram-1.10.0")),
+    downloadAsset("forge614-engram", "v1.10.0", "install.mjs", join(cache, "engram-1.10.0")),
+    downloadAsset("forge614-engram", "v1.10.0", "SHA256SUMS", join(cache, "engram-1.10.0")),
+
+    downloadAsset("forge614-workers", "v1.1.0", `forge614-workers-${hostTarget}`, join(cache, "workers-1.1.0")),
+    downloadAsset("forge614-workers", "v1.1.0", "forge614.node.json", join(cache, "workers-1.1.0")),
+    downloadAsset("forge614-workers", "v1.1.0", "install.mjs", join(cache, "workers-1.1.0")),
+    downloadAsset("forge614-workers", "v1.1.0", "SHA256SUMS", join(cache, "workers-1.1.0")),
+
+    downloadAsset("forge614-engines", "v1.18.0", `forge614-engines-1.18.0-${hostTarget}.tar.gz`, join(cache, "engines-1.18.0")),
+    downloadAsset("forge614-engines", "v1.18.0", "forge614.node.json", join(cache, "engines-1.18.0")),
+    downloadAsset("forge614-engines", "v1.18.0", "install.mjs", join(cache, "engines-1.18.0")),
+    downloadAsset("forge614-engines", "v1.18.0", "SHA256SUMS", join(cache, "engines-1.18.0")),
+
+    downloadAsset("forge614-shell", "v1.17.0", "forge614-shell-1.17.0.tar.gz", join(cache, "shell-1.17.0")),
+    downloadAsset("forge614-shell", "v1.17.0", "forge614.node.json", join(cache, "shell-1.17.0")),
+    downloadAsset("forge614-shell", "v1.17.0", "install.mjs", join(cache, "shell-1.17.0")),
+    downloadAsset("forge614-shell", "v1.17.0", "SHA256SUMS", join(cache, "shell-1.17.0")),
+
+    downloadAsset("forge614-engram", "v1.9.0", `forge614-engram-${hostTarget}`, join(cache, "engram-1.9.0")),
+
+    downloadAsset("forge614-atlas", "v1.1.2", "install.sh", join(cache, "atlas-1.1.2")),
+    downloadAsset("forge614-atlas", "v1.1.2", `forge614-atlas-${hostTarget}`, join(cache, "atlas-1.1.2")),
+    downloadAsset("forge614-atlas", "v1.1.2", "SHA256SUMS", join(cache, "atlas-1.1.2")),
+  ];
+  await Promise.all(downloads);
+
+  chmodSync(join(cache, "engram-1.10.0", `forge614-engram-${hostTarget}`), 0o755);
+  chmodSync(join(cache, "workers-1.1.0", `forge614-workers-${hostTarget}`), 0o755);
+  chmodSync(join(cache, "engram-1.9.0", `forge614-engram-${hostTarget}`), 0o755);
+  chmodSync(join(cache, "atlas-1.1.2", "install.sh"), 0o755);
+  chmodSync(join(cache, "atlas-1.1.2", `forge614-atlas-${hostTarget}`), 0o755);
 
   // Asegura que engines esté extraído para facilitar copias rápidas en pruebas
   const enginesExtracted = join(cache, "engines-extracted");

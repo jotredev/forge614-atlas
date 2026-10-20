@@ -88,7 +88,7 @@ function run(command: string[]): boolean {
   return result.status === 0;
 }
 
-const temporaryRoot = await mkdtemp(join(tmpdir(), "forge614-atlas-verify-"));
+const temporaryRoot = await mkdtemp(join(tmpdir(), "forge614-atlas-verify-test-"));
 const cacheDir = join(tmpdir(), "forge614-test-cache");
 await mkdir(cacheDir, { recursive: true });
 

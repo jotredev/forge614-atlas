@@ -24,7 +24,7 @@ jobs:
       - name: Create isolated test homes on Unix
         shell: bash
         run: |
-          forge_home="$RUNNER_TEMP/forge614-home"
+          forge_home="$RUNNER_TEMP/forge614-test-home"
           forge614_home="$forge_home/.forge614"
           mkdir -p "$forge_home" "$forge614_home"
           printf 'HOME=%s\nFORGE614_HOME=%s\n' "$forge_home" "$forge614_home" >> "$GITHUB_ENV"
