@@ -86,7 +86,7 @@ beforeAll(() => {
   });
   expect(build.error?.message).toBeUndefined();
   expect(build.status, build.stderr).toBe(0);
-});
+}, 120_000);
 
 afterAll(() => rmSync(buildRoot, { recursive: true, force: true }));
 
