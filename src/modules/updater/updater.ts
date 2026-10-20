@@ -151,6 +151,9 @@ export function verifyGnuSha256(filename: string, bytes: Uint8Array, sums: strin
  * Baja un instalador a un archivo temporal privado marcado como ejecutable (mantenido por compatibilidad de pruebas).
  * @param url De dónde bajar el instalador.
  * @returns La ruta del instalador y un `cleanup` que borra su carpeta temporal.
+ * @throws Error con el mensaje de descarga si el servidor responde con un estado HTTP de error (el número con que un
+ * servidor web indica un fallo, como 404); propaga los errores de `fetch` (la función estándar que descarga de la red)
+ * ante fallas de red y los del sistema de archivos al crear o escribir el temporal.
  */
 export async function downloadInstaller(url: string): Promise<{ installer: string; cleanup: () => void }> {
   const response = await fetch(url);
@@ -182,11 +185,12 @@ export interface UpdateOptions {
 
 /**
  * Baja el portero de instalación de la release resuelta, verifica su SHA-256 en SHA256SUMS y lo ejecuta
- * para reemplazar la versión activa, y luego lee qué versión quedó instalada.
+ * para reemplazar la versión activa, y luego lee qué versión quedó instalada. El archivo descargado se borra siempre, aun si la instalación falla.
  * @param currentVersion Versión del programa en ejecución, tomada como la instalada antes de actualizar.
- * @param forgeHome Carpeta Forge614 ya resuelta.
+ * @param forgeHome Carpeta Forge614 ya resuelta; de ahí se lee la versión instalada.
  * @param options Sustituciones opcionales de descarga, ejecución y lectura de versión para las pruebas.
  * @returns Si la versión cambió, la anterior y la instalada.
+ * @throws Error si falla la resolución de la release o la descarga de los activos o SHA256SUMS; Error si la verificación SHA-256 no coincide; Error del proceso si el instalador no arranca o si, al leer la versión, el comando instalado no corre; Error del instalador si sale con estado distinto de 0 o termina por una señal; Error de validación si la versión instalada no tiene la forma esperada. También propaga errores de limpieza del temporal.
  */
 export async function updateInstalledAtlas(
   currentVersion: string,

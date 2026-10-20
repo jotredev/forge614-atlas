@@ -50,11 +50,17 @@ function resolveHome(env: Record<string, string | undefined>): string {
  * `--self` responde que no hay integraciones que retirar con salida 0.
  * Retira SOLO la carpeta `<forgeHome>/atlas` (`FORGE614_HOME`, o `<home>/.forge614` si no está definida)
  * y el bloque de PATH que puso el instalador; nunca toca Engram, Engines, Shell, Workers, las memorias ni otros archivos.
+ * Orden: validar los argumentos, comprobar todo, verificar que el cwd no esté dentro de atlas/, pedir confirmación
+ * (salvo con `--confirmed`), quitar los bloques de PATH, borrar la carpeta y solo entonces imprimir `uninstalled`
+ * (el binario en ejecución puede borrarse en macOS y Linux). Si borrar la carpeta falla, responde `UNINSTALL_FAILED`
+ * y avisa que los bloques de PATH ya se quitaron. Si la carpeta de Atlas no existe (y la confirmación está dada)
+ * termina con 0 y `removed: false`, aunque haya quitado bloques de PATH (`pathPublications`).
  * Rechaza la desinstalación si el directorio actual está dentro de la carpeta de Atlas (`realpathSync.native`).
  * @param args Argumentos después de `uninstall`.
  * @param env Variables de entorno (`HOME` y `FORGE614_HOME`).
  * @param io Si hay terminal, cómo preguntar y cómo imprimir la respuesta.
  * @returns El código de salida: 0 si salió bien, 1 si hubo un error, 130 si la persona canceló.
+ * @throws Propaga los errores que no son `ForgeHomeError` (`INVALID_FORGE614_HOME`) ni `UninstallError` al comprobar el plan, los que no son `UninstallError` al quitar los bloques de PATH, y los de `io.ask` o `io.print`; los de `removeFolder` siempre salen como `UNINSTALL_FAILED`.
  */
 export async function runUninstallCommand(args: string[], env: Record<string, string | undefined>, io: UninstallIo): Promise<number> {
   let confirmed = false;
