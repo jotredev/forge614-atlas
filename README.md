@@ -16,7 +16,8 @@ El contextualizador de proyectos de Forge614: puntúa los módulos de un reposit
 
 ## Requisitos
 - Bash, `curl` y una utilidad SHA-256 (`shasum` o `sha256sum`).
-- Forge614 Engram 1.10.0 o posterior, Forge614 Workers 1.0.0 o posterior y Forge614 Engines 1.17.0 o posterior con el candado de solo lectura (`supportsReadOnly`). El instalador de Atlas instala o actualiza Engram y Workers cuando faltan o son anteriores (el de Engram necesita Node.js 22.19 o posterior y `tar`) y comprueba Engines al final. Si algo no se cumple, no instala nada de Atlas y explica qué falta.
+- Node.js 22.19.0 o posterior para instalarse mediante el portero oficial (`install.sh`).
+- Forge614 Engram 1.10.0 o posterior, Forge614 Workers 1.0.0 o posterior y Forge614 Engines 1.17.0 o posterior con el candado de solo lectura (`supportsReadOnly`). El instalador de Atlas asegura Engram y Workers cuando faltan o son anteriores y comprueba Engines al final. Si algo no se cumple, no instala nada de Atlas y explica qué falta.
 - Git en el proyecto que se va a analizar, con al menos un commit.
 - Un asistente de IA que Forge614 Engines pueda correr sin pantalla (Claude Code o Codex), ya autenticado.
 
@@ -27,11 +28,11 @@ macOS / Linux:
 curl -fsSL https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh | bash
 ```
 
-Para instalar una versión concreta: `curl -fsSL https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh | bash -s -- --version v1.1.2`.
+Para instalar una versión concreta: `curl -fsSL https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh | bash -s -- --version v1.2.0`.
 
 El binario queda en `~/.forge614/atlas/bin/forge614-atlas` y esa carpeta se agrega al PATH de la siguiente terminal (si tu terminal no se reconoce, el instalador imprime la línea exacta para agregarla a mano). Si defines `FORGE614_HOME` (ruta absoluta), el instalador, `update`, `uninstall` y el propio Atlas usan esa carpeta en lugar de `~/.forge614`; una variable vacía o relativa se rechaza con `INVALID_FORGE614_HOME`.
 
-Para verificar: `forge614-atlas --version` (imprime `forge614-atlas X.Y.Z`).
+Para verificar: `forge614-atlas --version` (imprime `forge614-atlas 1.2.0`) o `forge614-atlas --version --json`.
 
 Si ejecutaste Atlas 1.1.1 con Engram 1.10.0, pudo quedar una base vacía aparte en `FORGE614_HOME/engram/engram.db`. Puedes consultar cuántos recuerdos tiene sin mostrar su contenido con `sqlite3 "${FORGE614_HOME:-$HOME/.forge614}/engram/engram.db" 'SELECT COUNT(*) FROM memories;'`. Atlas no borra esa base automáticamente; conserva cualquier base que tenga recuerdos.
 
@@ -39,9 +40,9 @@ Si ejecutaste Atlas 1.1.1 con Engram 1.10.0, pudo quedar una base vacía aparte 
 | Orden | Qué hace |
 | --- | --- |
 | `forge614-atlas init [--engine <id>] [--force]` | Contextualiza el proyecto de la carpeta actual y responde en JSON (`completed`, `paused`, `already-complete`, `engine-ambiguous`, `engine-unavailable`, `engine-invalid` o un error). `--force` rehace un análisis ya completo. |
-| `forge614-atlas update` | Descarga el instalador de la última versión publicada y lo ejecuta con `--force`; responde con la versión anterior y la nueva. |
-| `forge614-atlas uninstall [--confirmed]` | Quita Atlas (ver abajo). |
-| `forge614-atlas --version`, `-v` | Imprime el nombre del producto y la versión. |
+| `forge614-atlas update [--version <v>] [--json]` | Descarga el instalador de la versión pedida (o la última) y actualiza el binario; responde en texto o JSON con la versión anterior y la nueva. |
+| `forge614-atlas uninstall [--from forge614-engram] [--confirmed] [--json] [--self]` | Quita Atlas (ver abajo). Rechaza la corrida si el directorio actual está dentro de la carpeta instalada de Atlas. |
+| `forge614-atlas --version [--json]`, `-v` | Imprime el nombre del producto y la versión (en texto o en sobre JSON estructurado). |
 | `forge614-atlas --help`, `-h` | Imprime la ayuda; también `init --help` y `uninstall --help`, sin ejecutar nada. |
 
 Los errores usan un sobre JSON único, `{ "schemaVersion": 1, "status": "error", "error": { "code": "...", "message": "..." } }`; la tabla de comandos, respuestas y códigos de salida está en el [capítulo 08](docs/es/08-nucleo-cli-y-plan-de-corrida.md).
