@@ -57,12 +57,19 @@ function engramStore(engramRoot: string) {
   return store;
 }
 
-// Estos tests requieren forge614-engines instalado en la ruta fija del
-// ecosistema, con Claude Code también instalado y con soporte headless
-// (ambos confirmados presentes en esta máquina de desarrollo).
+import { makeFakeDir, writeFakeEngines } from "./fake-binaries.testkit";
+import { chmodSync } from "node:fs";
+
 const forgeHome = resolveForgeHome(process.env, homedir());
-const enginesBinaryPath = resolveEnginesBinaryPath(process.platform, forgeHome);
 const workersBinaryPath = resolveWorkersBinaryPath(process.platform, forgeHome);
+const fakeDir = makeFakeDir("atlas-init-fake-engines-");
+const fakeClaude = join(fakeDir, "fake-claude.sh");
+writeFileSync(fakeClaude, '#!/bin/sh\ncat > /dev/null\necho "OK"\nexit 0\n');
+chmodSync(fakeClaude, 0o755);
+const enginesBinaryPath = writeFakeEngines(fakeDir, {
+  supportsReadOnly: true,
+  executable: fakeClaude,
+});
 
 /** Agrupa la ejecución real de `init`, sus sesiones y los fallos que debe transformar en resultados JSON. */
 describe("runInitCommand", () => {

@@ -1,9 +1,9 @@
 /**
  * Forge614 Atlas: punto de entrada público de la librería (`package.json` lo declara en `exports`); solo reexporta, no
  * define lógica. Reúne en 11 secciones la puntuación de módulos (descubrimiento, complejidad ciclomática, fan-in
- * —cuántos módulos dependen de uno—, churn —cuánto cambia en Git—, brecha de pruebas, normalización Min-Max —llevar cada
- * señal a 0–1—, puntaje compuesto y niveles o tiers —el nivel de contexto que recibe cada módulo—), la integración con
- * Engram, el cliente de Engines, el núcleo del CLI y el cliente de Workers.
+ * —cuántos módulos dependen de uno—, churn —cuánto cambia en Git—, brecha de pruebas, puntaje compuesto y normalización,
+ * y niveles o tiers —el nivel de análisis que recibe cada módulo—), la integración con Engram, el cliente de Engines,
+ * el núcleo del CLI y el cliente de Workers.
  */
 
 // 1. Módulo de Descubrimiento e Inspección del Sistema de Archivos
@@ -26,7 +26,7 @@ export { computeTestCoverageGap } from "./modules/scoring/test-coverage-gap";
 export { computeCompositeScores } from "./modules/scoring/composite-score";
 export type { ModuleSignals, ModuleScore } from "./modules/scoring/composite-score";
 
-// 7. Módulo de Asignación de Niveles de Presupuesto por Percentiles (Tiers)
+// 7. Módulo de Asignación de Niveles de Análisis por Percentiles (Tiers)
 export { assignTiers } from "./modules/scoring/tiers";
 export type { Tier, TieredModule } from "./modules/scoring/tiers";
 

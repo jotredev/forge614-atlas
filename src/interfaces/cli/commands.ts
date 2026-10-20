@@ -73,7 +73,11 @@ export async function runUpdate(args: string[], currentVersion: string): Promise
   const forgeHome = resolveForgeHomeOrReport();
   if (forgeHome === undefined) return;
   const outcome = await runUpdateCommand(args, currentVersion, forgeHome);
-  printJson(outcome.payload);
+  if (outcome.stdout) {
+    process.stdout.write(outcome.stdout);
+  } else if (outcome.payload) {
+    printJson(outcome.payload);
+  }
   process.exitCode = outcome.exitCode;
 }
 
@@ -100,5 +104,6 @@ export async function runUninstall(args: string[]): Promise<void> {
     isTerminal: process.stdin.isTTY === true,
     ask: askInTerminal,
     print: printJson,
+    writeLine: (line: string) => console.log(line),
   });
 }

@@ -165,9 +165,9 @@ describe("updateInstalledAtlas", () => {
 
 /** Agrupa las respuestas con éxito, fallo de instalación y argumentos sobrantes. */
 describe("runUpdateCommand", () => {
-  /** Comprueba el resultado con código 0 y los campos `updated`, `previousVersion` e `installedVersion`, y que `update` recibe la versión actual y la carpeta Forge614. */
-  test("prints the success answer with updated, previousVersion and installedVersion", async () => {
-    const outcome = await runUpdateCommand([], "1.0.0", "/opt/forge614", async (currentVersion, forgeHome) => {
+  /** Comprueba el resultado con código 0 y los campos `updated`, `previousVersion` e `installedVersion` con `--json`. */
+  test("prints the success answer with updated, previousVersion and installedVersion with --json", async () => {
+    const outcome = await runUpdateCommand(["--json"], "1.0.0", "/opt/forge614", async (currentVersion, forgeHome) => {
       expect(currentVersion).toBe("1.0.0");
       expect(forgeHome).toBe("/opt/forge614");
       return { updated: true, previousVersion: "1.0.0", installedVersion: "1.2.3" };
@@ -177,6 +177,16 @@ describe("runUpdateCommand", () => {
       exitCode: 0,
       payload: { schemaVersion: 1, status: "updated", updated: true, previousVersion: "1.0.0", installedVersion: "1.2.3" },
     });
+  });
+
+  /** Comprueba que sin `--json` devuelve el mensaje de texto para personas. */
+  test("prints human readable text when --json is omitted", async () => {
+    const outcome = await runUpdateCommand([], "1.0.0", "/opt/forge614", async () => {
+      return { updated: true, previousVersion: "1.0.0", installedVersion: "1.2.3" };
+    });
+
+    expect(outcome.exitCode).toBe(0);
+    expect(outcome.stdout).toContain("forge614-atlas se actualizó de 1.0.0 a 1.2.3.");
   });
 
   /** Comprueba que el error del actualizador se convierte en `UPDATE_FAILED` con código de salida 1. */
@@ -207,7 +217,7 @@ describe("runUpdateCommand", () => {
     expect(called).toBe(false);
     expect(outcome).toEqual({
       exitCode: 1,
-      payload: { schemaVersion: 1, status: "error", error: { code: "INVALID_ARGUMENT", message: "forge614-atlas update takes no arguments." } },
+      payload: { schemaVersion: 1, status: "error", error: { code: "INVALID_ARGUMENT", message: "Unknown argument for update: --force" } },
     });
   });
 });

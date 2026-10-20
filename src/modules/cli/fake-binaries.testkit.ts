@@ -36,6 +36,8 @@ export interface FakeEnginesOptions {
   supportsReadOnly: boolean | "absent";
   /** Valor de `supportsReasoningLevel` en la respuesta; si no se da, responde `true`. */
   supportsReasoningLevel?: boolean;
+  /** Ruta opcional del ejecutable del agente para no invocar motores reales; por defecto `/bin/claude`. */
+  executable?: string;
 }
 
 /**
@@ -49,7 +51,7 @@ export interface FakeEnginesOptions {
  */
 export function writeFakeEngines(dir: string, options: FakeEnginesOptions): string {
   const detect = {
-    agents: [{ id: "claude-code", label: "Claude Code", installed: true, executable: "/bin/claude", configDir: "/tmp/.claude", configFound: true }],
+    agents: [{ id: "claude-code", label: "Claude Code", installed: true, executable: options.executable ?? "/bin/claude", configDir: "/tmp/.claude", configFound: true }],
   };
   const capabilities: Record<string, unknown> = {
     id: "claude-code",
@@ -59,13 +61,21 @@ export function writeFakeEngines(dir: string, options: FakeEnginesOptions): stri
     supportsHeadlessExec: true,
     supportsReasoningLevel: options.supportsReasoningLevel ?? true,
   };
+  const headless = {
+    schemaVersion: 1,
+    headless: {
+      command: options.executable ?? "/bin/claude",
+      args: [],
+    },
+  };
   // Con "absent" el campo no se escribe, para imitar a un Engines viejo que no lo conocía.
   if (options.supportsReadOnly !== "absent") capabilities.supportsReadOnly = options.supportsReadOnly;
   writeFileSync(join(dir, "detect.json"), JSON.stringify(detect));
   writeFileSync(join(dir, "capabilities.json"), JSON.stringify(capabilities));
+  writeFileSync(join(dir, "headless.json"), JSON.stringify(headless));
   return writeExecutable(
     join(dir, "fake-engines.sh"),
-    `case "$1" in\n  detect) cat "${join(dir, "detect.json")}" ;;\n  capabilities) cat "${join(dir, "capabilities.json")}" ;;\n  *) exit 2 ;;\nesac`,
+    `case "$1" in\n  detect) cat "${join(dir, "detect.json")}" ;;\n  capabilities) cat "${join(dir, "capabilities.json")}" ;;\n  headless) cat "${join(dir, "headless.json")}" ;;\n  *) exit 2 ;;\nesac`,
   );
 }
 

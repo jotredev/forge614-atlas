@@ -37,7 +37,11 @@ async function main(): Promise<void> {
 
   // --version, update y uninstall se atienden ANTES de abrir Engram.
   if (command === "--version" || command === "-v") {
-    console.log(`forge614-atlas ${version}`);
+    if (rest.includes("--json")) {
+      console.log(JSON.stringify({ schemaVersion: 1, name: "forge614-atlas", version }));
+    } else {
+      console.log(`forge614-atlas ${version}`);
+    }
     return;
   }
 
