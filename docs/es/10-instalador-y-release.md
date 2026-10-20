@@ -11,7 +11,7 @@ Los Planes 1-4 construyeron la lógica de análisis y despacho de Atlas. El Plan
 ## Alcance: qué NO hace el instalador a propósito
 
 - **Cero registro de MCP.** El instalador nunca detecta asistentes de IA y nunca escribe configuración de MCP. Cualquier integración con asistentes la resuelve después el propio `forge614-atlas init`, vía `forge614-engines`.
-- **Solo macOS y Linux** (`darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`). **Windows queda excluido formalmente en 1.2.0** conforme a la Decisión 2 de arquitectura (`docs/decisions/0002-windows-omitted-1.2.0.md`). Los instaladores detectan Windows y se detienen limpiamente sin alterar el sistema.
+- **Solo macOS y Linux** (`darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`). **Windows queda excluido formalmente en 1.2.0** conforme a la Decisión 2 de arquitectura (`docs/decisions/0002-windows-omitted-1-2-0.md`). Los instaladores detectan Windows y se detienen limpiamente sin alterar el sistema.
 - **Sin distribución por gestor de paquetes** (npm/Homebrew/Scoop) y sin variante de "instalación desde código fuente".
 
 ## Requisitos y dependencias del ecosistema

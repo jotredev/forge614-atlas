@@ -11,7 +11,7 @@ Plans 1-4 built Atlas's core analysis and dispatch logic. Plan 5 constructed the
 ## Scope: what the installer deliberately does not do
 
 - **Zero MCP registration.** The installer never detects AI assistants and never writes MCP configuration. Any assistant integration is handled subsequently by `forge614-atlas init` via `forge614-engines`.
-- **macOS and Linux only** (`darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`). **Windows is formally excluded in 1.2.0** per Architecture Decision 2 (`docs/decisions/0002-windows-omitted-1.2.0.md`). Installers detect Windows and exit cleanly without altering the system.
+- **macOS and Linux only** (`darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`). **Windows is formally excluded in 1.2.0** per Architecture Decision 2 (`docs/decisions/0002-windows-omitted-1-2-0.md`). Installers detect Windows and exit cleanly without altering the system.
 - **No package-manager distribution** (npm/Homebrew/Scoop) and no "install from source" variant.
 
 ## Requirements and Ecosystem Dependencies

@@ -1,4 +1,23 @@
 {
   "schemaVersion": 1,
-  "decisions": []
+  "decisions": [
+    {
+      "number": "0001",
+      "slug": "engram-git-tag-dependency",
+      "title": "Dependencia de Engram fijada por tag de Git a v1.10.0",
+      "status": "aceptada",
+      "date": "2026-10-19",
+      "session": "tablero-34d95456",
+      "file": "0001-engram-git-tag-dependency.md"
+    },
+    {
+      "number": "0002",
+      "slug": "windows-omitted-1-2-0",
+      "title": "Omisión de soporte para Windows en Atlas 1.2.0",
+      "status": "aceptada",
+      "date": "2026-10-19",
+      "session": "tablero-16b154f6",
+      "file": "0002-windows-omitted-1-2-0.md"
+    }
+  ]
 }
