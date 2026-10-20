@@ -43,11 +43,24 @@ test("--version and -v print the product name and the package version, and exit 
   }
 });
 
-/** Comprueba que `package.json` dice `1.1.2` y que `--version` imprime exactamente `forge614-atlas 1.1.2`; hay que actualizarla en cada cambio de versión. */
-test("the printed version is exactly forge614-atlas 1.1.2 while package.json says 1.1.2", async () => {
-  expect(version).toBe("1.1.2");
+/** Comprueba que `--version --json` y `-v --json` imprimen el sobre JSON estructurado. */
+test("--version --json and -v --json print the structured JSON envelope", async () => {
+  for (const flag of ["--version", "-v"]) {
+    const { exitCode, stdout } = await runMain([flag, "--json"]);
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout)).toEqual({
+      schemaVersion: 1,
+      name: "forge614-atlas",
+      version,
+    });
+  }
+});
+
+/** Comprueba que `package.json` dice `1.2.0` y que `--version` imprime exactamente `forge614-atlas 1.2.0`; hay que actualizarla en cada cambio de versión. */
+test("the printed version is exactly forge614-atlas 1.2.0 while package.json says 1.2.0", async () => {
+  expect(version).toBe("1.2.0");
   const { stdout } = await runMain(["--version"]);
-  expect(stdout.trim()).toBe("forge614-atlas 1.1.2");
+  expect(stdout.trim()).toBe("forge614-atlas 1.2.0");
 });
 
 /** Comprueba que `--help` y `-h` salen con 0 e imprimen cada comando con sus opciones, `--version, -v`, `--help, -h` y `FORGE614_HOME`. */
@@ -135,14 +148,14 @@ test("update with an invalid FORGE614_HOME answers INVALID_FORGE614_HOME without
   });
 });
 
-/** Comprueba que `update --force` sale con 1 y responde `INVALID_ARGUMENT` (`update` no acepta argumentos). */
+/** Comprueba que `update --force` sale con 1 y responde `INVALID_ARGUMENT`. */
 test("update refuses extra arguments before touching the network", async () => {
   const { exitCode, stdout } = await runMain(["update", "--force"]);
   expect(exitCode).toBe(1);
   expect(JSON.parse(stdout)).toEqual({
     schemaVersion: 1,
     status: "error",
-    error: { code: "INVALID_ARGUMENT", message: "forge614-atlas update takes no arguments." },
+    error: { code: "INVALID_ARGUMENT", message: "Unknown argument for update: --force" },
   });
 });
 

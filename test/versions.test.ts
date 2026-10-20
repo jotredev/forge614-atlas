@@ -43,4 +43,15 @@ describe("aligned versions", () => {
   test("CHANGELOG.md has a '## <version>' entry for the package.json version", () => {
     expect(read("CHANGELOG.md").split("\n")).toContain(`## ${pkg.version}`);
   });
+
+  /** La versión de Engram compilada en package.json debe coincidir con minimumVersion de Engram en forge614.node.json. */
+  test("forge614-engram tag in package.json matches minimumVersion in forge614.node.json", () => {
+    const pointer = JSON.parse(read("forge614.node.json"));
+    const engramDep = pointer.install?.dependencies?.find((dep: { node: string }) => dep.node === "engram");
+    const packageDep = (pkg.dependencies as Record<string, string>)["forge614-engram"];
+    const tagMatch = /#(?:v)?(\d+\.\d+\.\d+)$/.exec(packageDep);
+    expect(tagMatch).not.toBeNull();
+    expect(tagMatch![1]).toBe(engramDep.minimumVersion);
+    expect(engramDep.minimumVersion).toBe("1.10.0");
+  });
 });
