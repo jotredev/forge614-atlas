@@ -55,6 +55,11 @@ export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map
     throw new Error(`git log failed in ${repoRoot}: ${result.stderr}`);
   }
 
+  // Si repoRoot es un subdirectorio del repositorio Git, git log devuelve rutas relativas a la raíz del repo.
+  // show-prefix nos da el prefijo del subdirectorio (por ejemplo "packages/app/") para relacionar los archivos con repoRoot.
+  const prefixResult = spawnSync("git", ["rev-parse", "--show-prefix"], { cwd: repoRoot, encoding: "utf8" });
+  const prefix = prefixResult.status === 0 ? prefixResult.stdout.trim() : "";
+
   // 3. Inicializar el mapa de conteo con 0 para todos los módulos conocidos
   const churn = new Map(modules.map(module => [module.name, 0]));
 
@@ -66,8 +71,13 @@ export function computeChurn(repoRoot: string, modules: ModuleDescriptor[]): Map
 
   // 5. Mapear cada archivo modificado en el historial hacia su módulo correspondiente
   for (const relativeFile of touchedFiles) {
+    if (prefix && !relativeFile.startsWith(prefix)) {
+      // El archivo pertenece a otra parte del repositorio Git fuera de repoRoot
+      continue;
+    }
+    const fileUnderRepo = prefix ? relativeFile.slice(prefix.length) : relativeFile;
     // Reconstruir la ruta absoluta en el sistema de archivos local
-    const absolutePath = join(repoRoot, relativeFile);
+    const absolutePath = join(repoRoot, fileUnderRepo);
 
     // Encontrar los módulos cuya carpeta es la ruta del archivo o la contiene
     const matchingModules = modules.filter(module => {
