@@ -42,6 +42,6 @@ Configura las reglas de compilación, las exclusiones del control de versiones y
 
 ## Dónde se usa
 
-- `tsconfig.json`: Lo usa `bun run typecheck` (`tsc --noEmit`); el binario lo genera `bun build` (`package.json`, `scripts.build`).
+- `tsconfig.json`: Lo usa `bun run typecheck` (`tsc --noEmit`); el binario lo genera `bun build` (`package.json:11`, `scripts.build`).
 - `.gitignore`: Usado por Git para evitar seguimiento de ciertas rutas.
-- `src/index.ts`: Ningún otro archivo de este repositorio lo importa (el programa, `src/interfaces/cli/commands.ts:9-14`, importa los módulos directamente); existe para quien use Atlas como librería, porque `package.json` lo declara en `exports` (`package.json:7`).
+- `src/index.ts`: Ningún otro archivo de este repositorio lo importa (el programa, `src/interfaces/cli/commands.ts:9-13`, importa los módulos directamente); existe para quien use Atlas como librería, porque `package.json` lo declara en `exports` (`package.json:7`).

@@ -14,8 +14,8 @@ Checks that the test runner (`bun test`) finds and runs a test and that its `exp
 
 1. The file contains a single `describe` block that does not import any function from the project (`src/modules/scoring/scaffold.test.ts:11`).
 2. Contains a single test with a trivial mathematical assertion (`expect(1 + 1).toBe(2)`) (`src/modules/scoring/scaffold.test.ts:16-19`).
-3. The project's complete test suite is executed by running `bun test` in the terminal (defined in `package.json`).
-4. Type checking is not part of this test or of `bun test`: it runs separately with `bun run typecheck`, which internally calls `tsc --noEmit` (`package.json`, `scripts.typecheck`); the CI runs it after the tests (`.github/workflows/verify.yml:66`).
+3. The project's complete test suite is executed by running `bun test` in the terminal (defined in `package.json:9`).
+4. Type checking is not part of this test or of `bun test`: it runs separately with `bun run typecheck`, which internally calls `tsc --noEmit` (`package.json:10`, `scripts.typecheck`); the CI runs it after the tests.
 
 ## Edge cases and decisions
 

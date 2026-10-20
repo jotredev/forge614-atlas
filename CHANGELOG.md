@@ -11,6 +11,7 @@ Atlas adopta el instalador único de Forge614 (`forge614-ai`), incorpora las ór
 - **Identidad estructurada:** `--version --json` (y `-v --json`) responde con el sobre estandarizado `{"schemaVersion":1,"name":"forge614-atlas","version":"1.2.0"}`.
 - **E2E y pruebas:** suite de pruebas de ciclo de vida e instalador de punta a punta (`test/e2e-installer.test.ts`) cubriendo instalación limpia, migración desde 1.1.2 en un único update, actualización desde Engram 1.9.0 con migración de recuerdos, desinstalación con rechazo en cwd, desinstalación desde Engram 1.10.0 y desinstalación mediante `install.mjs --uninstall`.
 - **Plataformas soportadas:** macOS y Linux (`darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`). Windows queda formalmente excluido de esta versión por la Decisión 2 de arquitectura.
+- **Requisito de motor Bun:** se alinea `engines.bun` a `>=1.4.2` en `package.json` para reflejar la versión mínima efectivamente verificada y probada en la integración continua.
 
 ## 1.1.2
 
