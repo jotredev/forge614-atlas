@@ -479,11 +479,22 @@ describe("forge614-atlas installer and lifecycle e2e", () => {
         const afterVer = Bun.spawnSync([installedAtlas, "--version"]);
         expect(afterVer.stdout.toString().trim()).toBe("forge614-atlas 1.2.0");
 
-        // Verifica que el bloque PATH quedó uno solo y sin residuos
-        const zshrcPath = join(home, ".zshrc");
-        const zshrcContent = existsSync(zshrcPath) ? readFileSync(zshrcPath, "utf8") : "";
-        const pathMatches = zshrcContent.match(/# >>> forge614-atlas PATH >>>/g) || [];
-        expect(pathMatches.length).toBe(1);
+        // Verifica que el bloque PATH quedó uno solo y sin residuos en el perfil de terminal detectado
+        const candidateProfiles = [
+          join(home, ".zshrc"),
+          join(home, ".bash_profile"),
+          join(home, ".bashrc"),
+          join(home, ".profile"),
+        ];
+        const modifiedProfiles = candidateProfiles.filter(
+          (p) => existsSync(p) && readFileSync(p, "utf8").includes("# >>> forge614-atlas PATH >>>"),
+        );
+        expect(modifiedProfiles.length, "Debe existir al menos un perfil modificado con el bloque PATH").toBeGreaterThanOrEqual(1);
+        for (const profile of modifiedProfiles) {
+          const content = readFileSync(profile, "utf8");
+          const pathMatches = content.match(/# >>> forge614-atlas PATH >>>/g) || [];
+          expect(pathMatches.length, `Perfil ${profile} debe tener exactamente 1 bloque PATH`).toBe(1);
+        }
       } finally {
         tls.close();
         server.stop(true);
