@@ -41,6 +41,10 @@ Atlas's installer makes sure of Engram, Workers and Engines before it creates an
 | `uninstall [--from forge614-engram] [--confirmed]` | None; `--confirmed` skips the question | JSON `{ status: "uninstalled", removed, pathPublications }` | 1 | 0; 1 on failure; 130 if the person cancels |
 | `--version`, `-v` | First argument | Text `forge614-atlas X.Y.Z` | — | 0 |
 | `--help`, `-h` | In any position of the arguments | Help text | — | 0 |
+| `bun run verify` | Runs local verification | Result of typecheck and test suite | — | 0 on pass |
+| `bun run build:target` | Uses `FORGE614_TARGET` | Binary for macOS or Linux | — | 0 on compile |
+| `bun run smoke:target` | Uses `FORGE614_TARGET` | Checks binary `--version` | — | 0 on response |
+| `bun run release:publish` | Publishes staged assets | Release with the nine files | — | 0 on publish |
 
 ## Error codes
 | Code | Meaning |
