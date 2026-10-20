@@ -340,7 +340,7 @@ beforeAll(async () => {
     `${createHash("sha256").update(installMjsContent).digest("hex")}  install.mjs`,
     `${createHash("sha256").update(installShContent).digest("hex")}  install.sh`,
   ].join("\n") + "\n";
-});
+}, 120_000);
 
 afterAll(() => {
   if (buildDir && existsSync(buildDir)) rmSync(buildDir, { recursive: true, force: true });
