@@ -14,8 +14,8 @@ Comprueba que el ejecutor de pruebas (`bun test`) encuentra y corre una prueba y
 
 1. El archivo contiene un único bloque `describe` que no importa ninguna función del proyecto (`src/modules/scoring/scaffold.test.ts:11`).
 2. Contiene una sola prueba con una aserción matemática trivial (`expect(1 + 1).toBe(2)`) (`src/modules/scoring/scaffold.test.ts:16-19`).
-3. La suite de pruebas completa del proyecto se ejecuta corriendo `bun test` en la terminal (definido en `package.json`).
-4. La verificación de tipos no forma parte de esta prueba ni de `bun test`: se corre aparte con `bun run typecheck`, que internamente llama a `tsc --noEmit` (`package.json`, `scripts.typecheck`); la CI la ejecuta después de las pruebas (`.github/workflows/verify.yml:66`).
+3. La suite de pruebas completa del proyecto se ejecuta corriendo `bun test` en la terminal (definido en `package.json:9`).
+4. La verificación de tipos no forma parte de esta prueba ni de `bun test`: se corre aparte con `bun run typecheck`, que internamente llama a `tsc --noEmit` (`package.json:10`, `scripts.typecheck`); la CI la ejecuta después de las pruebas.
 
 ## Casos borde y decisiones
 

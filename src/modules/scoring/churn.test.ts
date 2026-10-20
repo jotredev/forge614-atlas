@@ -199,4 +199,38 @@ describe("computeChurn", () => {
 
     rmSync(root, { recursive: true, force: true });
   });
+
+  /**
+   * Comprueba que computeChurn compute correctamente el churn cuando repoRoot es un subdirectorio dentro del repositorio Git.
+   * Importa porque git log devuelve rutas relativas a la raíz del repositorio Git, no a repoRoot.
+   */
+  test("computes churn correctly when repoRoot is a subdirectory of the git repository", () => {
+    const gitRepo = mkdtempSync(join(tmpdir(), "atlas-churn-sub-"));
+    git(gitRepo, ["init", "-q"]);
+    git(gitRepo, ["config", "user.email", "test@example.com"]);
+    git(gitRepo, ["config", "user.name", "Test"]);
+
+    const subproject = join(gitRepo, "packages", "app");
+    const authPath = join(subproject, "auth");
+    mkdirSync(authPath, { recursive: true });
+    const authFile = join(authPath, "login.ts");
+
+    writeFileSync(authFile, "export const login = () => true;");
+    git(gitRepo, ["add", "."]);
+    git(gitRepo, ["commit", "-q", "-m", "add login in subproject"]);
+
+    writeFileSync(authFile, "export const login = () => false;");
+    git(gitRepo, ["add", "."]);
+    git(gitRepo, ["commit", "-q", "-m", "update login in subproject"]);
+
+    const modules: ModuleDescriptor[] = [
+      { name: "auth", path: authPath, files: [authFile] },
+    ];
+
+    const result = computeChurn(subproject, modules);
+
+    expect(result.get("auth")).toBe(2);
+
+    rmSync(gitRepo, { recursive: true, force: true });
+  });
 });

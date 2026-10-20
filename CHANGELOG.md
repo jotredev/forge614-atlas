@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0
+
+Atlas adopta el instalador único de Forge614 (`forge614-ai`), incorpora las órdenes `update` con selección de versión y salida estructurada, `uninstall` con `--self` y validación de directorio de trabajo, e introduce la identidad estructurada en `--version --json`.
+
+- **Instalador único:** adopción del estándar del ecosistema mediante porteros nativos (`install.sh`, `install.ps1`), motor de instalación multiplataforma `install.mjs` y puntero `forge614.node.json`; requiere Node.js 22.19.0 o posterior para instalarse.
+- **Resolución de dependencias:** el instalador asegura Engram 1.10.0 o posterior, Workers 1.0.0 o posterior y Engines 1.17.0 o posterior mediante el grafo estandarizado de Forge614.
+- **Actualización flexible (`update`):** admite la bandera opcional `[--version X.Y.Z]` y la salida estructurada `--json` con sobre `schemaVersion: 1`, reportando `previousVersion` e `installedVersion`.
+- **Desinstalación segura (`uninstall`):** rechaza la ejecución si el directorio de trabajo se encuentra dentro de `<FORGE614_HOME>/atlas` (`UNINSTALL_FAILED`), añade el contrato `--self` con salida JSON para integraciones con el desinstalador de nodo, y preserva siempre los datos y recuerdos en `memory/`.
+- **Identidad estructurada:** `--version --json` (y `-v --json`) responde con el sobre estandarizado `{"schemaVersion":1,"name":"forge614-atlas","version":"1.2.0"}`.
+- **E2E y pruebas:** suite de pruebas de ciclo de vida e instalador de punta a punta (`test/e2e-installer.test.ts`) cubriendo instalación limpia, migración desde 1.1.2 en un único update, actualización desde Engram 1.9.0 con migración de recuerdos, desinstalación con rechazo en cwd, desinstalación desde Engram 1.10.0 y desinstalación mediante `install.mjs --uninstall`.
+- **Plataformas soportadas:** macOS y Linux (`darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`). Windows queda formalmente excluido de esta versión por la Decisión 2 de arquitectura.
+- **Requisito de motor Bun:** se alinea `engines.bun` a `>=1.4.2` en `package.json` para reflejar la versión mínima efectivamente verificada y probada en la integración continua.
+
 ## 1.1.2
 
 Atlas vuelve a compartir la carpeta de memoria de Engram 1.10.0, tanto al compilar como al instalar.

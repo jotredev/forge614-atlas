@@ -134,12 +134,13 @@ describe("forge614-atlas uninstall", () => {
     writeFileSync(join(sandbox.home, ".bashrc"), "export BAR=2\n");
     const bashrcBefore = readFileSync(join(sandbox.home, ".bashrc"), "utf8");
 
-    const result = await runUninstall(sandbox, ["--confirmed"]);
+    const result = await runUninstall(sandbox, ["--confirmed", "--json"]);
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
       schemaVersion: 1,
       status: "uninstalled",
+      result: { removed: true },
       removed: true,
       pathPublications: [join(sandbox.home, ".zshrc")],
     });
@@ -158,7 +159,7 @@ describe("forge614-atlas uninstall", () => {
     writeFileSync(join(sandbox.home, ".bash_profile"), `# profile\n${pathBlock("/x/bin")}`);
     writeFileSync(join(sandbox.home, ".bashrc"), `${pathBlock("/x/bin")}export BAR=2\n`);
 
-    const result = await runUninstall(sandbox, ["--confirmed"]);
+    const result = await runUninstall(sandbox, ["--confirmed", "--json"]);
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout).pathPublications).toEqual([join(sandbox.home, ".bash_profile"), join(sandbox.home, ".bashrc")]);
@@ -171,12 +172,12 @@ describe("forge614-atlas uninstall", () => {
     const sandbox = makeSandbox();
     installFakeAtlas(sandbox);
     writeFileSync(join(sandbox.home, ".zshrc"), `export FOO=1\n${pathBlock("/x/bin")}`);
-    await runUninstall(sandbox, ["--confirmed"]);
+    await runUninstall(sandbox, ["--confirmed", "--json"]);
 
-    const second = await runUninstall(sandbox, ["--confirmed"]);
+    const second = await runUninstall(sandbox, ["--confirmed", "--json"]);
 
     expect(second.exitCode).toBe(0);
-    expect(JSON.parse(second.stdout)).toEqual({ schemaVersion: 1, status: "uninstalled", removed: false, pathPublications: [] });
+    expect(JSON.parse(second.stdout)).toEqual({ schemaVersion: 1, status: "uninstalled", result: { removed: false }, removed: false, pathPublications: [] });
     expect(readFileSync(join(sandbox.home, ".zshrc"), "utf8")).toBe("export FOO=1\n");
   });
 
@@ -263,7 +264,7 @@ describe("forge614-atlas uninstall", () => {
     mkdirSync(join(sandbox.home, ".config", "fish", "conf.d"), { recursive: true });
     writeFileSync(fish, pathBlock("/x/bin"));
 
-    const result = await runUninstall(sandbox, ["--confirmed"]);
+    const result = await runUninstall(sandbox, ["--confirmed", "--json"]);
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout).pathPublications).toEqual([fish]);
@@ -278,7 +279,7 @@ describe("forge614-atlas uninstall", () => {
     mkdirSync(join(sandbox.home, ".config", "fish", "conf.d"), { recursive: true });
     writeFileSync(fish, `set -gx EDITOR vim\n${pathBlock("/x/bin")}`);
 
-    const result = await runUninstall(sandbox, ["--confirmed"]);
+    const result = await runUninstall(sandbox, ["--confirmed", "--json"]);
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.stdout).pathPublications).toEqual([fish]);
@@ -414,6 +415,20 @@ describe("forge614-atlas uninstall", () => {
     expect(readFileSync(join(sandbox.home, ".zshrc"), "utf8")).toBe(zshrcBefore);
   });
 
+  /** Comprueba que respuestas cortas como 's', 'y' o 'S' cancelan con código 130 y no borran nada. */
+  test("with a terminal, short answers like 's', 'y' or 'S' cancel with exit 130 and delete nothing", async () => {
+    for (const answer of ["s", "y", "S"]) {
+      const sandbox = makeSandbox();
+      installFakeAtlas(sandbox);
+      writeFileSync(join(sandbox.home, ".zshrc"), `export FOO=1\n${pathBlock("/x/bin")}`);
+
+      const result = await runUninstallInTerminal(sandbox, answer);
+
+      expect(result.exitCode).toBe(130);
+      expect(existsSync(join(sandbox.atlas, "bin", "forge614-atlas"))).toBe(true);
+    }
+  });
+
   /** Comprueba la llamada exacta de Engram (`--from forge614-engram`, con la entrada, la salida y los errores ignorados): sale 0, borra Atlas y limpia `.zshrc`. */
   test("the exact call Engram makes (stdin, stdout and stderr ignored) succeeds with exit code 0", async () => {
     const sandbox = makeSandbox();
@@ -435,5 +450,57 @@ describe("forge614-atlas uninstall", () => {
     expect(exitCode).toBe(0);
     expect(existsSync(sandbox.atlas)).toBe(false);
     expect(readFileSync(join(sandbox.home, ".zshrc"), "utf8")).toBe("export FOO=1\n");
+  });
+
+  /** Comprueba que sin --json devuelve el mensaje plano para personas. */
+  test("prints human readable message when --json is omitted", async () => {
+    const sandbox = makeSandbox();
+    installFakeAtlas(sandbox);
+    const result = await runUninstall(sandbox, ["--confirmed"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("forge614-atlas se desinstaló.");
+    expect(existsSync(sandbox.atlas)).toBe(false);
+  });
+
+  /** Comprueba que uninstall --self no retira nada y devuelve mensaje de texto con código 0. */
+  test("uninstall --self reports no integrations to remove and exits 0", async () => {
+    const sandbox = makeSandbox();
+    installFakeAtlas(sandbox);
+    const result = await runUninstall(sandbox, ["--self"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("forge614-atlas no tiene integraciones de asistentes que retirar.");
+    expect(existsSync(sandbox.atlas)).toBe(true);
+  });
+
+  /** Comprueba que uninstall --self --json responde integrationsRemoved: true y código 0. */
+  test("uninstall --self --json answers integrationsRemoved: true", async () => {
+    const sandbox = makeSandbox();
+    installFakeAtlas(sandbox);
+    const result = await runUninstall(sandbox, ["--self", "--json"]);
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({ schemaVersion: 1, result: { integrationsRemoved: true } });
+    expect(existsSync(sandbox.atlas)).toBe(true);
+  });
+
+  /** Comprueba que desinstalar desde dentro de la carpeta de Atlas se rechaza con UNINSTALL_FAILED y código 1. */
+  test("uninstall is rejected when the working directory is inside the atlas folder", async () => {
+    const sandbox = makeSandbox();
+    installFakeAtlas(sandbox);
+    const binDir = join(sandbox.atlas, "bin");
+    const child = Bun.spawn(["bun", entrypoint, "uninstall", "--confirmed", "--json"], {
+      cwd: binDir,
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      env: childEnv(sandbox),
+    });
+    const [exitCode, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stdout)).toEqual({
+      schemaVersion: 1,
+      status: "error",
+      error: { code: "UNINSTALL_FAILED", message: "uninstall cannot run from inside FORGE614_HOME/atlas" },
+    });
+    expect(existsSync(sandbox.atlas)).toBe(true);
   });
 });
