@@ -43,7 +43,32 @@ export function detectAgents(binaryPath: string): AgentDetection[] {
     throw new Error(`forge614-engines detect failed: ${detail}`);
   }
 
-  // La respuesta es un JSON con la lista en `agents`; se devuelve sin revisar que cada agente traiga todos sus campos.
-  const parsed = JSON.parse(result.stdout) as { agents: AgentDetection[] };
-  return parsed.agents;
+  // La respuesta es un JSON con la lista en `agents`; se valida su estructura y los campos de cada agente.
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch (error) {
+    throw new Error(`forge614-engines detect failed: invalid JSON output (${error instanceof Error ? error.message : String(error)})`);
+  }
+
+  if (typeof parsed !== "object" || parsed === null || !("agents" in parsed) || !Array.isArray((parsed as { agents: unknown }).agents)) {
+    throw new Error("forge614-engines detect failed: output did not contain an 'agents' array");
+  }
+
+  const agents = (parsed as { agents: unknown[] }).agents;
+  for (const agent of agents) {
+    if (
+      typeof agent !== "object" ||
+      agent === null ||
+      typeof (agent as Record<string, unknown>).id !== "string" ||
+      typeof (agent as Record<string, unknown>).label !== "string" ||
+      typeof (agent as Record<string, unknown>).installed !== "boolean" ||
+      typeof (agent as Record<string, unknown>).configDir !== "string" ||
+      typeof (agent as Record<string, unknown>).configFound !== "boolean"
+    ) {
+      throw new Error("forge614-engines detect failed: invalid agent entry in 'agents'");
+    }
+  }
+
+  return agents as AgentDetection[];
 }

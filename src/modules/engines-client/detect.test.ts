@@ -5,7 +5,9 @@
  * binario inexistente haga lanzar un error.
  */
 import { describe, expect, test } from "bun:test";
-import { homedir } from "node:os";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { join } from "node:path";
 import { detectAgents } from "./detect";
 import { resolveEnginesBinaryPath } from "./binary-path";
 import { resolveForgeHome } from "../forge-home/forge-home";
@@ -43,5 +45,37 @@ describe("detectAgents", () => {
    */
   test("throws a clear error when the binary path does not exist", () => {
     expect(() => detectAgents("/nonexistent/forge614-engines")).toThrow();
+  });
+
+  /**
+   * Comprueba que detectAgents valide que la respuesta contenga un arreglo 'agents'.
+   */
+  test("throws when the binary outputs JSON without an agents array", () => {
+    const dir = mkdtempSync(join(tmpdir(), "atlas-detect-fake-"));
+    const script = join(dir, "fake-engines.sh");
+    writeFileSync(script, '#!/bin/sh\necho "{\\"schemaVersion\\":1}"\n');
+    chmodSync(script, 0o755);
+
+    try {
+      expect(() => detectAgents(script)).toThrow("forge614-engines detect failed: output did not contain an 'agents' array");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * Comprueba que detectAgents valide que cada elemento en 'agents' contenga los campos obligatorios.
+   */
+  test("throws when an agent in agents array is missing required fields", () => {
+    const dir = mkdtempSync(join(tmpdir(), "atlas-detect-fake-"));
+    const script = join(dir, "fake-engines.sh");
+    writeFileSync(script, '#!/bin/sh\necho "{\\"agents\\":[{\\"id\\":\\"bad\\"}]}"\n');
+    chmodSync(script, 0o755);
+
+    try {
+      expect(() => detectAgents(script)).toThrow("forge614-engines detect failed: invalid agent entry in 'agents'");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
