@@ -173,8 +173,6 @@ export interface UpdateOptions {
   env?: Record<string, string | undefined>;
   /** Función de fetch inyectable. */
   fetcher?: typeof fetch;
-  /** Función sustituible de descarga (compatibilidad con pruebas unitarias heredadas). */
-  download?: Download;
   /** Función sustituible de lanzamiento de procesos. */
   spawn?: Spawn;
   /** Función sustituible de lectura de versión instalada. */
@@ -201,64 +199,54 @@ export async function updateInstalledAtlas(
   const platform = options.platform ?? process.platform;
   const spawn: Spawn = options.spawn ?? ((command, args, spawnOptions) => spawnSync(command, args, spawnOptions));
 
-  let downloaded: { installer: string; cleanup: () => void };
-  let spawnCommand: string;
-  let spawnArgs: string[];
+  const base = resolveTestBaseUrl(env);
+  const tag = await resolveReleaseTag(base, options.versionTag, options.fetcher ?? fetch);
+  const file = platform === "win32" ? "install.ps1" : "install.sh";
+  const fetcher = options.fetcher ?? fetch;
 
-  if (options.download) {
-    downloaded = await options.download(LATEST_INSTALLER_URL);
-    spawnCommand = "bash";
-    spawnArgs = [downloaded.installer, "--force"];
-  } else {
-    const base = resolveTestBaseUrl(env);
-    const tag = await resolveReleaseTag(base, options.versionTag, options.fetcher ?? fetch);
-    const file = platform === "win32" ? "install.ps1" : "install.sh";
-    const fetcher = options.fetcher ?? fetch;
+  const buildAssetUrl = (name: string) => {
+    const path = `releases/download/${encodeURIComponent(tag)}/${name}`;
+    return base ? `${base}/repos/${REPOSITORY}/${path}` : `https://github.com/${REPOSITORY}/${path}`;
+  };
 
-    const buildAssetUrl = (name: string) => {
-      const path = `releases/download/${encodeURIComponent(tag)}/${name}`;
-      return base ? `${base}/repos/${REPOSITORY}/${path}` : `https://github.com/${REPOSITORY}/${path}`;
-    };
-
-    let assetResponse: Response;
-    try {
-      assetResponse = await fetcher(buildAssetUrl(file));
-    } catch (error) {
-      throw new Error(`Could not download ${file} for ${tag}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    if (!assetResponse.ok) {
-      throw new Error(`Could not download ${file} for ${tag} (HTTP ${assetResponse.status}).`);
-    }
-    const assetBytes = new Uint8Array(await assetResponse.arrayBuffer());
-
-    let sumsResponse: Response;
-    try {
-      sumsResponse = await fetcher(buildAssetUrl("SHA256SUMS"));
-    } catch (error) {
-      throw new Error(`Could not download SHA256SUMS for ${tag}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    if (!sumsResponse.ok) {
-      throw new Error(`Could not download SHA256SUMS for ${tag} (HTTP ${sumsResponse.status}).`);
-    }
-    const sumsText = await sumsResponse.text();
-
-    verifyGnuSha256(file, assetBytes, sumsText);
-
-    const directory = mkdtempSync(join(tmpdir(), "forge614-atlas-update-"));
-    const installer = join(directory, file);
-    writeFileSync(installer, assetBytes, { mode: 0o600 });
-    if (platform !== "win32") {
-      chmodSync(installer, 0o700);
-    }
-    downloaded = {
-      installer,
-      cleanup: () => rmSync(directory, { recursive: true, force: true }),
-    };
-    spawnCommand = platform === "win32" ? "powershell" : "bash";
-    spawnArgs = platform === "win32"
-      ? ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", installer, "--version", tag]
-      : [installer, "--version", tag];
+  let assetResponse: Response;
+  try {
+    assetResponse = await fetcher(buildAssetUrl(file));
+  } catch (error) {
+    throw new Error(`Could not download ${file} for ${tag}: ${error instanceof Error ? error.message : String(error)}`);
   }
+  if (!assetResponse.ok) {
+    throw new Error(`Could not download ${file} for ${tag} (HTTP ${assetResponse.status}).`);
+  }
+  const assetBytes = new Uint8Array(await assetResponse.arrayBuffer());
+
+  let sumsResponse: Response;
+  try {
+    sumsResponse = await fetcher(buildAssetUrl("SHA256SUMS"));
+  } catch (error) {
+    throw new Error(`Could not download SHA256SUMS for ${tag}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!sumsResponse.ok) {
+    throw new Error(`Could not download SHA256SUMS for ${tag} (HTTP ${sumsResponse.status}).`);
+  }
+  const sumsText = await sumsResponse.text();
+
+  verifyGnuSha256(file, assetBytes, sumsText);
+
+  const directory = mkdtempSync(join(tmpdir(), "forge614-atlas-update-"));
+  const installer = join(directory, file);
+  writeFileSync(installer, assetBytes, { mode: 0o600 });
+  if (platform !== "win32") {
+    chmodSync(installer, 0o700);
+  }
+  const downloaded = {
+    installer,
+    cleanup: () => rmSync(directory, { recursive: true, force: true }),
+  };
+  const spawnCommand = platform === "win32" ? "powershell" : "bash";
+  const spawnArgs = platform === "win32"
+    ? ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", installer, "--version", tag]
+    : [installer, "--version", tag];
 
   try {
     const result = spawn(spawnCommand, spawnArgs, { stdio: "inherit" });

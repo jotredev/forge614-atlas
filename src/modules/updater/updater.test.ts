@@ -3,6 +3,7 @@
  * versiones y las respuestas del comando sin instalar Atlas ni consultar una release real.
  */
 import { afterEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -34,23 +35,37 @@ function forgeHomeWithFakeAtlas(versionLine: string): string {
   return forgeHome;
 }
 
-/** Crea un instalador descargado FALSO: un archivo real en una carpeta temporal para comprobar que se borra.
- * @returns Función de descarga falsa, ruta del instalador y lista de URL recibidas.
- */
-function fakeDownload(): { download: (url: string) => Promise<{ installer: string; cleanup: () => void }>; installer: string; urls: string[] } {
-  const directory = mkdtempSync(join(tmpdir(), "atlas-update-installer-"));
-  tempDirs.push(directory);
-  const installer = join(directory, "install.sh");
-  writeFileSync(installer, "#!/bin/sh\nexit 0\n");
-  const urls: string[] = [];
-  return {
-    installer,
-    urls,
-    download: async url => {
-      urls.push(url);
-      return { installer, cleanup: () => rmSync(directory, { recursive: true, force: true }) };
-    },
-  };
+/** Crea un fetcher falso que emula las respuestas HTTP de GitHub releases para pruebas de actualización. */
+function fakeReleaseFetcher(options: {
+  tag?: string;
+  scriptContent?: string;
+  sha256sums?: string;
+  failAsset?: boolean;
+  failSums?: boolean;
+} = {}): typeof fetch {
+  const tag = options.tag ?? "v1.2.3";
+  const script = options.scriptContent ?? "#!/bin/sh\nexit 0\n";
+  const scriptSha = createHash("sha256").update(script).digest("hex");
+  const sums = options.sha256sums ?? `${scriptSha}  install.sh\n`;
+
+  return (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes("/releases/latest")) {
+      return new Response(JSON.stringify({ tag_name: tag }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (url.endsWith("/install.sh")) {
+      if (options.failAsset) return new Response("Not found", { status: 404 });
+      return new Response(script, { status: 200 });
+    }
+    if (url.endsWith("/SHA256SUMS")) {
+      if (options.failSums) return new Response("Not found", { status: 404 });
+      return new Response(sums, { status: 200 });
+    }
+    return new Response("Not found", { status: 404 });
+  }) as unknown as typeof fetch;
 }
 
 /** Agrupa la comprobación de la ruta del comando que deja el instalador. */
@@ -61,27 +76,23 @@ describe("installedAtlasCommand", () => {
   });
 });
 
-/** Agrupa los casos de descarga, ejecución, lectura de versión y limpieza del instalador temporal. */
+/** Agrupa los casos de descarga, verificación SHA-256, ejecución, lectura de versión y limpieza del instalador temporal. */
 describe("updateInstalledAtlas", () => {
-  /** Comprueba URL de la última release, llamada a bash con `--force`, versiones devueltas y borrado del temporal. */
-  test("downloads the latest installer, runs it with --force, reads the installed version and removes the temporary file", async () => {
+  /** Comprueba resolución de release, verificación SHA-256, invocación del instalador y versiones resultantes. */
+  test("downloads the release gatekeeper, verifies SHA-256, runs it, reads installed version and cleans up", async () => {
     const forgeHome = forgeHomeWithFakeAtlas("forge614-atlas 1.2.3");
-    const double = fakeDownload();
     const calls: string[] = [];
 
     const result = await updateInstalledAtlas("1.0.0", forgeHome, {
-      download: double.download,
+      fetcher: fakeReleaseFetcher(),
       spawn: (command, args) => {
         calls.push(`${command} ${args.join(" ")}`);
         return { status: 0 };
       },
     });
 
-    expect(double.urls).toEqual(["https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh"]);
-    expect(LATEST_INSTALLER_URL).toBe("https://github.com/jotredev/forge614-atlas/releases/latest/download/install.sh");
-    expect(calls).toEqual([`bash ${double.installer} --force`]);
+    expect(calls[0]).toMatch(/^bash .*\/install\.sh --version v1\.2\.3$/);
     expect(result).toEqual({ updated: true, previousVersion: "1.0.0", installedVersion: "1.2.3" });
-    expect(existsSync(double.installer)).toBe(false);
   });
 
   /** Comprueba que versiones iguales devuelven `updated: false` con ambas versiones en `1.0.0`. */
@@ -89,35 +100,53 @@ describe("updateInstalledAtlas", () => {
     const forgeHome = forgeHomeWithFakeAtlas("forge614-atlas 1.0.0");
 
     const result = await updateInstalledAtlas("1.0.0", forgeHome, {
-      download: fakeDownload().download,
+      fetcher: fakeReleaseFetcher({ tag: "v1.0.0" }),
       spawn: () => ({ status: 0 }),
     });
 
     expect(result).toEqual({ updated: false, previousVersion: "1.0.0", installedVersion: "1.0.0" });
   });
 
-  /** Comprueba que un estado 1 del instalador produce el error esperado y borra el archivo temporal. */
-  test("an installer that fails rejects and still removes the temporary file", async () => {
-    const forgeHome = forgeHomeWithFakeAtlas("forge614-atlas 1.2.3");
-    const double = fakeDownload();
+  /** Comprueba que un SHA256SUMS que no coincide detiene el update sin ejecutar el instalador. */
+  test("a mismatched SHA256SUMS stops the update and never launches the installer", async () => {
+    let launched = false;
+    const badSums = "0000000000000000000000000000000000000000000000000000000000000000  install.sh\n";
 
     await expect(
-      updateInstalledAtlas("1.0.0", forgeHome, { download: double.download, spawn: () => ({ status: 1 }) }),
-    ).rejects.toThrow("The Forge614 Atlas installer failed; the installed version was not confirmed.");
+      updateInstalledAtlas("1.0.0", "/nonexistent/forge614", {
+        fetcher: fakeReleaseFetcher({ sha256sums: badSums }),
+        spawn: () => {
+          launched = true;
+          return { status: 0 };
+        },
+      }),
+    ).rejects.toThrow("SHA-256 verification failed for install.sh.");
 
-    expect(existsSync(double.installer)).toBe(false);
+    expect(launched).toBe(false);
+  });
+
+  /** Comprueba que un estado 1 del instalador produce el error esperado y limpia el temporal. */
+  test("an installer that fails rejects and still removes the temporary file", async () => {
+    const forgeHome = forgeHomeWithFakeAtlas("forge614-atlas 1.2.3");
+
+    await expect(
+      updateInstalledAtlas("1.0.0", forgeHome, {
+        fetcher: fakeReleaseFetcher(),
+        spawn: () => ({ status: 1 }),
+      }),
+    ).rejects.toThrow("The Forge614 Atlas installer failed; the installed version was not confirmed.");
   });
 
   /** Comprueba que un texto de versión sin formato X.Y.Z se rechaza y aun así se borra el temporal. */
   test("an installed version with an invalid format rejects and still removes the temporary file", async () => {
     const forgeHome = forgeHomeWithFakeAtlas("atlas version one point two");
-    const double = fakeDownload();
 
     await expect(
-      updateInstalledAtlas("1.0.0", forgeHome, { download: double.download, spawn: () => ({ status: 0 }) }),
+      updateInstalledAtlas("1.0.0", forgeHome, {
+        fetcher: fakeReleaseFetcher(),
+        spawn: () => ({ status: 0 }),
+      }),
     ).rejects.toThrow("The installed Forge614 Atlas did not report a valid version.");
-
-    expect(existsSync(double.installer)).toBe(false);
   });
 
   /** Comprueba que `1.2.3` sin el nombre `forge614-atlas` se rechaza como versión instalada. */
@@ -125,41 +154,55 @@ describe("updateInstalledAtlas", () => {
     const forgeHome = forgeHomeWithFakeAtlas("1.2.3");
 
     await expect(
-      updateInstalledAtlas("1.0.0", forgeHome, { download: fakeDownload().download, spawn: () => ({ status: 0 }) }),
+      updateInstalledAtlas("1.0.0", forgeHome, {
+        fetcher: fakeReleaseFetcher(),
+        spawn: () => ({ status: 0 }),
+      }),
     ).rejects.toThrow("The installed Forge614 Atlas did not report a valid version.");
   });
 
-  /** Comprueba que un error de descarga llega al llamador y evita incluso invocar el lanzador falso. */
+  /** Comprueba que un error de descarga del activo llega al llamador y evita invocar el instalador. */
   test("a failed download rejects and never launches the installer", async () => {
     let launched = false;
 
     await expect(
       updateInstalledAtlas("1.0.0", "/nonexistent/forge614", {
-        download: async () => {
-          throw new Error("Could not download the Forge614 Atlas installer.");
-        },
+        fetcher: fakeReleaseFetcher({ failAsset: true }),
         spawn: () => {
           launched = true;
           return { status: 0 };
         },
       }),
-    ).rejects.toThrow("Could not download the Forge614 Atlas installer.");
+    ).rejects.toThrow("Could not download install.sh for v1.2.3 (HTTP 404).");
 
     expect(launched).toBe(false);
   });
 
-  /** Comprueba que un error simulado al iniciar bash (el lanzador falso devuelve `error`) llega al llamador y el temporal se borra. */
-  test("a process that cannot start surfaces its own error and removes the temporary file", async () => {
-    const double = fakeDownload();
+  /** Comprueba que un fallo al descargar SHA256SUMS detiene la ejecución sin lanzar el instalador. */
+  test("a failed SHA256SUMS download rejects and never launches the installer", async () => {
+    let launched = false;
 
     await expect(
       updateInstalledAtlas("1.0.0", "/nonexistent/forge614", {
-        download: double.download,
+        fetcher: fakeReleaseFetcher({ failSums: true }),
+        spawn: () => {
+          launched = true;
+          return { status: 0 };
+        },
+      }),
+    ).rejects.toThrow("Could not download SHA256SUMS for v1.2.3 (HTTP 404).");
+
+    expect(launched).toBe(false);
+  });
+
+  /** Comprueba que un error simulado al iniciar bash llega al llamador y limpia el temporal. */
+  test("a process that cannot start surfaces its own error and removes the temporary file", async () => {
+    await expect(
+      updateInstalledAtlas("1.0.0", "/nonexistent/forge614", {
+        fetcher: fakeReleaseFetcher(),
         spawn: () => ({ status: null, error: new Error("spawn bash ENOENT") }),
       }),
     ).rejects.toThrow("spawn bash ENOENT");
-
-    expect(existsSync(double.installer)).toBe(false);
   });
 });
 
