@@ -1,4 +1,5 @@
 {
+  "productVersion": "1.2.0",
   "reviewedProductVersion": "1.0.0",
   "reviewedCommit": "5319ed9",
   "pages": [
@@ -6,13 +7,13 @@
       "localPath": "docs/es/08-nucleo-cli-y-plan-de-corrida.md",
       "language": "es",
       "notionUrl": "https://app.notion.com/p/3e121943d129812d9814cb2e9e9a95c9?pvs=204",
-      "contentFingerprint": "plan4-dispatch-5cb2ea5"
+      "contentFingerprint": "single-installer-1.2.0"
     },
     {
       "localPath": "docs/en/08-cli-core-and-run-plan.md",
       "language": "en",
       "notionUrl": "https://app.notion.com/p/3e121943d1298178ae70c84bf95e9e4f?pvs=204",
-      "contentFingerprint": "plan4-dispatch-5cb2ea5"
+      "contentFingerprint": "single-installer-1.2.0"
     },
     {
       "localPath": "docs/es/09-despacho-de-subagentes.md",
@@ -30,13 +31,13 @@
       "localPath": "docs/es/10-instalador-y-release.md",
       "language": "es",
       "notionUrl": "https://app.notion.com/p/3e321943d12981949ce7e0824399e5f4?pvs=204",
-      "contentFingerprint": "plan5-installer-6952559"
+      "contentFingerprint": "single-installer-1.2.0"
     },
     {
       "localPath": "docs/en/10-installer-and-release.md",
       "language": "en",
       "notionUrl": "https://app.notion.com/p/3e321943d12981e382e7e96ff9a05c9c?pvs=204",
-      "contentFingerprint": "plan5-installer-6952559"
+      "contentFingerprint": "single-installer-1.2.0"
     }
   ]
 }
